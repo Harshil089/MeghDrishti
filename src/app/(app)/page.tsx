@@ -19,7 +19,7 @@ import {
   type DashboardStat,
   type SensorHealth,
 } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
+import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
 import { AlertTriangle, Sparkles, HeartPulse, ArrowRight } from "lucide-react";
 
 const severityDot: Record<string, string> = {
@@ -32,11 +32,11 @@ const EMPTY_FLEET_SERIES = { temperature_c: [], humidity_pct: [], pressure_hpa: 
 
 export default function DashboardPage() {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-  const alerts = useLiveData(fetchAlerts, [] as Alert[]);
-  const statCards = useLiveData(fetchDashboardStats, [] as DashboardStat[]);
-  const fleetSeries = useLiveData(fetchFleetSeries, EMPTY_FLEET_SERIES);
-  const insights = useLiveData(fetchInsights, [] as string[]);
-  const sensorHealth = useLiveData(fetchSensorHealth, [] as SensorHealth[]);
+  const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
+  const statCards = useLiveDataWs(fetchDashboardStats, [] as DashboardStat[], "/ws/dashboard");
+  const fleetSeries = useLiveData(fetchFleetSeries, EMPTY_FLEET_SERIES, 30000);
+  const insights = useLiveDataWs(fetchInsights, [] as string[], "/ws/dashboard");
+  const sensorHealth = useLiveData(fetchSensorHealth, [] as SensorHealth[], 30000);
 
   const latestTemp = fleetSeries.temperature_c.at(-1)?.value ?? null;
   const latestPressure = fleetSeries.pressure_hpa.at(-1)?.value ?? null;

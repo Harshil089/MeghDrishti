@@ -6,12 +6,17 @@ from __future__ import annotations
 
 import asyncio
 
+from sqlalchemy import select
+
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.core.security import hash_password
 from app.db.session import AsyncSessionLocal
+from app.models.calibration import CalibrationProfile
 from app.models.stations import DataSource, Station, StationSensor
+from app.qc.defaults import DEFAULT_RULE_THRESHOLDS
 from app.repositories.user_repository import UserRepository
+from app.scoring.defaults import DEFAULT_DECISION_THRESHOLDS, DEFAULT_FUSION_WEIGHTS
 
 logger = get_logger("meghdrishti.seed")
 
@@ -49,15 +54,26 @@ async def seed() -> None:
         else:
             logger.info("seed_admin_exists", email=settings.demo_admin_email)
 
-        source = DataSource(name="OPEN_METEO", kind="FORECAST_API", is_enabled=True, config={})
-        session.add(source)
-        session.add(DataSource(name="IMD", kind="STATION_NETWORK", is_enabled=settings.imd_enabled, config={}))
-        session.add(DataSource(name="NOAA_ISD", kind="STATION_NETWORK", is_enabled=False, config={}))
-        session.add(DataSource(name="ERA5", kind="REANALYSIS", is_enabled=False, config={}))
-        session.add(DataSource(name="NASA_GPM", kind="SATELLITE", is_enabled=False, config={}))
+        existing_sources = {
+            row[0] for row in (await session.execute(select(DataSource.name))).all()
+        }
+        for name, kind, enabled in [
+            ("OPEN_METEO", "FORECAST_API", True),
+            ("IMD", "STATION_NETWORK", settings.imd_enabled),
+            ("NOAA_ISD", "STATION_NETWORK", False),
+            ("ERA5", "REANALYSIS", False),
+            ("NASA_GPM", "SATELLITE", False),
+        ]:
+            if name not in existing_sources:
+                session.add(DataSource(name=name, kind=kind, is_enabled=enabled, config={}))
 
+        existing_codes = {
+            row[0] for row in (await session.execute(select(Station.station_code))).all()
+        }
         stations: list[Station] = []
         for s in DEMO_STATIONS:
+            if s["station_code"] in existing_codes:
+                continue
             station = Station(source="IMD", is_active=True, **s)
             session.add(station)
             stations.append(station)
@@ -66,6 +82,27 @@ async def seed() -> None:
         for station in stations:
             for m in MEASUREMENTS:
                 session.add(StationSensor(station_id=station.id, measurement=m, unit=UNITS[m], is_active=True))
+
+        existing_profile = (
+            await session.execute(select(CalibrationProfile).where(CalibrationProfile.name == "default"))
+        ).scalar_one_or_none()
+        if existing_profile is None:
+            from app.health.station_health import DEFAULT_BOUNDARIES, DEFAULT_WEIGHTS
+
+            session.add(
+                CalibrationProfile(
+                    name="default",
+                    is_active=True,
+                    rule_thresholds=DEFAULT_RULE_THRESHOLDS,
+                    fusion_weights=DEFAULT_FUSION_WEIGHTS,
+                    decision_thresholds=DEFAULT_DECISION_THRESHOLDS,
+                    health_weights=DEFAULT_WEIGHTS,
+                    health_boundaries={str(k): v for k, v in DEFAULT_BOUNDARIES},
+                )
+            )
+            logger.info("seed_calibration_profile_created")
+        else:
+            logger.info("seed_calibration_profile_exists")
 
         await session.commit()
         logger.info("seed_stations_created", count=len(stations))

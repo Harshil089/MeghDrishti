@@ -12,6 +12,7 @@ from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
 from app.models.alerts import Alert
 from app.repositories.alert_repository import AlertRepository
+from app.services.event_publisher import publish_alert_event
 
 router = APIRouter()
 
@@ -69,4 +70,5 @@ async def update_alert(
         raise NotFoundError("Alert does not exist", code="ALERT_NOT_FOUND")
     ack_by = uuid.UUID(user.id) if payload.status == "ACKNOWLEDGED" else None
     alert = await repo.update_status(alert, payload.status, ack_by)
+    await publish_alert_event("ALERT_UPDATED", {"alert_id": str(alert.id), "status": alert.status})
     return {"data": _alert_out(alert)}

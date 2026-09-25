@@ -6,7 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusMeta, type Alert, type Station } from "@/lib/mock-data";
 import { fetchAlerts } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
+import { useLiveDataWs } from "@/lib/useLiveData";
 
 const severityStyle: Record<string, string> = {
   critical: "text-rose-400",
@@ -72,7 +72,7 @@ export default function LeafletMapScene({
   onSelect?: (s: Station) => void;
 }) {
   const light = useIsLight();
-  const alerts = useLiveData(fetchAlerts, [] as Alert[]);
+  const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
   const selected = stations.find((s) => s.id === selectedId);
 
   return (

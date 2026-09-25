@@ -1,13 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
-import { Menu, Search, Bell } from "lucide-react";
+import { Menu, Search, Bell, LogIn, LogOut } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AlertDetailModal from "@/components/AlertDetailModal";
 import type { Alert } from "@/lib/mock-data";
 import { fetchAlerts } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
+import { useLiveDataWs } from "@/lib/useLiveData";
+import { useAuth } from "@/lib/useAuth";
+import { logout } from "@/lib/auth";
 
 const severityDot: Record<string, string> = {
   critical: "bg-rose-500",
@@ -20,8 +23,9 @@ export default function Topbar({ title }: { title: string }) {
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
-  const alerts = useLiveData(fetchAlerts, [] as Alert[]);
+  const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
   const unread = alerts.filter((a) => a.severity !== "info").length;
+  const { user, loading: authLoading } = useAuth();
 
   function toggleOpen() {
     if (!open && bellRef.current) {
@@ -59,9 +63,34 @@ export default function Topbar({ title }: { title: string }) {
         </button>
 
         <ThemeToggle />
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-orange-400 flex items-center justify-center text-[11px] font-semibold text-black">
-          MD
-        </div>
+
+        {authLoading ? (
+          <div className="h-8 w-8 rounded-full bg-panel-2 animate-pulse" />
+        ) : user ? (
+          <div className="flex items-center gap-2">
+            <div
+              className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-orange-400 flex items-center justify-center text-[11px] font-semibold text-black"
+              title={user.email}
+            >
+              {user.email.slice(0, 2).toUpperCase()}
+            </div>
+            <button
+              onClick={logout}
+              className="hidden sm:flex items-center gap-1.5 text-xs text-muted hover:text-foreground"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs text-muted hover:text-foreground hover:border-cyan-400/30 transition-colors"
+          >
+            <LogIn className="h-3.5 w-3.5" />
+            Sign in
+          </Link>
+        )}
       </div>
 
       {open &&

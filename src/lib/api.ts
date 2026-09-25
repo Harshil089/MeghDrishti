@@ -65,6 +65,7 @@ export async function fetchAlerts(): Promise<Alert[]> {
       {
         id: string;
         station_id: string;
+        anomaly_id: string | null;
         status: string;
         priority: string;
         policy: string;
@@ -84,6 +85,8 @@ export async function fetchAlerts(): Promise<Alert[]> {
       const confidence = typeof a.details.confidence === "number" ? a.details.confidence : null;
       return {
         id: a.id,
+        anomalyId: a.anomaly_id,
+        status: a.status,
         station: codeById.get(a.station_id) ?? a.station_id.slice(0, 8),
         code: reasonCodes[0] ?? a.policy,
         message: a.title,
@@ -286,4 +289,126 @@ export async function fetchFleetSeries(): Promise<{
 export async function fetchInsights(): Promise<string[]> {
   const body = await getJSON<{ insights: string[] }>("/analytics/insights");
   return body.insights;
+}
+
+// --- Authenticated writes ---
+
+class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function authedJSON<T>(path: string, method: "PATCH" | "POST", body?: unknown): Promise<T> {
+  const { authHeaders } = await import("@/lib/auth");
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new ApiError(res.status, detail?.error?.message ?? `${path} -> ${res.status}`);
+  }
+  const json = await res.json();
+  return json.data as T;
+}
+
+export const ALERT_STATUSES = ["ACKNOWLEDGED", "UNDER_REVIEW", "RESOLVED", "DISMISSED"] as const;
+export type AlertStatus = (typeof ALERT_STATUSES)[number];
+
+export async function updateAlertStatus(alertId: string, status: AlertStatus): Promise<void> {
+  await authedJSON(`/alerts/${alertId}`, "PATCH", { status });
+}
+
+export const REVIEW_CLASSIFICATIONS = [
+  "CONFIRMED_SENSOR_FAULT",
+  "VALID_EXTREME_WEATHER",
+  "FALSE_POSITIVE",
+  "UNKNOWN",
+  "REVIEW_LATER",
+] as const;
+export type ReviewClassification = (typeof REVIEW_CLASSIFICATIONS)[number];
+
+// --- Admin / settings ---
+
+export interface CalibrationProfile {
+  id: string;
+  name: string;
+  is_active: boolean;
+  rule_thresholds: Record<string, unknown>;
+  fusion_weights: Record<string, number>;
+  decision_thresholds: Record<string, number>;
+  health_weights: Record<string, number>;
+  health_boundaries: Record<string, string>;
+  updated_at: string;
+}
+
+export async function fetchActiveCalibration(): Promise<CalibrationProfile | null> {
+  return getJSON<CalibrationProfile | null>("/admin/calibration");
+}
+
+export interface DataSourceStatus {
+  name: string;
+  kind: string;
+  is_enabled: boolean;
+  config: Record<string, unknown>;
+}
+
+export async function fetchDataSources(): Promise<DataSourceStatus[]> {
+  return getJSON<DataSourceStatus[]>("/admin/data-sources");
+}
+
+export interface IngestionJob {
+  id: string;
+  source: string;
+  station_id: string | null;
+  status: string;
+  attempt: number;
+  error_message: string | null;
+  stats: Record<string, unknown>;
+  created_at: string;
+}
+
+export async function fetchIngestionJobs(): Promise<IngestionJob[]> {
+  return getJSON<IngestionJob[]>("/admin/ingestion-jobs?limit=30");
+}
+
+export async function replayIngestionJob(jobId: string): Promise<void> {
+  await authedJSON(`/admin/replay/${jobId}`, "POST");
+}
+
+export interface ModelVersion {
+  id: string;
+  model_id: string;
+  model_version: string;
+  measurement: string;
+  region: string | null;
+  season: string | null;
+  contamination: number;
+  threshold: number | null;
+  metrics: Record<string, unknown>;
+  status: string;
+  created_at: string;
+}
+
+export async function fetchModels(): Promise<ModelVersion[]> {
+  return getJSON<ModelVersion[]>("/models?limit=50");
+}
+
+export async function activateModel(modelId: string): Promise<void> {
+  await authedJSON(`/models/${modelId}/activate`, "POST");
+}
+
+export async function submitReview(
+  anomalyId: string,
+  operatorClassification: ReviewClassification,
+  comment?: string
+): Promise<void> {
+  await authedJSON(`/anomalies/${anomalyId}/review`, "POST", {
+    operator_classification: operatorClassification,
+    comment: comment ?? null,
+  });
 }

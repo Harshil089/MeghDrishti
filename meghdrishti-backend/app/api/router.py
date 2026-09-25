@@ -8,6 +8,7 @@ from app.api import (
     anomalies,
     auth,
     dashboard,
+    models,
     observations,
     reviews,
     stations,
@@ -23,3 +24,4 @@ api_router.include_router(reviews.router, tags=["reviews"])
 api_router.include_router(alerts.router, prefix="/alerts", tags=["alerts"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(models.router, prefix="/models", tags=["models"])

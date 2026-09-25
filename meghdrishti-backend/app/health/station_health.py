@@ -36,6 +36,14 @@ def status_for_score(score: float, boundaries: list[tuple[float, str]] | None = 
     return "CRITICAL"
 
 
+def boundaries_from_dict(raw: dict[str, str] | None) -> list[tuple[float, str]] | None:
+    """CalibrationProfile.health_boundaries stores {"90": "HEALTHY", ...} (JSON keys are
+    always strings); convert back to the sorted (threshold, label) list compute_health expects."""
+    if not raw:
+        return None
+    return sorted(((float(k), v) for k, v in raw.items()), key=lambda pair: pair[0], reverse=True)
+
+
 def compute_health(inputs: HealthInputs, weights: dict | None = None, boundaries: list[tuple[float, str]] | None = None) -> dict:
     w = {**DEFAULT_WEIGHTS, **(weights or {})}
 

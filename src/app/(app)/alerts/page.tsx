@@ -3,7 +3,7 @@
 import Topbar from "@/components/Topbar";
 import type { Alert } from "@/lib/mock-data";
 import { fetchAlerts } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
+import { useLiveDataWs } from "@/lib/useLiveData";
 
 const severityStyle: Record<string, string> = {
   critical: "bg-rose-500/10 text-rose-400 border-rose-500/30",
@@ -12,7 +12,7 @@ const severityStyle: Record<string, string> = {
 };
 
 export default function AlertsPage() {
-  const alerts = useLiveData(fetchAlerts, [] as Alert[]);
+  const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
   return (
     <>
       <Topbar title="Alerts" />

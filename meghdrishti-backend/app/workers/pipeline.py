@@ -23,15 +23,20 @@ from app.features.builder import MEASUREMENTS, FeatureBuilder, FeatureInputs
 from app.ml.inference import run_inference
 from app.ml.registry import ModelRegistry
 from app.models.observations import ObservationFeatures, WeatherObservation
-from app.qc.engine import QCContext, QCEngine
+from app.qc.engine import QCContext, QCEngine, merge_thresholds
 from app.repositories.anomaly_repository import AnomalyRepository
+from app.repositories.calibration_repository import CalibrationRepository
 from app.repositories.context_repository import ContextRepository
 from app.repositories.feature_repository import FeatureRepository
 from app.repositories.observation_repository import ObservationRepository
 from app.repositories.qc_repository import QCRepository
 from app.repositories.station_repository import StationRepository
 from app.scoring.decision import DecisionEngine
-from app.services.event_publisher import publish_dashboard_event, publish_station_event
+from app.services.event_publisher import (
+    publish_alert_event,
+    publish_dashboard_event,
+    publish_station_event,
+)
 from app.services.health_service import HealthService
 
 logger = get_logger("meghdrishti.workers.pipeline")
@@ -41,7 +46,9 @@ def _measurements_dict(obs: WeatherObservation) -> dict[str, float | None]:
     return {m: getattr(obs, m) for m in MEASUREMENTS}
 
 
-async def run_rule_engine(session: AsyncSession, observation_id: uuid.UUID) -> list:
+async def run_rule_engine(
+    session: AsyncSession, observation_id: uuid.UUID, rule_thresholds: dict | None = None
+) -> list:
     obs_repo = ObservationRepository(session)
     result = await session.execute(select(WeatherObservation).where(WeatherObservation.id == observation_id))
     obs = result.scalar_one()
@@ -56,6 +63,7 @@ async def run_rule_engine(session: AsyncSession, observation_id: uuid.UUID) -> l
         measurements=_measurements_dict(obs),
         history=history,
         last_observation_timestamp=history[0]["timestamp"] if history else None,
+        thresholds=merge_thresholds(rule_thresholds),
     )
     results = QCEngine().run(ctx)
     for r in results:
@@ -194,6 +202,8 @@ async def calculate_final_decision(
     rule_results: list,
     ml_results: dict,
     context_results: dict,
+    fusion_weights: dict | None = None,
+    decision_thresholds: dict | None = None,
 ) -> uuid.UUID | None:
     result = await session.execute(select(WeatherObservation).where(WeatherObservation.id == observation_id))
     obs = result.scalar_one()
@@ -228,6 +238,8 @@ async def calculate_final_decision(
         ml_result,
         context_result,
         station_data_completeness_pct=completeness or 100.0,
+        fusion_weights=fusion_weights,
+        decision_thresholds=decision_thresholds,
     )
 
     anomaly_repo = AnomalyRepository(session)
@@ -279,6 +291,7 @@ async def create_alert_if_required(session: AsyncSession, anomaly) -> None:
     )
     if alert is not None:
         await publish_dashboard_event("ALERT_CREATED", {"alert_id": str(alert.id), "priority": alert.priority})
+        await publish_alert_event("ALERT_CREATED", {"alert_id": str(alert.id), "priority": alert.priority})
 
 
 async def process_observation(observation_id: uuid.UUID) -> uuid.UUID | None:
@@ -291,10 +304,16 @@ async def process_observation(observation_id: uuid.UUID) -> uuid.UUID | None:
             return None
 
         station = await StationRepository(session).get(obs.station_id)
+        profile = await CalibrationRepository(session).get_active()
+        rule_thresholds = profile.rule_thresholds if profile else None
+        fusion_weights = profile.fusion_weights if profile else None
+        decision_thresholds = profile.decision_thresholds if profile else None
 
-        rule_results = await run_rule_engine(session, observation_id)
+        rule_results = await run_rule_engine(session, observation_id, rule_thresholds)
         await calculate_features(session, observation_id)
         ml_results = await run_ml_inference(session, observation_id, station.region if station else None)
         context_results = await run_context_validation(session, observation_id)
-        anomaly_id = await calculate_final_decision(session, observation_id, rule_results, ml_results, context_results)
+        anomaly_id = await calculate_final_decision(
+            session, observation_id, rule_results, ml_results, context_results, fusion_weights, decision_thresholds
+        )
         return anomaly_id

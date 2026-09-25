@@ -7,11 +7,12 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.health.station_health import HealthInputs, compute_health
+from app.health.station_health import HealthInputs, boundaries_from_dict, compute_health
 from app.models.anomalies import Anomaly
 from app.models.observations import ObservationFeatures, WeatherObservation
 from app.models.qc import QCRuleResult
 from app.models.reviews import OperatorReview
+from app.repositories.calibration_repository import CalibrationRepository
 from app.repositories.health_repository import HealthRepository
 from app.services.event_publisher import publish_station_event
 
@@ -112,6 +113,10 @@ class HealthService:
         if confirmed_faults > 0:
             issues.append(f"{confirmed_faults} confirmed sensor faults in 30 days")
 
+        profile = await CalibrationRepository(self.session).get_active()
+        health_weights = profile.health_weights if profile and profile.health_weights else None
+        health_boundaries = boundaries_from_dict(profile.health_boundaries) if profile else None
+
         result = compute_health(
             HealthInputs(
                 sensor_reliability_pct=round(sensor_reliability_pct, 2),
@@ -120,7 +125,9 @@ class HealthService:
                 completeness_pct=round(float(avg_completeness), 2) if avg_completeness is not None else 100.0,
                 confirmed_fault_count_30d=confirmed_faults,
                 issues=issues,
-            )
+            ),
+            weights=health_weights,
+            boundaries=health_boundaries,
         )
 
         await self.repo.upsert(

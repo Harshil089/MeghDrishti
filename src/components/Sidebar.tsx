@@ -13,8 +13,10 @@ import {
   Wrench,
   History,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import Logo from "@/components/Logo";
+import { useAuth } from "@/lib/useAuth";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -30,6 +32,10 @@ const nav = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const items = user?.roles.includes("ADMIN")
+    ? [...nav, { href: "/admin", label: "Admin", icon: ShieldCheck }]
+    : nav;
 
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-panel/60 glass">
@@ -44,7 +50,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
@@ -70,8 +76,11 @@ export default function Sidebar() {
 
       <div className="p-3 border-t border-border">
         <div className="rounded-lg px-3 py-3 text-xs text-muted glass">
-          <p className="text-foreground/80 font-medium mb-1">Prototype build</p>
-          UI-only display · no live backend connected
+          <p className="text-foreground/80 font-medium mb-1 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
+            Live backend
+          </p>
+          Connected to MeghDrishti API
         </div>
       </div>
     </aside>

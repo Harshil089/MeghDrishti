@@ -30,6 +30,8 @@ export interface SeriesPoint {
 
 export interface Alert {
   id: string;
+  anomalyId: string | null;
+  status: string;
   station: string;
   code: string;
   message: string;
