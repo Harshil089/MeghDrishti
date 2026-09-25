@@ -73,21 +73,41 @@ pipeline-stage descriptions), never numbers presented as live data.
   credentials/implementation. Same "real interface, inert until ready"
   pattern as IMD.
 
-## What's not wired up yet
+## What's live
 
-- No login UI — backend JWT auth is built and tested, frontend has no
-  login page, so write actions (submit review, acknowledge alert) aren't
-  reachable from the UI yet.
-- "Real-time" pages poll every 10–20s; the backend's WebSocket endpoints
-  (`/ws/dashboard`, `/ws/alerts`) are built and tested but the frontend
-  doesn't open a socket yet.
-- No trained/activated ML model yet — anomaly decisions currently run on
-  rules + context only until an Isolation Forest is trained and activated
-  (`meghdrishti-backend/airflow/dags/model_training.py`, or run the
-  training/registry code directly).
-- Station neighbor computation and calibration profiles haven't been run
-  yet, so spatial context and threshold tuning use defaults.
-- See [`queue/`](queue/) for anything blocked on an external process.
+- Login (`/login`), JWT stored client-side — the Topbar reflects real
+  sign-in state; alert acknowledge/review actions require it.
+- Alert acknowledge/confirm-fault/valid-extreme/false-positive actions in
+  `AlertDetailModal` call the real `PATCH /alerts/{id}` and
+  `POST /anomalies/{id}/review` endpoints.
+- Dashboard alerts/stats and the Topbar notification bell use a real
+  WebSocket (`/ws/dashboard`, `/ws/alerts`) with poll fallback, not pure
+  polling — alert status changes push immediately.
+- 6 Isolation Forest models (one per measurement) trained on real
+  ingested data and activated — ML genuinely contributes to fusion now,
+  not just rules + context. Retrain with `scripts/train_models.py`.
+- Station neighbors computed (`scripts/compute_neighbors.py`) — spatial
+  context is real, not always "unavailable".
+- A default `calibration_profiles` row is active and the pipeline actually
+  loads it (rule thresholds, fusion weights, decision thresholds, health
+  weights) — not just stored and ignored.
+- `/settings` shows the real active calibration profile + data source
+  status; `/admin` (ADMIN role) lists/replays ingestion jobs and
+  lists/activates models.
+- Prometheus + Grafana verified actually running (locally via Homebrew,
+  no Docker needed) against the live backend — not just configured.
+- CI actually runs on push (was previously in the wrong directory for
+  GitHub Actions to find it — fixed).
+
+## What's still not wired up
+
+- Docker Compose / full multi-container stack — written, never booted (no
+  Docker in this dev environment). Config verified correct by proxy (each
+  piece works standalone), but the compose file itself is unverified.
+- Airflow DAGs — written, syntax-checked, never executed (needs Docker or
+  a local Airflow install).
+- See [`queue/`](queue/) for anything blocked on an external process
+  (IMD credentials, etc).
 
 ## Project background
 

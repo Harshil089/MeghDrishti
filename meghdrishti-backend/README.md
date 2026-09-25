@@ -110,7 +110,7 @@ full original specification this implements.
 | Celery workers | `app/workers/` |
 | Airflow DAGs | `airflow/dags/` |
 
-## What's fully implemented and tested (57 automated tests, real Postgres/Redis)
+## What's fully implemented and tested (73 automated tests, real Postgres/Redis)
 
 - Foundation: FastAPI app, structured JSON logging, `/health`, `/ready`, `/metrics`
 - Full DB schema (26 tables) + Alembic migration, verified upgrade/downgrade
@@ -122,9 +122,23 @@ full original specification this implements.
 - Feature engineering: deltas, rolling stats, rate of change, z-score,
   neighbor stats, historical baselines — never zero-fills missing data
 - Isolation Forest: training, candidate registry (never auto-activates),
-  evaluation, inference — all on engineered features, never raw values
+  evaluation, inference — all on engineered features, never raw values.
+  **6 models (one per measurement) trained on real ingested data and
+  activated** (`scripts/train_models.py`) — ML genuinely contributes to
+  fusion scores now, not a placeholder.
 - Context engine: distinguishes "unavailable" from "disagrees", neighbor/
-  forecast/ERA5/GPM consistency scoring
+  forecast/ERA5/GPM consistency scoring. **Station neighbors computed**
+  (`scripts/compute_neighbors.py`) — spatial context is real.
+- **Calibration profiles wired end-to-end**: a default active profile
+  exists and the pipeline actually loads and applies its rule thresholds,
+  fusion weights, decision thresholds, and health weights — not just
+  stored in the DB and ignored (proven by
+  `tests/integration/test_calibration_wiring.py`).
+- Models API (`GET/POST /api/v1/models`) — was speced but never built;
+  now exists with list/get/activate.
+- Admin endpoints: `GET /admin/calibration`, `GET /admin/data-sources`,
+  `POST /admin/ingest/{station_id}` (manual trigger), plus the existing
+  ingestion-jobs list/replay.
 - Evidence fusion, confidence scoring (distinct from fault score),
   ExtremeEventGuard, reason codes — validated against both canonical spec
   end-to-end cases (genuine extreme rainfall vs. sensor-fault temperature spike)
@@ -137,13 +151,20 @@ full original specification this implements.
 - WebSocket relay over real Redis Pub/Sub (`/ws/dashboard`, `/ws/alerts`,
   `/ws/stations/{id}`)
 - Prometheus metrics wired into ingestion/QC/ML/context/alerts/websockets;
-  Grafana starter dashboard provisioned
+  **Prometheus + Grafana verified actually running** (locally via Homebrew,
+  no Docker needed — dashboard imported and confirmed scraping live data),
+  not just configured on disk
 - Rate limiting on login, security headers, error envelope, audit logging
 - Synthetic fault generator (`scripts/inject_fault.py`), all 6 fault types
   verified against a live database
 
 ## Known gaps / follow-ups
 
+- **Docker Compose / full multi-container stack** — written, never booted
+  (no Docker in this dev environment). Each piece has been verified to
+  actually work standalone outside Docker (Postgres/Redis via Homebrew,
+  Prometheus/Grafana via Homebrew), which derisks the compose file
+  somewhat, but the compose file itself has not been run.
 - **Airflow DAGs** (`airflow/dags/*.py`) are written and syntax-checked but
   not runtime-verified — no Docker in this environment to run the Airflow
   image. They're thin wrappers around already-tested service code
