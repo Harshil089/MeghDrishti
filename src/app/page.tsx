@@ -5,8 +5,80 @@ import { motion, useReducedMotion } from "framer-motion";
 import Logo from "@/components/Logo";
 import AtmosphereCanvas from "@/components/AtmosphereCanvas";
 import RadarSweepCanvas from "@/components/RadarSweepCanvas";
+import Counter from "@/components/Counter";
+import MagneticButton from "@/components/MagneticButton";
 import { pipelineStages } from "@/lib/mock-data";
-import { ArrowRight, GitFork, ShieldCheck, CloudRain, Gauge } from "lucide-react";
+import { fetchLandingStats, type LandingStats } from "@/lib/api";
+import { useLiveData } from "@/lib/useLiveData";
+import {
+  ArrowRight,
+  GitFork,
+  ShieldCheck,
+  CloudRain,
+  Gauge,
+  Layers,
+  Radio,
+  FileSearch,
+  ClipboardCheck,
+  HeartPulse,
+} from "lucide-react";
+
+const EMPTY_STATS: LandingStats = {
+  stationsTotal: 0,
+  stationsActive: 0,
+  anomalies24h: 0,
+  genuineExtreme24h: 0,
+  probableFaults24h: 0,
+  avgStationHealth: null,
+  activeModels: 0,
+  openAlerts: 0,
+};
+
+const FEATURES = [
+  {
+    icon: Layers,
+    title: "Fusion, not a single score",
+    body: "Rule checks, an Isolation Forest model, and context validation each cast an independent vote. Fusion combines them into one explainable decision.",
+    tone: "cyan",
+  },
+  {
+    icon: ShieldCheck,
+    title: "ExtremeEventGuard",
+    body: "A genuine heatwave never gets auto-labelled a sensor fault when neighbors and forecasts confirm it.",
+    tone: "emerald",
+  },
+  {
+    icon: Radio,
+    title: "Real-time over WebSocket",
+    body: "Operators see anomalies and alert changes the moment they happen, not on a refresh.",
+    tone: "amber",
+  },
+  {
+    icon: FileSearch,
+    title: "Every flag is explainable",
+    body: "Reason codes like TEMP_SPIKE, NEIGHBOR_MISMATCH, GPM_CONFIRMED trace exactly why.",
+    tone: "rose",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Human-supervised calibration",
+    body: "Operator review feeds a label store for periodic recalibration, never instant retraining. Fully audited.",
+    tone: "cyan",
+  },
+  {
+    icon: HeartPulse,
+    title: "Independent station health",
+    body: "A rolling reliability score per station, separate from any single anomaly.",
+    tone: "emerald",
+  },
+];
+
+const toneClasses: Record<string, string> = {
+  cyan: "border-cyan-400/20 bg-cyan-400/[0.05] text-cyan-300",
+  emerald: "border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-400",
+  amber: "border-amber-400/20 bg-amber-400/[0.05] text-amber-400",
+  rose: "border-rose-500/20 bg-rose-500/[0.05] text-rose-400",
+};
 
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const reduce = useReducedMotion();
@@ -24,10 +96,17 @@ function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: nu
 
 export default function LandingPage() {
   const reduce = useReducedMotion();
+  const stats = useLiveData(fetchLandingStats, EMPTY_STATS, 15000);
+  const hasStats = stats.stationsTotal > 0 || stats.anomalies24h > 0;
 
   return (
-    <div className="flex-1 min-h-[100dvh]">
-      <header className="h-16 flex items-center justify-between px-4 md:px-8 max-w-[1400px] mx-auto">
+    <div className="relative flex-1 min-h-[100dvh]">
+      {/* Real-time animated background — persists behind every section */}
+      <div className="fixed inset-0 -z-10">
+        <AtmosphereCanvas />
+      </div>
+
+      <header className="relative h-16 flex items-center justify-between px-4 md:px-8 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-2.5">
           <Logo size={32} />
           <span className="text-sm font-semibold tracking-wide">MeghDrishti</span>
@@ -53,7 +132,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-10 pb-16 md:pt-16 md:pb-24 grid md:grid-cols-2 gap-10 items-center">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-10 pb-10 md:pt-16 md:pb-14 grid md:grid-cols-2 gap-10 items-center">
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -68,22 +147,26 @@ export default function LandingPage() {
               heatwave never gets flagged as a faulty probe.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/login"
-                className="flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
-              >
-                Sign in to the console
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="https://github.com/Harshil089/MeghDrishti"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 rounded-full border border-border text-sm px-5 py-3 text-foreground/80 hover:bg-white/[0.04] transition-colors"
-              >
-                <GitFork className="h-4 w-4" />
-                View source
-              </a>
+              <MagneticButton>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
+                >
+                  Sign in to the console
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </MagneticButton>
+              <MagneticButton strength={0.25}>
+                <a
+                  href="https://github.com/Harshil089/MeghDrishti"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 rounded-full border border-border text-sm px-5 py-3 text-foreground/80 hover:bg-white/[0.04] transition-colors"
+                >
+                  <GitFork className="h-4 w-4" />
+                  View source
+                </a>
+              </MagneticButton>
             </div>
           </motion.div>
 
@@ -93,11 +176,69 @@ export default function LandingPage() {
             transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="relative h-72 md:h-96 rounded-2xl border border-border glass overflow-hidden"
           >
-            <AtmosphereCanvas />
             <div className="absolute inset-0 flex items-center justify-center">
               <RadarSweepCanvas size={180} />
             </div>
           </motion.div>
+        </div>
+
+        {/* Live stat strip */}
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 pb-16 md:pb-24">
+          <Reveal>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-border glass p-4">
+                <Counter
+                  value={hasStats ? stats.stationsActive : null}
+                  className="text-2xl md:text-3xl font-semibold text-cyan-300 font-mono"
+                />
+                <p className="text-[11px] text-muted mt-1">stations live</p>
+              </div>
+              <div className="rounded-xl border border-border glass p-4">
+                <Counter
+                  value={hasStats ? stats.anomalies24h : null}
+                  className="text-2xl md:text-3xl font-semibold text-amber-400 font-mono"
+                />
+                <p className="text-[11px] text-muted mt-1">readings analyzed, 24h</p>
+              </div>
+              <div className="rounded-xl border border-border glass p-4">
+                <Counter
+                  value={hasStats ? stats.probableFaults24h : null}
+                  className="text-2xl md:text-3xl font-semibold text-rose-400 font-mono"
+                />
+                <p className="text-[11px] text-muted mt-1">sensor faults caught, 24h</p>
+              </div>
+              <div className="rounded-xl border border-border glass p-4">
+                <Counter
+                  value={hasStats ? stats.avgStationHealth : null}
+                  decimals={1}
+                  suffix="%"
+                  className="text-2xl md:text-3xl font-semibold text-emerald-400 font-mono"
+                />
+                <p className="text-[11px] text-muted mt-1">average station health</p>
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* Pros: bento feature grid */}
+      <section className="max-w-[1400px] mx-auto px-4 md:px-8 py-16 md:py-24">
+        <Reveal>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[26ch] mb-10">
+            Built to be trusted with a decision, not just a score
+          </h2>
+        </Reveal>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.title} delay={i * 0.05}>
+              <div className={`h-full rounded-2xl border p-6 ${toneClasses[f.tone]}`}>
+                <f.icon className="h-5 w-5 mb-4" />
+                <h3 className="text-sm font-semibold text-foreground mb-2">{f.title}</h3>
+                <p className="text-sm text-muted leading-relaxed">{f.body}</p>
+              </div>
+            </Reveal>
+          ))}
         </div>
       </section>
 
@@ -182,13 +323,15 @@ export default function LandingPage() {
                 Sign in to see live station data and anomaly decisions
               </h2>
             </div>
-            <Link
-              href="/login"
-              className="shrink-0 flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
-            >
-              Sign in to the console
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <MagneticButton>
+              <Link
+                href="/login"
+                className="shrink-0 flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
+              >
+                Sign in to the console
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </MagneticButton>
           </div>
         </Reveal>
       </section>

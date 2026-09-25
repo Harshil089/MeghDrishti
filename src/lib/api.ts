@@ -412,3 +412,43 @@ export async function submitReview(
     comment: comment ?? null,
   });
 }
+
+// --- Public landing-page stats (no auth) ---
+// Every number here comes straight from the live backend. No fallback
+// values are faked — callers show "—" while loading rather than a made-up
+// number.
+
+export interface LandingStats {
+  stationsTotal: number;
+  stationsActive: number;
+  anomalies24h: number;
+  genuineExtreme24h: number;
+  probableFaults24h: number;
+  avgStationHealth: number | null;
+  activeModels: number;
+  openAlerts: number;
+}
+
+export async function fetchLandingStats(): Promise<LandingStats> {
+  const [summary, activeModels] = await Promise.all([
+    getJSON<{
+      stations: { total: number; active: number };
+      alerts: { open: number; critical: number };
+      anomalies_24h: number;
+      classification_counts_24h: Record<string, number>;
+      average_station_health: number | null;
+    }>("/dashboard/summary"),
+    getJSON<unknown[]>("/models?status=ACTIVE&limit=50"),
+  ]);
+
+  return {
+    stationsTotal: summary.stations.total,
+    stationsActive: summary.stations.active,
+    anomalies24h: summary.anomalies_24h,
+    genuineExtreme24h: summary.classification_counts_24h["LIKELY_GENUINE_EXTREME"] ?? 0,
+    probableFaults24h: summary.classification_counts_24h["PROBABLE_SENSOR_FAULT"] ?? 0,
+    avgStationHealth: summary.average_station_health,
+    activeModels: activeModels.length,
+    openAlerts: summary.alerts.open,
+  };
+}
