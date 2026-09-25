@@ -19,7 +19,7 @@ import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/useAuth";
 
 const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/live-monitor", label: "Live Monitor", icon: Activity },
   { href: "/alerts", label: "Alerts", icon: AlertTriangle },
   { href: "/sensor-health", label: "Sensor Health", icon: HeartPulse },

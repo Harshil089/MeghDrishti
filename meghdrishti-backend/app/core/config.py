@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     demo_admin_email: str = "admin@meghdrishti.local"
     demo_admin_password: str = "change-me"
 
+    google_client_id: str = ""
+
     # Ingestion sources
     open_meteo_base_url: str = "https://api.open-meteo.com/v1"
 

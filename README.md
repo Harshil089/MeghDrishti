@@ -75,8 +75,17 @@ pipeline-stage descriptions), never numbers presented as live data.
 
 ## What's live
 
-- Login (`/login`), JWT stored client-side — the Topbar reflects real
-  sign-in state; alert acknowledge/review actions require it.
+- Public landing page at `/` explaining the product; the operator console
+  (`/dashboard` and everything else under the sidebar) requires sign-in —
+  unauthenticated visitors are redirected to `/`.
+- Login (`/login`): Google Sign-In (OAuth2 ID token flow) as the primary
+  path, email/password as a fallback for the seeded demo admin. Google
+  sign-in needs `GOOGLE_CLIENT_ID` (backend) + `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
+  (frontend) set to a real OAuth client ID — until then the button shows a
+  clear "not configured" message instead of failing silently. First-time
+  Google sign-in provisions a VIEWER account automatically.
+- JWT stored client-side; the Topbar reflects real sign-in state; alert
+  acknowledge/review actions require it.
 - Alert acknowledge/confirm-fault/valid-extreme/false-positive actions in
   `AlertDetailModal` call the real `PATCH /alerts/{id}` and
   `POST /anomalies/{id}/review` endpoints.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -15,12 +16,23 @@ from app.services.auth_service import AuthService
 router = APIRouter()
 
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str
+
+
 @router.post("/login", response_model=TokenPair, dependencies=[Depends(rate_limit("login", max_requests=10, window_seconds=60))])
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
 ):
     service = AuthService(db)
     user = await service.authenticate(form_data.username, form_data.password)
+    return service.issue_tokens(user)
+
+
+@router.post("/google", response_model=TokenPair, dependencies=[Depends(rate_limit("login", max_requests=10, window_seconds=60))])
+async def google_login(payload: GoogleLoginRequest, db: AsyncSession = Depends(get_db)):
+    service = AuthService(db)
+    user = await service.authenticate_google(payload.id_token)
     return service.issue_tokens(user)
 
 

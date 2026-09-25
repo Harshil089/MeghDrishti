@@ -49,5 +49,10 @@ class UserRepository:
             role = await self.get_or_create_role(name)
             self.session.add(UserRole(user_id=user.id, role_id=role.id))
         await self.session.commit()
-        await self.session.refresh(user, attribute_names=["user_roles"])
-        return user
+        # refresh() only reloads the user_roles collection, not each row's
+        # nested .role — that lazy-loads later outside the async greenlet
+        # context and raises MissingGreenlet. Re-fetch with the same
+        # selectinload chain get_by_email/get_by_id use instead.
+        created = await self.get_by_id(user.id)
+        assert created is not None
+        return created

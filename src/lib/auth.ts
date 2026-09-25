@@ -57,6 +57,20 @@ export async function login(email: string, password: string): Promise<void> {
   setTokens(data.access_token, data.refresh_token);
 }
 
+export async function loginWithGoogle(idToken: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.error?.message ?? "Google sign-in failed");
+  }
+  const data = await res.json();
+  setTokens(data.access_token, data.refresh_token);
+}
+
 export async function fetchCurrentUser(): Promise<CurrentUser | null> {
   const token = getToken();
   if (!token) return null;
