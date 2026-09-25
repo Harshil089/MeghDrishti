@@ -452,3 +452,29 @@ export async function fetchLandingStats(): Promise<LandingStats> {
     openAlerts: summary.alerts.open,
   };
 }
+
+export interface RecentDecision {
+  id: string;
+  stationCode: string;
+  classification: string;
+  confidence: number;
+  time: string;
+}
+
+export async function fetchRecentDecisions(): Promise<RecentDecision[]> {
+  const [rows, stations] = await Promise.all([
+    getJSON<
+      { id: string; station_id: string; classification: string; confidence: number; created_at: string }[]
+    >("/anomalies?limit=5"),
+    getJSON<{ id: string; station_code: string }[]>("/stations?limit=100"),
+  ]);
+  const codeById = new Map(stations.map((s) => [s.id, s.station_code]));
+
+  return rows.map((r) => ({
+    id: r.id,
+    stationCode: codeById.get(r.station_id) ?? r.station_id.slice(0, 8),
+    classification: r.classification,
+    confidence: r.confidence,
+    time: new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  }));
+}
