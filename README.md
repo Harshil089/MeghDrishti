@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MeghDrishti
 
-## Getting Started
+AI/ML-based intelligent anomaly detection for Automatic Weather Stations.
+Distinguishes genuine extreme weather from sensor malfunction, drift,
+spikes, and telemetry faults — never on statistical extremity alone.
 
-First, run the development server:
+This repo has two parts:
+
+- **`/`** (this directory) — Next.js frontend: dashboard, alerts, network
+  map, live monitor, analysis, maintenance, sensor health.
+- **`meghdrishti-backend/`** — FastAPI backend: ingestion, rule engine,
+  Isolation Forest, context validation, evidence fusion, alerting, operator
+  review, Celery workers, Airflow DAGs. See
+  [`meghdrishti-backend/README.md`](meghdrishti-backend/README.md) for
+  full backend docs.
+
+## Quickstart
+
+**Backend first** (frontend has nothing to show without it):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd meghdrishti-backend
+cp .env.example .env
+# needs Postgres + Redis running — see backend README for local (no-Docker)
+# setup, or `docker compose up -d` if you have Docker
+alembic upgrade head
+python -m app.db.seed
+uvicorn app.main:app --reload
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Frontend:**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local   # sets NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open:
+- Frontend: http://localhost:3000
+- Backend API + Swagger: http://localhost:8000/docs
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+RAW OBSERVATION → INGESTION → SCHEMA VALIDATION → NORMALIZATION → FEATURES
+    ↓
+ ┌──────────────┬────────────────┬───────────────────┐
+ │ Rule Engine  │ Isolation      │ Context Validator  │
+ │              │ Forest         │                    │
+ └──────────────┴────────────────┴───────────────────┘
+    ↓
+ EVIDENCE FUSION → CONFIDENCE → DECISION (ExtremeEventGuard)
+    ↓
+ NORMAL / WATCH / SUSPICIOUS / PROBABLE_SENSOR_FAULT / LIKELY_GENUINE_EXTREME
+    ↓
+ ALERT → OPERATOR REVIEW → LABEL STORE
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Every number the frontend shows comes from a live backend query — nothing
+in `src/lib/api.ts` is fabricated. `src/lib/mock-data.ts` holds only types,
+UI color/legend config, and static reference copy (operator runbook text,
+pipeline-stage descriptions), never numbers presented as live data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Live data sources
 
-## Deploy on Vercel
+- **Open-Meteo** — live now, no API key required.
+- **IMD** (India Meteorological Department) — real adapter built
+  (`meghdrishti-backend/app/ingestion/imd.py`), inactive pending IMD API
+  access approval (external legal/institutional process). See
+  [`queue/imd-integration.md`](queue/imd-integration.md).
+- **NOAA / ERA5 / NASA GPM** — adapter interfaces built, inactive pending
+  credentials/implementation. Same "real interface, inert until ready"
+  pattern as IMD.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## What's not wired up yet
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- No login UI — backend JWT auth is built and tested, frontend has no
+  login page, so write actions (submit review, acknowledge alert) aren't
+  reachable from the UI yet.
+- "Real-time" pages poll every 10–20s; the backend's WebSocket endpoints
+  (`/ws/dashboard`, `/ws/alerts`) are built and tested but the frontend
+  doesn't open a socket yet.
+- No trained/activated ML model yet — anomaly decisions currently run on
+  rules + context only until an Isolation Forest is trained and activated
+  (`meghdrishti-backend/airflow/dags/model_training.py`, or run the
+  training/registry code directly).
+- Station neighbor computation and calibration profiles haven't been run
+  yet, so spatial context and threshold tuning use defaults.
+- See [`queue/`](queue/) for anything blocked on an external process.
+
+## Project background
+
+This is a Smart India Hackathon 2026 submission — see
+`SIH2026-IDEA-MeghDrishti-Winner-Style-v2_ Edit (1).pptx.pdf` for the
+original pitch deck.
