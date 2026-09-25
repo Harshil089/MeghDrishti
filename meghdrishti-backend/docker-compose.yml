@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: meghdrishti
+      POSTGRES_PASSWORD: meghdrishti
+      POSTGRES_DB: meghdrishti
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meghdrishti"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker-qc:
+    build: .
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: celery -A app.workers.celery_app worker -Q qc,features,ml -l info -n worker-qc@%h
+
+  worker-context:
+    build: .
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: celery -A app.workers.celery_app worker -Q context -l info -n worker-context@%h
+
+  worker-alert:
+    build: .
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    command: celery -A app.workers.celery_app worker -Q alert,health,realtime -l info -n worker-alert@%h
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./monitoring/grafana:/etc/grafana/provisioning:ro
+    ports: ["3001:3000"]
+    depends_on: [prometheus]
+
+  airflow-webserver:
+    image: apache/airflow:2.10.2-python3.12
+    env_file: .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://meghdrishti:meghdrishti@postgres/meghdrishti_airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.2-python3.12
+    env_file: .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://meghdrishti:meghdrishti@postgres/meghdrishti_airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: scheduler
+
+volumes:
+  pgdata:

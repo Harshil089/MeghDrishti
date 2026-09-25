@@ -1,0 +1,28 @@
+# --- Frontend (Next.js) ---
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env
+.env.local
+.env*.local
+
+# --- Backend (Python) ---
+meghdrishti-backend/.venv/
+meghdrishti-backend/__pycache__/
+**/__pycache__/
+*.pyc
+meghdrishti-backend/.pytest_cache/
+meghdrishti-backend/.mypy_cache/
+meghdrishti-backend/.ruff_cache/
+meghdrishti-backend/*.egg-info/
+meghdrishti-backend/model_store/*.joblib
+meghdrishti-backend/test.db
+meghdrishti-backend/dump.rdb
+meghdrishti-backend/.env
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/

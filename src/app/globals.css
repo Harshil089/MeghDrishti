@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+:root {
+  --background: #05070d;
+  --panel: #0b1220;
+  --panel-2: #0e1526;
+  --border: #1c2740;
+  --foreground: #e6edf7;
+  --muted: #8492ab;
+  --cyan: #22d3ee;
+  --orange: #f97316;
+  --emerald: #34d399;
+  --rose: #fb7185;
+  --amber: #fbbf24;
+  --map-fill: #0e1526;
+  --map-stroke: #2a3a5c;
+}
+
+:root.light {
+  --background: #f3f5fa;
+  --panel: #ffffff;
+  --panel-2: #eef1f8;
+  --border: #dde3f0;
+  --foreground: #10192b;
+  --muted: #5b6785;
+  --map-fill: #e8ecf6;
+  --map-stroke: #b9c4dc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-cyan: var(--cyan);
+  --color-orange: var(--orange);
+  --color-emerald: var(--emerald);
+  --color-rose: var(--rose);
+  --color-amber: var(--amber);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(34, 211, 238, 0.08), transparent 60%),
+    radial-gradient(1000px 600px at 100% 0%, rgba(249, 115, 22, 0.07), transparent 55%),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--border);
+  backdrop-filter: blur(6px);
+}
+
+:root.light .glass {
+  background: linear-gradient(180deg, rgba(16, 25, 43, 0.02), rgba(16, 25, 43, 0.005));
+  box-shadow: 0 1px 2px rgba(16, 25, 43, 0.04);
+}
+
+.glow-cyan { box-shadow: 0 0 0 1px rgba(34,211,238,0.15), 0 0 24px -6px rgba(34,211,238,0.35); }
+.glow-orange { box-shadow: 0 0 0 1px rgba(249,115,22,0.15), 0 0 24px -6px rgba(249,115,22,0.35); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.animate-pulse-slow { animation: pulse-slow 2.4s ease-in-out infinite; }
+
+@keyframes radar-spin {
+  to { transform: rotate(360deg); }
+}
+.animate-radar-spin { animation: radar-spin 6s linear infinite; }
+
+/* Light-mode contrast fixes for accent text tuned against the dark theme by default. */
+:root.light .text-cyan-300 { color: #0e7490; }
+:root.light .text-cyan-300\/80 { color: #0e7490; }
+:root.light .text-amber-400 { color: #b45309; }
+:root.light .text-emerald-400 { color: #047857; }
+:root.light .text-rose-400 { color: #be123c; }
+:root.light .text-rose-500 { color: #be123c; }
+:root.light .text-orange-400\/80 { color: #c2410c; }
+:root.light .text-muted { color: var(--muted); }
+
+/* Dark-mode map: OSM tiles have no free dark style, so invert the raster (a standard,
+   key-free trick) and un-invert markers/popups so station colors stay true. */
+.map-dark-tiles .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+.map-dark-tiles .leaflet-marker-pane,
+.map-dark-tiles .leaflet-overlay-pane,
+.map-dark-tiles .leaflet-popup-pane,
+.map-dark-tiles .leaflet-tooltip-pane {
+  filter: none;
+}
+.leaflet-container {
+  background: var(--panel-2);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+.leaflet-tooltip {
+  background: var(--panel-2);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--panel-2);
+  color: var(--foreground);
+}
+.leaflet-popup-content-wrapper {
+  border: 1px solid var(--border);
+}
+.leaflet-popup-close-button {
+  color: var(--muted) !important;
+}
+
+.station-pin {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.station-pin__dot {
+  position: relative;
+  z-index: 2;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--panel);
+}
+.station-pin__ping {
+  position: absolute;
+  border-radius: 50%;
+  animation: station-beep 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes station-beep {
+  0% { transform: scale(1); opacity: 0.55; }
+  70% { transform: scale(4.2); opacity: 0; }
+  100% { transform: scale(4.2); opacity: 0; }
+}
+
+
