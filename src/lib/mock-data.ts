@@ -104,7 +104,7 @@ export const defaultSafetySteps = [
 // Static explainer copy for how the pipeline works — architecture
 // documentation, not live data.
 export const pipelineStages = [
-  { key: "ingest", label: "API Connect", detail: "IMD / AWS / ARG · Open-Meteo · NOAA ISD · ERA5 + GPM" },
+  { key: "ingest", label: "API Connect", detail: "IMD / AWS / ARG · Open-Meteo · NOAA GHCN · ERA5 + GPM" },
   { key: "schema", label: "Schema Check", detail: "Structural + unit validation on arrival" },
   { key: "normalize", label: "Normalize", detail: "Unified feature pipeline across sources" },
   { key: "score", label: "Anomaly Score", detail: "Rule checks + Isolation Forest" },

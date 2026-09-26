@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from airflow.decorators import dag, task
 
 MEASUREMENTS = ["temperature_c", "humidity_pct", "pressure_hpa", "wind_speed_ms"]
-FEATURE_NAMES = ["value", "delta_5m", "rolling_std", "station_z_score"]
+FEATURE_NAMES = ["value", "delta_1h", "rolling_std", "neighbor_deviation"]
 
 
 @dag(

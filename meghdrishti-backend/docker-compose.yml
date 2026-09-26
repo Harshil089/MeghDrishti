@@ -1,3 +1,14 @@
+x-container-network-env: &container-network-env
+  # .env's DATABASE_URL/REDIS_URL/CELERY_* point at localhost for native
+  # (non-Docker) dev — inside Compose's network those services are reachable
+  # by service name instead, so every container that imports app.* overrides
+  # them here rather than forking .env into a docker-only variant.
+  DATABASE_URL: postgresql+asyncpg://meghdrishti:meghdrishti@postgres:5432/meghdrishti
+  DATABASE_URL_SYNC: postgresql+psycopg://meghdrishti:meghdrishti@postgres:5432/meghdrishti
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -6,7 +17,9 @@ services:
       POSTGRES_PASSWORD: meghdrishti
       POSTGRES_DB: meghdrishti
     ports: ["5432:5432"]
-    volumes: ["pgdata:/var/lib/postgresql/data"]
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+      - "./docker/postgres-init:/docker-entrypoint-initdb.d:ro"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U meghdrishti"]
       interval: 5s
@@ -22,19 +35,47 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build: .
+    image: meghdrishti-backend-api
+    env_file: .env
+    environment: *container-network-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: alembic upgrade head
+
   api:
     build: .
     env_file: .env
-    ports: ["8000:8000"]
+    environment: *container-network-env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    command: >
-      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+      migrate: { condition: service_completed_successfully }
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8000:80"]
+    depends_on: [api]
+
+  web:
+    build:
+      context: ..
+      args:
+        # NEXT_PUBLIC_* is baked in at build time — nginx (above) is the
+        # browser-facing API entrypoint on :8000, same as native dev.
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: 97426230431-3ti10akei2c48tqr6tvheokts2jbmc89.apps.googleusercontent.com
+    ports: ["3000:3000"]
+    depends_on: [nginx]
 
   worker-qc:
     build: .
     env_file: .env
+    environment: *container-network-env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -43,6 +84,7 @@ services:
   worker-context:
     build: .
     env_file: .env
+    environment: *container-network-env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -51,6 +93,7 @@ services:
   worker-alert:
     build: .
     env_file: .env
+    environment: *container-network-env
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -71,31 +114,49 @@ services:
     ports: ["3001:3000"]
     depends_on: [prometheus]
 
-  airflow-webserver:
+  airflow-init:
     image: apache/airflow:2.10.2-python3.12
     env_file: .env
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://meghdrishti:meghdrishti@postgres/meghdrishti_airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+    depends_on:
+      postgres: { condition: service_healthy }
+    command: airflow db migrate
+
+  airflow-webserver:
+    image: apache/airflow:2.10.2-python3.12
+    env_file: .env
+    environment:
+      <<: *container-network-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://meghdrishti:meghdrishti@postgres/meghdrishti_airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
     ports: ["8080:8080"]
     depends_on:
       postgres: { condition: service_healthy }
+      airflow-init: { condition: service_completed_successfully }
     command: webserver
 
   airflow-scheduler:
     image: apache/airflow:2.10.2-python3.12
     env_file: .env
     environment:
+      <<: *container-network-env
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://meghdrishti:meghdrishti@postgres/meghdrishti_airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
     depends_on:
       postgres: { condition: service_healthy }
+      airflow-init: { condition: service_completed_successfully }
     command: scheduler
 
 volumes:

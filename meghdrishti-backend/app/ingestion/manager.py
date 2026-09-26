@@ -15,7 +15,7 @@ from app.ingestion.base import WeatherSourceAdapter
 from app.ingestion.era5 import ERA5Adapter
 from app.ingestion.gpm import GPMAdapter
 from app.ingestion.imd import get_imd_adapter
-from app.ingestion.noaa import NOAAAdapter
+from app.ingestion.ghcn import GHCNAdapter
 from app.ingestion.open_meteo import OpenMeteoAdapter
 from app.models.stations import Station
 from app.repositories.observation_repository import ObservationRepository
@@ -27,7 +27,7 @@ def get_adapter_registry() -> dict[str, WeatherSourceAdapter]:
     return {
         "OPEN_METEO": OpenMeteoAdapter(),
         "IMD": get_imd_adapter(),
-        "NOAA": NOAAAdapter(),
+        "GHCN": GHCNAdapter(),
         "ERA5": ERA5Adapter(),
         "NASA_GPM": GPMAdapter(),
     }
@@ -82,7 +82,7 @@ async def ingest_station(
         schema_valid = True
         try:
             canonical = adapter.normalize(payload)
-        except (ValidationError, KeyError, ValueError) as exc:
+        except (ValidationError, KeyError, ValueError, TypeError) as exc:
             schema_valid = False
             result.schema_invalid += 1
             logger.warning("ingestion_schema_invalid", source=adapter.source_name, error=str(exc))

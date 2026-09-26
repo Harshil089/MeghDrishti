@@ -16,19 +16,27 @@ This repo has two parts:
 
 ## Quickstart
 
-**Backend first** (frontend has nothing to show without it):
+Two supported ways to run this, pick one:
+
+**Docker** (frontend + backend + Postgres + Redis, one command):
 
 ```bash
 cd meghdrishti-backend
 cp .env.example .env
-# needs Postgres + Redis running — see backend README for local (no-Docker)
-# setup, or `docker compose up -d` if you have Docker
+docker compose up -d --build
+docker compose exec api python -m app.db.seed
+```
+
+**Native** (no Docker — backend first, frontend has nothing to show without it):
+
+```bash
+cd meghdrishti-backend
+cp .env.example .env
+# see backend README for native Postgres + Redis setup
 alembic upgrade head
 python -m app.db.seed
 uvicorn app.main:app --reload
 ```
-
-**Frontend:**
 
 ```bash
 cp .env.example .env.local   # sets NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
@@ -69,7 +77,7 @@ pipeline-stage descriptions), never numbers presented as live data.
   (`meghdrishti-backend/app/ingestion/imd.py`), inactive pending IMD API
   access approval (external legal/institutional process). See
   [`queue/imd-integration.md`](queue/imd-integration.md).
-- **NOAA / ERA5 / NASA GPM** — adapter interfaces built, inactive pending
+- **GHCN / ERA5 / NASA GPM** — adapter interfaces built, inactive pending
   credentials/implementation. Same "real interface, inert until ready"
   pattern as IMD.
 

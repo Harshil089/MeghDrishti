@@ -37,7 +37,7 @@ Meteorological Department (IMD)" at the point of display — station
 listings, the observation detail view, and any exported report will carry
 that attribution wherever IMD is the origin source of a shown reading.
 Internally, every observation is tagged with its originating source (IMD,
-Open-Meteo, NOAA, etc.) at ingestion time and this tag is never stripped or
+Open-Meteo, GHCN, etc.) at ingestion time and this tag is never stripped or
 overwritten, so IMD data remains traceable end-to-end.
 
 **4. How will you disseminate information obtained from these APIs to your
@@ -97,7 +97,7 @@ portal lists one by name — I don't have IMD's exact product catalog.]`
 
 - IMD AWS observation data (primary station source)
 - Open-Meteo forecast API (short-range forecast context, no key required)
-- NOAA ISD (secondary station cross-reference, where available)
+- NOAA GHCN (secondary station cross-reference, where available)
 - ERA5 reanalysis (Copernicus CDS) — historical/contextual atmospheric state
 - NASA GPM (IMERG) — satellite rainfall estimate for rainfall-event validation
 - Station metadata: location, elevation, sensor inventory (self-maintained)

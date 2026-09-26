@@ -56,6 +56,6 @@ process with a timeline outside this codebase's control. See
 
 ## Not queued — already works today without IMD
 
-Open-Meteo (no key required) is the live source right now. NOAA/ERA5/GPM
+Open-Meteo (no key required) is the live source right now. GHCN/ERA5/GPM
 adapters are also built with the same "real interface, inert until
 credentials" pattern — same story if/when those are pursued.

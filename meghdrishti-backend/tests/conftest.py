@@ -20,6 +20,14 @@ import app.models  # noqa: F401 populate metadata
 TEST_DB_URL = os.environ["DATABASE_URL"]
 
 
+@pytest.fixture(autouse=True)
+def _isolate_model_store(tmp_path, monkeypatch):
+    """Tests that train/register models must never write into the real model_store/."""
+    import app.ml.registry as registry
+
+    monkeypatch.setattr(registry, "MODEL_STORE", tmp_path)
+
+
 @pytest_asyncio.fixture
 async def db_engine():
     engine = create_async_engine(TEST_DB_URL, future=True)

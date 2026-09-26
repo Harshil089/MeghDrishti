@@ -76,8 +76,7 @@ export async function fetchCurrentUser(): Promise<CurrentUser | null> {
   if (!token) return null;
   const res = await fetch(`${API_BASE}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) return null;
-  const body = await res.json();
-  return body.data as CurrentUser;
+  return (await res.json()) as CurrentUser;
 }
 
 export function authHeaders(): Record<string, string> {

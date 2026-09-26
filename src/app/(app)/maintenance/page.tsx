@@ -1,6 +1,8 @@
 "use client";
 
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { fetchMaintenance, type MaintenanceReport } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { Wrench } from "lucide-react";
@@ -19,8 +21,9 @@ export default function MaintenancePage() {
   return (
     <>
       <Topbar title="Maintenance" />
-      <main className="flex-1 p-4 md:p-6 grid md:grid-cols-2 gap-4">
-        <div className="glass rounded-xl p-6">
+      <main className="flex-1 p-4 md:p-6">
+        <Reveal className="grid md:grid-cols-2 gap-4">
+        <SpotlightCard className="p-6">
           <div className="flex items-center gap-2 mb-1">
             <Wrench className="h-4 w-4 text-amber-400" />
             <h3 className="text-sm font-semibold">Predicted maintenance needs</h3>
@@ -45,8 +48,8 @@ export default function MaintenancePage() {
               </li>
             ))}
           </ul>
-        </div>
-        <div className="glass rounded-xl p-6">
+        </SpotlightCard>
+        <SpotlightCard className="p-6">
           <h3 className="text-sm font-semibold mb-1">Priority queue</h3>
           <p className="text-[11px] text-muted mb-4">Generated from live station health + rule-trigger data.</p>
           {recommended_actions.length === 0 ? (
@@ -58,7 +61,8 @@ export default function MaintenancePage() {
               ))}
             </ol>
           )}
-        </div>
+        </SpotlightCard>
+        </Reveal>
       </main>
     </>
   );

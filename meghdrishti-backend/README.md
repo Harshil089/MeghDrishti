@@ -5,27 +5,36 @@ Distinguishes genuine extreme weather from sensor malfunction using rule-based
 QC, Isolation Forest, and external context validation — never on statistical
 extremity alone.
 
-## Quickstart
+## Quickstart (Docker)
+
+Runs the whole project — frontend, API (behind nginx, round-robin
+load-balanced), Postgres, Redis, Celery workers, Airflow — in containers.
+Migrations run once via a dedicated `migrate` service before `api` starts,
+so this is safe to scale.
 
 ```bash
 cp .env.example .env
-docker compose up -d
-alembic upgrade head
-python -m app.db.seed
+docker compose up -d --build
+docker compose exec api python -m app.db.seed
 ```
 
 Then open:
 
+- Frontend: http://localhost:3000
 - API: http://localhost:8000
 - Swagger: http://localhost:8000/docs
 - Grafana: http://localhost:3001 (admin/admin)
 - Airflow: http://localhost:8080
 - Prometheus: http://localhost:9090
 
+Scale the API horizontally: `docker compose up -d --scale api=3` (nginx
+round-robins across replicas — see `nginx/nginx.conf`).
+
 ## Local development without Docker
 
-This was built and tested against a native Homebrew Postgres 16 + Redis
-(no Docker available in the dev sandbox). To reproduce:
+Also fully supported — this is what the project was originally built and
+tested against (native Homebrew Postgres 16 + Redis). Both paths are kept
+working; pick whichever fits. To reproduce the native path:
 
 ```bash
 brew install postgresql@16
@@ -99,7 +108,7 @@ full original specification this implements.
 | API | `app/api/` |
 | Domain models | `app/models/` |
 | Repositories | `app/repositories/` |
-| Ingestion adapters | `app/ingestion/` (Open-Meteo real, IMD real+demo, NOAA/ERA5/GPM real-interface-with-graceful-fallback) |
+| Ingestion adapters | `app/ingestion/` (Open-Meteo real, IMD real+demo, GHCN/ERA5/GPM real-interface-with-graceful-fallback) |
 | QC rule engine | `app/qc/` |
 | Feature engineering | `app/features/` |
 | ML (Isolation Forest) | `app/ml/` |

@@ -1,6 +1,7 @@
 "use client";
 
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
 import type { Alert } from "@/lib/mock-data";
 import { fetchAlerts } from "@/lib/api";
 import { useLiveDataWs } from "@/lib/useLiveData";
@@ -17,7 +18,7 @@ export default function AlertsPage() {
     <>
       <Topbar title="Alerts" />
       <main className="flex-1 p-4 md:p-6">
-        <div className="glass rounded-xl overflow-hidden">
+        <Reveal className="glass rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-muted border-b border-border">
@@ -53,7 +54,7 @@ export default function AlertsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Reveal>
       </main>
     </>
   );

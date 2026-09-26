@@ -2,13 +2,14 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Menu, Search, Bell, LogIn, LogOut } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AlertDetailModal from "@/components/AlertDetailModal";
-import type { Alert } from "@/lib/mock-data";
-import { fetchAlerts } from "@/lib/api";
-import { useLiveDataWs } from "@/lib/useLiveData";
+import type { Alert, Station } from "@/lib/mock-data";
+import { fetchAlerts, fetchStations } from "@/lib/api";
+import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
 import { useAuth } from "@/lib/useAuth";
 import { logout } from "@/lib/auth";
 
@@ -24,8 +25,31 @@ export default function Topbar({ title }: { title: string }) {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const bellRef = useRef<HTMLButtonElement>(null);
   const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
+  const stations = useLiveData(fetchStations, [] as Station[]);
   const unread = alerts.filter((a) => a.severity !== "info").length;
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  const q = query.trim().toLowerCase();
+  const stationMatches = q ? stations.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 5) : [];
+  const alertMatches = q
+    ? alerts.filter((a) => a.station.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || a.message.toLowerCase().includes(q)).slice(0, 5)
+    : [];
+  const showResults = searchFocused && q.length > 0;
+
+  function goToStation(s: Station) {
+    setQuery("");
+    setSearchFocused(false);
+    router.push(`/network?station=${s.id}`);
+  }
+
+  function openAlert(a: Alert) {
+    setQuery("");
+    setSearchFocused(false);
+    setSelectedAlert(a);
+  }
 
   function toggleOpen() {
     if (!open && bellRef.current) {
@@ -45,9 +69,51 @@ export default function Topbar({ title }: { title: string }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 rounded-lg border border-border bg-panel-2 px-3 py-1.5 text-sm text-muted w-64">
-          <Search className="h-4 w-4" />
-          <span>Search station, alert…</span>
+        <div className="relative hidden sm:block w-64">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-panel-2 px-3 py-1.5 text-sm">
+            <Search className="h-4 w-4 text-muted shrink-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+              placeholder="Search station, alert…"
+              className="w-full bg-transparent outline-none placeholder:text-muted"
+            />
+          </div>
+
+          {showResults && (
+            <div className="absolute top-full mt-1.5 w-full rounded-lg border border-border bg-panel-2 shadow-2xl overflow-hidden z-50">
+              {stationMatches.length === 0 && alertMatches.length === 0 ? (
+                <p className="px-3 py-2.5 text-xs text-muted">No matches.</p>
+              ) : (
+                <ul className="max-h-72 overflow-y-auto text-xs">
+                  {stationMatches.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        onMouseDown={() => goToStation(s)}
+                        className="w-full text-left px-3 py-2 hover:bg-white/[0.04] transition-colors"
+                      >
+                        <span className="text-muted">Station · </span>
+                        {s.name}
+                      </button>
+                    </li>
+                  ))}
+                  {alertMatches.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        onMouseDown={() => openAlert(a)}
+                        className="w-full text-left px-3 py-2 hover:bg-white/[0.04] transition-colors"
+                      >
+                        <span className="text-muted">Alert · </span>
+                        {a.station} — {a.code}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
 
         <button

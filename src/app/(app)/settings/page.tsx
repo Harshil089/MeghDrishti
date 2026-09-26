@@ -1,6 +1,8 @@
 "use client";
 
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { fetchActiveCalibration, fetchDataSources, type CalibrationProfile, type DataSourceStatus } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { Settings as SettingsIcon, Database, SlidersHorizontal } from "lucide-react";
@@ -19,8 +21,8 @@ export default function SettingsPage() {
           <span className="text-[11px] text-muted ml-auto">read-only — edit via calibration DAG / admin API</span>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="glass rounded-xl p-5">
+        <Reveal className="grid md:grid-cols-2 gap-4">
+          <SpotlightCard className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <SlidersHorizontal className="h-4 w-4 text-amber-400" />
               <h4 className="text-sm font-semibold">Active calibration profile</h4>
@@ -57,9 +59,9 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
-          </div>
+          </SpotlightCard>
 
-          <div className="glass rounded-xl p-5">
+          <SpotlightCard className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <Database className="h-4 w-4 text-emerald-400" />
               <h4 className="text-sm font-semibold">Data sources</h4>
@@ -84,8 +86,8 @@ export default function SettingsPage() {
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
+          </SpotlightCard>
+        </Reveal>
       </main>
     </>
   );

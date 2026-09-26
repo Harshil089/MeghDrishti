@@ -53,8 +53,15 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
 
         hourly = data.get("hourly", {})
         times = hourly.get("time", [])
+        naive_start, naive_end = start_time.replace(tzinfo=None), end_time.replace(tzinfo=None)
         records = []
         for i, t in enumerate(times):
+            # /forecast always returns the full requested day(s), including
+            # hours after "now" — without this filter every ingestion run on
+            # the same day re-fetches an identical payload (dedup'd as
+            # duplicates), so nothing after the first run ever looks new.
+            if not (naive_start <= datetime.fromisoformat(t) <= naive_end):
+                continue
             records.append(
                 {
                     "station_id": station.station_code,

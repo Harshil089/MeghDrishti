@@ -21,6 +21,8 @@ meghdrishti-backend/model_store/*.joblib
 meghdrishti-backend/test.db
 meghdrishti-backend/dump.rdb
 meghdrishti-backend/.env
+dump.rdb
+graphify-out/
 
 # --- OS / editor ---
 .DS_Store

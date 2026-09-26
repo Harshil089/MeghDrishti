@@ -10,3 +10,4 @@ model_store/*.joblib
 test.db
 .DS_Store
 dump.rdb
+var/

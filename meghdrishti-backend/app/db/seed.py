@@ -60,7 +60,7 @@ async def seed() -> None:
         for name, kind, enabled in [
             ("OPEN_METEO", "FORECAST_API", True),
             ("IMD", "STATION_NETWORK", settings.imd_enabled),
-            ("NOAA_ISD", "STATION_NETWORK", False),
+            ("GHCN", "STATION_NETWORK", False),
             ("ERA5", "REANALYSIS", False),
             ("NASA_GPM", "SATELLITE", False),
         ]:

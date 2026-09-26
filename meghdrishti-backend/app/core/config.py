@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,8 +46,8 @@ class Settings(BaseSettings):
     imd_api_key: str = ""
     imd_enabled: bool = False
 
-    noaa_isd_base_url: str = "https://www.ncei.noaa.gov/access/services/data/v1"
-    noaa_api_token: str = ""
+    ghcn_base_url: str = "https://www.ncei.noaa.gov/access/services/data/v1"
+    ghcn_api_token: str = ""
 
     era5_cds_url: str = "https://cds.climate.copernicus.eu/api"
     era5_cds_key: str = ""
@@ -75,6 +75,15 @@ class Settings(BaseSettings):
             except Exception:
                 return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _guard_production(self) -> Settings:
+        if self.environment == "production":
+            if self.debug:
+                raise ValueError("DEBUG must be false when ENVIRONMENT=production")
+            if self.jwt_secret == "insecure-dev-secret-change-me":
+                raise ValueError("JWT_SECRET must be set to a real secret when ENVIRONMENT=production")
+        return self
 
 
 @lru_cache

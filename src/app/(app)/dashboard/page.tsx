@@ -9,6 +9,8 @@ import StatsFieldCanvas from "@/components/StatsFieldCanvas";
 import AlertPulseCanvas from "@/components/AlertPulseCanvas";
 import AlertDetailModal from "@/components/AlertDetailModal";
 import Logo from "@/components/Logo";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { pipelineStages, type Alert } from "@/lib/mock-data";
 import {
   fetchAlerts,
@@ -85,13 +87,13 @@ export default function DashboardPage() {
         {/* stat cards */}
         <section className="relative">
           <StatsFieldCanvas />
-          <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Reveal className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
             {statCards.length === 0
               ? Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="glass rounded-xl p-4 h-[92px] animate-pulse" />
                 ))
               : statCards.map((c) => <StatCard key={c.label} {...c} />)}
-          </div>
+          </Reveal>
         </section>
 
         {/* live sensor data */}
@@ -103,16 +105,16 @@ export default function DashboardPage() {
               live · hourly average across active stations
             </span>
           </div>
-          <div className="grid md:grid-cols-3 gap-4">
+          <Reveal className="grid md:grid-cols-3 gap-4">
             <SensorChart title="Temperature" unit="°C" current={latestTemp ?? 0} range="fleet hourly avg" data={fleetSeries.temperature_c} color="#22d3ee" />
             <SensorChart title="Pressure" unit="hPa" current={latestPressure ?? 0} range="fleet hourly avg" data={fleetSeries.pressure_hpa} color="#f97316" />
             <SensorChart title="Humidity" unit="%" current={latestHumidity ?? 0} range="fleet hourly avg" data={fleetSeries.humidity_pct} color="#34d399" />
-          </div>
+          </Reveal>
         </section>
 
         {/* bottom row */}
-        <section className="grid lg:grid-cols-3 gap-4">
-          <div className="glass rounded-xl p-4">
+        <Reveal className="grid lg:grid-cols-3 gap-4">
+          <SpotlightCard className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="h-4 w-4 text-rose-400" />
               <h3 className="text-sm font-semibold">Recent Alerts</h3>
@@ -137,9 +139,9 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </SpotlightCard>
 
-          <div className="glass rounded-xl p-4">
+          <SpotlightCard className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="h-4 w-4 text-cyan-300" />
               <h3 className="text-sm font-semibold">Insights</h3>
@@ -152,9 +154,9 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </SpotlightCard>
 
-          <div className="glass rounded-xl p-4">
+          <SpotlightCard className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <HeartPulse className="h-4 w-4 text-emerald-400" />
               <h3 className="text-sm font-semibold">Sensor Health</h3>
@@ -176,8 +178,8 @@ export default function DashboardPage() {
                 </li>
               ))}
             </ul>
-          </div>
-        </section>
+          </SpotlightCard>
+        </Reveal>
       </main>
     </>
   );

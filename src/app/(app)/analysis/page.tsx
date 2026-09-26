@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { BarChart, Bar, ResponsiveContainer, XAxis, Tooltip } from "recharts";
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { fetchAnomalyAnalytics, fetchStationAnomalies, fetchStationOptions } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { BarChart3 } from "lucide-react";
@@ -96,31 +98,31 @@ export default function AnalysisPage() {
           </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="glass rounded-xl p-5">
+        <Reveal className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SpotlightCard className="p-5">
             <h4 className="text-sm font-semibold mb-4">Classification breakdown</h4>
             <Bars counts={analytics.classification_counts} />
-          </div>
-          <div className="glass rounded-xl p-5">
+          </SpotlightCard>
+          <SpotlightCard className="p-5">
             <h4 className="text-sm font-semibold mb-4">Rule checks triggered</h4>
             <Bars counts={analytics.rule_trigger_counts} />
-          </div>
-        </div>
+          </SpotlightCard>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="glass rounded-xl p-4">
+        <Reveal className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SpotlightCard className="p-4">
             <p className="text-xs text-muted mb-1">Average fault score</p>
             <p className="text-2xl font-semibold text-rose-400">
               {analytics.average_fault_score !== null ? analytics.average_fault_score.toFixed(2) : "—"}
             </p>
-          </div>
-          <div className="glass rounded-xl p-4">
+          </SpotlightCard>
+          <SpotlightCard className="p-4">
             <p className="text-xs text-muted mb-1">Average confidence</p>
             <p className="text-2xl font-semibold text-emerald-400">
               {analytics.average_confidence !== null ? analytics.average_confidence.toFixed(2) : "—"}
             </p>
-          </div>
-          <div className="glass rounded-xl p-4 flex flex-col">
+          </SpotlightCard>
+          <SpotlightCard className="p-4 flex flex-col">
             <p className="text-xs text-muted mb-1">Anomalies per hour</p>
             <div className="h-14 flex-1">
               <ResponsiveContainer width="100%" height="100%">
@@ -134,11 +136,11 @@ export default function AnalysisPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </div>
-        </div>
+          </SpotlightCard>
+        </Reveal>
 
         {activeId && (
-          <div className="glass rounded-xl overflow-hidden">
+          <Reveal className="glass rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted border-b border-border">
@@ -176,7 +178,7 @@ export default function AnalysisPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </Reveal>
         )}
       </main>
     </>

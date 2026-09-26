@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Topbar from "@/components/Topbar";
 import SensorChart from "@/components/SensorChart";
+import Reveal from "@/components/Reveal";
 import { fetchStationObservations, fetchStationOptions, seriesFromReadings } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { Activity, Radio } from "lucide-react";
@@ -50,13 +51,13 @@ export default function LiveMonitorPage() {
           <div className="glass rounded-xl p-8 text-center text-sm text-muted">No stations available.</div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Reveal className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <SensorChart title="Temperature" unit="°C" current={latest?.temperature_c ?? 0} range="18 – 34°C" data={series.temperature} color="#22d3ee" />
               <SensorChart title="Humidity" unit="%" current={latest?.humidity_pct ?? 0} range="40 – 80%" data={series.humidity} color="#34d399" />
               <SensorChart title="Pressure" unit="hPa" current={latest?.pressure_hpa ?? 0} range="1000 – 1015 hPa" data={series.pressure} color="#fbbf24" />
-            </div>
+            </Reveal>
 
-            <div className="glass rounded-xl overflow-hidden">
+            <Reveal delay={0.1} className="glass rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-muted border-b border-border">
@@ -92,7 +93,7 @@ export default function LiveMonitorPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Reveal>
           </>
         )}
       </main>

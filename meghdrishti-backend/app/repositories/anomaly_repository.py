@@ -13,6 +13,10 @@ class AnomalyRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def get_for_observation(self, observation_id: uuid.UUID) -> Anomaly | None:
+        result = await self.session.execute(select(Anomaly).where(Anomaly.observation_id == observation_id))
+        return result.scalar_one_or_none()
+
     async def create(
         self,
         observation_id: uuid.UUID,

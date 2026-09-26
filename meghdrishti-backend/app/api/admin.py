@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,11 +12,14 @@ from app.api.deps import Pagination, pagination_params
 from app.core.exceptions import NotFoundError
 from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
+from app.models.ingestion import RawObservation
+from app.models.observations import WeatherObservation
 from app.models.stations import DataSource
 from app.repositories.calibration_repository import CalibrationRepository
 from app.repositories.ingestion_job_repository import IngestionJobRepository
 from app.repositories.station_repository import StationRepository
 from app.services.ingestion_service import IngestionService
+from app.workers.qc_tasks import process_observation_task
 
 router = APIRouter()
 
@@ -93,6 +97,32 @@ async def list_ingestion_jobs(
         ],
         "meta": {"limit": pagination.limit, "offset": pagination.offset},
     }
+
+
+class EnqueueProcessingRequest(BaseModel):
+    job_ids: list[uuid.UUID]
+
+
+@router.post("/enqueue-processing")
+async def enqueue_processing(
+    body: EnqueueProcessingRequest,
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_REPLAY)),
+) -> dict:
+    """Hand normalized observations from the given ingestion jobs to the
+    realtime Celery pipeline. Exists so the Airflow DAG (a separate Python
+    environment with its own, older, pinned SQLAlchemy) can trigger this
+    without importing any app.* modules directly — it just calls this
+    endpoint over HTTP instead."""
+    result = await db.execute(
+        select(WeatherObservation.id)
+        .join(RawObservation, RawObservation.id == WeatherObservation.raw_observation_id)
+        .where(RawObservation.ingestion_job_id.in_(body.job_ids))
+    )
+    observation_ids = [str(row[0]) for row in result.all()]
+    for observation_id in observation_ids:
+        process_observation_task.delay(observation_id)
+    return {"data": {"enqueued": len(observation_ids)}}
 
 
 @router.post("/replay/{job_id}")

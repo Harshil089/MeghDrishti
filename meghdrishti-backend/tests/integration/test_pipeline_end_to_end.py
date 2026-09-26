@@ -62,3 +62,17 @@ async def test_full_pipeline_produces_anomaly_for_spike(db_session):
 
     health = await HealthRepository(db_session).get_latest(station.id)
     assert health is not None
+
+    # Idempotency: a retry (Celery retry, or a duplicate enqueue-processing
+    # call) must not create a second Anomaly/QC/ML/Context row for the same
+    # observation — it should just return the existing anomaly.
+    from sqlalchemy import func, select
+
+    from app.models.anomalies import Anomaly
+
+    rerun_id = await process_observation(spike_obs.id)
+    assert rerun_id == anomaly_id
+    count = (
+        await db_session.execute(select(func.count()).select_from(Anomaly).where(Anomaly.observation_id == spike_obs.id))
+    ).scalar_one()
+    assert count == 1

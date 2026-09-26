@@ -3,10 +3,13 @@
 import Topbar from "@/components/Topbar";
 import StationMap from "@/components/StationMap";
 import RadarSweepCanvas from "@/components/RadarSweepCanvas";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { statusMeta, type Station } from "@/lib/mock-data";
 import { fetchMaintenance, fetchStations, type MaintenanceReport } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Wrench, ClipboardList } from "lucide-react";
 
 const EMPTY_MAINTENANCE: MaintenanceReport = { predictions: [], recommended_actions: [] };
@@ -20,7 +23,8 @@ function severityBar(pct: number) {
 export default function NetworkPage() {
   const stations = useLiveData(fetchStations, [] as Station[]);
   const maintenance = useLiveData(fetchMaintenance, EMPTY_MAINTENANCE);
-  const [selectedId, setSelectedId] = useState<string>("");
+  const searchParams = useSearchParams();
+  const [selectedId, setSelectedId] = useState<string>(searchParams.get("station") ?? "");
   const selected: Station | undefined = stations.find((s) => s.id === selectedId) ?? stations[0];
 
   return (
@@ -63,8 +67,8 @@ export default function NetworkPage() {
           )}
         </section>
 
-        <section className="grid md:grid-cols-2 gap-4">
-          <div className="glass rounded-xl p-4">
+        <Reveal className="grid md:grid-cols-2 gap-4">
+          <SpotlightCard className="p-4">
             <div className="flex items-center gap-2 mb-3">
               <Wrench className="h-4 w-4 text-amber-400" />
               <h3 className="text-sm font-semibold">Maintenance prediction</h3>
@@ -89,9 +93,9 @@ export default function NetworkPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </SpotlightCard>
 
-          <div className="glass rounded-xl p-4 flex flex-col">
+          <SpotlightCard className="p-4 flex flex-col">
             <div className="flex items-center gap-2 mb-3">
               <ClipboardList className="h-4 w-4 text-cyan-300" />
               <h3 className="text-sm font-semibold">Recommended action</h3>
@@ -106,8 +110,8 @@ export default function NetworkPage() {
                 </li>
               ))}
             </ul>
-          </div>
-        </section>
+          </SpotlightCard>
+        </Reveal>
       </main>
     </>
   );

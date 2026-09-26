@@ -7,6 +7,9 @@ import AtmosphereCanvas from "@/components/AtmosphereCanvas";
 import RadarSweepCanvas from "@/components/RadarSweepCanvas";
 import Counter from "@/components/Counter";
 import MagneticButton from "@/components/MagneticButton";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
+import GradientText from "@/components/GradientText";
 import { pipelineStages } from "@/lib/mock-data";
 import {
   ArrowRight,
@@ -70,29 +73,6 @@ const FEATURES = [
   },
 ];
 
-function Reveal({
-  children,
-  delay = 0,
-  className,
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
-}) {
-  const reduce = useReducedMotion();
-  return (
-    <motion.div
-      className={className}
-      initial={reduce ? false : { opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.5, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
 export default function LandingPage() {
   const reduce = useReducedMotion();
 
@@ -136,7 +116,8 @@ export default function LandingPage() {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">
-              Is that reading a real storm, or a broken sensor?
+              Is that reading a real storm, or a{" "}
+              <GradientText as="span">broken sensor</GradientText>?
             </h1>
             <p className="text-base text-muted leading-relaxed max-w-[52ch] mb-8">
               MeghDrishti tells the difference. Rule checks, an Isolation Forest model, and
@@ -202,7 +183,7 @@ export default function LandingPage() {
       <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
         <Reveal>
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[28ch] mb-10">
-            Built to be trusted with a decision, not just a score
+            Built to be <GradientText as="span">trusted with a decision</GradientText>, not just a score
           </h2>
         </Reveal>
 
@@ -213,11 +194,11 @@ export default function LandingPage() {
               delay={i * 0.05}
               className={f.big ? "md:col-span-2" : "md:col-span-1"}
             >
-              <div className="h-full rounded-2xl border border-border glass p-6">
+              <SpotlightCard className="h-full p-6">
                 <f.icon className="h-5 w-5 text-cyan-400 mb-4" />
                 <h3 className="text-sm font-semibold text-foreground mb-2">{f.title}</h3>
                 <p className="text-sm text-muted leading-relaxed">{f.body}</p>
-              </div>
+              </SpotlightCard>
             </Reveal>
           ))}
         </div>
@@ -233,7 +214,7 @@ export default function LandingPage() {
 
         <div className="grid md:grid-cols-2 gap-4">
           <Reveal delay={0.05}>
-            <div className="h-full rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-6 md:p-8">
+            <SpotlightCard tone="emerald" className="h-full p-6 md:p-8">
               <div className="flex items-center gap-2 mb-4">
                 <CloudRain className="h-4 w-4 text-emerald-400" />
                 <span className="text-sm font-medium text-emerald-400">Likely genuine extreme</span>
@@ -245,11 +226,11 @@ export default function LandingPage() {
               <p className="text-xs font-mono text-emerald-400/80">
                 RAINFALL_EXTREME · GPM_CONFIRMED · NEIGHBOR_CONFIRMED · FORECAST_CONFIRMED
               </p>
-            </div>
+            </SpotlightCard>
           </Reveal>
 
           <Reveal delay={0.12}>
-            <div className="h-full rounded-2xl border border-rose-500/20 bg-rose-500/[0.04] p-6 md:p-8">
+            <SpotlightCard tone="rose" className="h-full p-6 md:p-8">
               <div className="flex items-center gap-2 mb-4">
                 <Gauge className="h-4 w-4 text-rose-400" />
                 <span className="text-sm font-medium text-rose-400">Probable sensor fault</span>
@@ -261,7 +242,7 @@ export default function LandingPage() {
               <p className="text-xs font-mono text-rose-400/80">
                 TEMP_SPIKE · MODEL_HIGH_ANOMALY_SCORE · NEIGHBOR_MISMATCH · FORECAST_MISMATCH
               </p>
-            </div>
+            </SpotlightCard>
           </Reveal>
         </div>
       </section>

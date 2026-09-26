@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from "recharts";
 import type { SeriesPoint } from "@/lib/mock-data";
+import SpotlightCard from "@/components/SpotlightCard";
 
 export default function SensorChart({
   title,
@@ -20,7 +21,7 @@ export default function SensorChart({
 }) {
   const gradientId = `grad-${title.replace(/\s+/g, "-")}`;
   return (
-    <div className="glass rounded-xl p-4 flex flex-col">
+    <SpotlightCard className="p-4 flex flex-col">
       <div className="flex items-center justify-between mb-1">
         <p className="text-sm text-muted">{title}</p>
         <span className="h-1.5 w-1.5 rounded-full animate-pulse-slow" style={{ background: color }} />
@@ -53,6 +54,6 @@ export default function SensorChart({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </SpotlightCard>
   );
 }

@@ -6,7 +6,8 @@ import type { Alert, SeriesPoint, Station, StationStatus } from "@/lib/mock-data
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 async function getJSON<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const { authHeaders } = await import("@/lib/auth");
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: authHeaders() });
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
   const body = await res.json();
   return body.data as T;

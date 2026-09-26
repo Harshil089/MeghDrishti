@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { useAuth } from "@/lib/useAuth";
 import { useLiveData } from "@/lib/useLiveData";
 import {
@@ -43,7 +45,7 @@ function IngestionJobsPanel() {
   }
 
   return (
-    <div className="glass rounded-xl p-5">
+    <SpotlightCard className="p-5">
       <div className="flex items-center gap-2 mb-3">
         <Database className="h-4 w-4 text-cyan-300" />
         <h4 className="text-sm font-semibold">Ingestion jobs</h4>
@@ -77,7 +79,7 @@ function IngestionJobsPanel() {
           </div>
         ))}
       </div>
-    </div>
+    </SpotlightCard>
   );
 }
 
@@ -95,7 +97,7 @@ function ModelsPanel() {
   }
 
   return (
-    <div className="glass rounded-xl p-5">
+    <SpotlightCard className="p-5">
       <div className="flex items-center gap-2 mb-3">
         <Cpu className="h-4 w-4 text-amber-400" />
         <h4 className="text-sm font-semibold">Isolation Forest models</h4>
@@ -130,7 +132,7 @@ function ModelsPanel() {
           </div>
         ))}
       </div>
-    </div>
+    </SpotlightCard>
   );
 }
 
@@ -158,10 +160,10 @@ export default function AdminPage() {
             to manage ingestion jobs and models.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4">
+          <Reveal className="grid md:grid-cols-2 gap-4">
             <IngestionJobsPanel />
             <ModelsPanel />
-          </div>
+          </Reveal>
         )}
       </main>
     </>

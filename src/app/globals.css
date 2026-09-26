@@ -66,6 +66,32 @@ body {
 .glow-cyan { box-shadow: 0 0 0 1px rgba(34,211,238,0.15), 0 0 24px -6px rgba(34,211,238,0.35); }
 .glow-orange { box-shadow: 0 0 0 1px rgba(249,115,22,0.15), 0 0 24px -6px rgba(249,115,22,0.35); }
 
+/* SpotlightCard: cursor-tracked glow, pointer-only (no effect on touch, no
+   :hover to fake). Reduced-motion keeps the glow but skips the opacity
+   transition so it snaps rather than fades. */
+.spotlight-card__glow {
+  background: radial-gradient(
+    240px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    rgba(34, 211, 238, 0.12),
+    transparent 70%
+  );
+}
+@media (hover: hover) {
+  .spotlight-card:hover .spotlight-card__glow { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-card__glow { transition-duration: 0s; }
+}
+
+.gradient-text {
+  background-image: linear-gradient(90deg, var(--cyan), var(--orange), var(--cyan));
+  background-size: 200% 100%;
+}
+.gradient-text--animated { animation: gradient-sweep 6s linear infinite; }
+@keyframes gradient-sweep {
+  to { background-position: -200% 0; }
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }

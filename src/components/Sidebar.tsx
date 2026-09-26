@@ -63,7 +63,7 @@ export default function Sidebar() {
               {active && (
                 <motion.span
                   layoutId="sidebar-active-pill"
-                  className="absolute inset-0 rounded-lg bg-cyan-400/10 border border-cyan-400/20"
+                  className="absolute inset-0 rounded-lg bg-cyan-400/10 border border-cyan-400/20 glow-cyan"
                   transition={{ type: "spring", stiffness: 420, damping: 34 }}
                 />
               )}

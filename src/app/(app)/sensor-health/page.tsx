@@ -1,6 +1,8 @@
 "use client";
 
 import Topbar from "@/components/Topbar";
+import Reveal from "@/components/Reveal";
+import SpotlightCard from "@/components/SpotlightCard";
 import { fetchSensorHealth, type SensorHealth } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { HeartPulse } from "lucide-react";
@@ -18,7 +20,7 @@ function Gauge({ sensor }: { sensor: SensorHealth }) {
   const angle = pct !== null ? (pct / 100) * 360 : 0;
 
   return (
-    <div className="glass rounded-xl p-5 flex flex-col items-center text-center">
+    <SpotlightCard className="p-5 flex flex-col items-center text-center">
       <div
         className="relative h-24 w-24 rounded-full flex items-center justify-center"
         style={{
@@ -36,7 +38,7 @@ function Gauge({ sensor }: { sensor: SensorHealth }) {
       <p className="text-[11px] text-muted mt-1 font-mono">
         {sensor.readings} readings · {sensor.rule_triggers} flagged
       </p>
-    </div>
+    </SpotlightCard>
   );
 }
 
@@ -58,11 +60,11 @@ export default function SensorHealthPage() {
         {sensors.length === 0 ? (
           <div className="glass rounded-xl p-8 text-center text-sm text-muted">Connecting to backend…</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Reveal className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {sensors.map((s) => (
               <Gauge key={s.measurement} sensor={s} />
             ))}
-          </div>
+          </Reveal>
         )}
       </main>
     </>

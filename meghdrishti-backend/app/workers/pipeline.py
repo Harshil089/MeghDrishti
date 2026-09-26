@@ -303,6 +303,14 @@ async def process_observation(observation_id: uuid.UUID) -> uuid.UUID | None:
             logger.warning("process_observation_missing", observation_id=str(observation_id))
             return None
 
+        # Celery retries (and any duplicate enqueue-processing call) would
+        # otherwise re-run QC/ML/context and create a second Anomaly + Alert
+        # for the same observation. One anomaly per observation is final, so
+        # its existence is the idempotency check for the whole pipeline.
+        existing = await AnomalyRepository(session).get_for_observation(observation_id)
+        if existing is not None:
+            return existing.id
+
         station = await StationRepository(session).get(obs.station_id)
         profile = await CalibrationRepository(session).get_active()
         rule_thresholds = profile.rule_thresholds if profile else None
