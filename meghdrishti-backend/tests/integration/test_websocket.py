@@ -4,13 +4,15 @@ import json
 import pytest
 from starlette.testclient import TestClient
 
+from app.core.security import create_access_token
 from app.main import app
 from app.services.event_publisher import publish_dashboard_event
 
 
 def test_dashboard_websocket_receives_published_event():
+    token = create_access_token(subject="test-user", roles=["ADMIN"])
     with TestClient(app) as client:
-        with client.websocket_connect("/ws/dashboard") as ws:
+        with client.websocket_connect(f"/ws/dashboard?token={token}") as ws:
             async def _publish():
                 await asyncio.sleep(0.2)
                 await publish_dashboard_event("ANOMALY_CREATED", {"anomaly_id": "abc123"})
