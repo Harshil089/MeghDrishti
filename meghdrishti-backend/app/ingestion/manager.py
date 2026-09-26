@@ -13,9 +13,9 @@ from app.core.logging import get_logger
 from app.core.metrics import observations_failed_total, observations_ingested_total
 from app.ingestion.base import WeatherSourceAdapter
 from app.ingestion.era5 import ERA5Adapter
+from app.ingestion.ghcn import GHCNAdapter
 from app.ingestion.gpm import GPMAdapter
 from app.ingestion.imd import get_imd_adapter
-from app.ingestion.ghcn import GHCNAdapter
 from app.ingestion.open_meteo import OpenMeteoAdapter
 from app.models.stations import Station
 from app.repositories.observation_repository import ObservationRepository
