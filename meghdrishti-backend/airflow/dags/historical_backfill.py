@@ -5,11 +5,11 @@ with dag_run.conf = {"days": 30, "sources": ["OPEN_METEO"]}.
 """
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow.decorators import dag, task
 from airflow.models.param import Param
+from backend_api import API_BASE, backend_session
 
 
 @dag(
@@ -17,7 +17,7 @@ from airflow.models.param import Param
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
-    params={"days": Param(30, type="integer"), "sources": Param(["OPEN_METEO"], type="array")},
+    params={"days": Param(30, type="integer", minimum=1, maximum=365), "sources": Param(["OPEN_METEO"], type="array")},
     tags=["ingestion", "backfill"],
 )
 def historical_backfill():
@@ -27,25 +27,25 @@ def historical_backfill():
         days = params["days"]
         sources = params["sources"]
 
-        from app.db.session import AsyncSessionLocal
-        from app.repositories.station_repository import StationRepository
-        from app.services.ingestion_service import IngestionService
-
-        async def _run() -> dict:
-            end = datetime.utcnow()
-            start = end - timedelta(days=days)
-            totals = {"normalized": 0, "duplicates": 0, "errors": 0}
-            async with AsyncSessionLocal() as session:
-                stations = await StationRepository(session).all_active()
+        totals = {"normalized": 0, "duplicates": 0, "errors": 0}
+        with backend_session() as session:
+            offset = 0
+            while True:
+                response = session.get(f"{API_BASE}/stations", params={"is_active": "true", "limit": 500, "offset": offset}, timeout=30)
+                response.raise_for_status()
+                stations = response.json()["data"]
+                if not stations:
+                    break
                 for station in stations:
                     for source in sources:
-                        result = await IngestionService(session).run_for_station(station, source, start, end)
+                        response = session.post(f"{API_BASE}/admin/ingest/{station['id']}", params={"source": source, "window_minutes": days * 1440}, timeout=300)
+                        response.raise_for_status()
+                        result = response.json()["data"]
                         totals["normalized"] += result.get("normalized", 0)
                         totals["duplicates"] += result.get("duplicates", 0)
                         totals["errors"] += len(result.get("errors", []))
-            return totals
-
-        return asyncio.run(_run())
+                offset += len(stations)
+        return totals
 
     backfill()
 

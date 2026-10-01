@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.alerts import Alert
+from app.models.anomalies import Anomaly
+from app.models.observations import WeatherObservation
 
 
 class AlertRepository:
@@ -46,9 +48,13 @@ class AlertRepository:
         return result.scalar_one_or_none()
 
     async def list(
-        self, limit: int, offset: int, status: str | None = None, priority: str | None = None, station_id: uuid.UUID | None = None
+        self, limit: int, offset: int, status: str | None = None, priority: str | None = None, station_id: uuid.UUID | None = None,
     ) -> list[Alert]:
-        stmt = select(Alert).order_by(Alert.created_at.desc()).limit(limit).offset(offset)
+        stmt = (select(Alert)
+                .outerjoin(Anomaly, Anomaly.id == Alert.anomaly_id)
+                .outerjoin(WeatherObservation, WeatherObservation.id == Anomaly.observation_id)
+                .order_by(func.coalesce(WeatherObservation.timestamp, Alert.created_at).desc(), Alert.created_at.desc())
+                .limit(limit).offset(offset))
         if status:
             stmt = stmt.where(Alert.status == status)
         if priority:

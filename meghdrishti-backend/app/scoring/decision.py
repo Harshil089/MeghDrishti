@@ -1,9 +1,10 @@
 """Final decision engine: fusion + confidence + ExtremeEventGuard + reason codes.
 
-The ExtremeEventGuard is the component that keeps a genuinely extreme
-observation from being auto-labelled a sensor fault: strong contextual
-agreement always wins over a high anomaly score.
+The ExtremeEventGuard preserves corroborated weather extremes. Context cannot
+explain impossible values or operational faults, and conflicting sources
+require investigation rather than an automatic weather/fault verdict.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -45,6 +46,7 @@ class DecisionEngine:
         model_reliability: float = 0.5,
         fusion_weights: dict | None = None,
         decision_thresholds: dict | None = None,
+        observation_source: str | None = None,
     ) -> DecisionResult:
         thresholds = {**DEFAULT_DECISION_THRESHOLDS, **(decision_thresholds or {})}
 
@@ -63,8 +65,12 @@ class DecisionEngine:
             ]
             if c is not None
         ]
-        context_agreement_avg = sum(other_agreements) / len(other_agreements) if other_agreements else None
-        context_mismatch = (1.0 - context_agreement_avg) if context_agreement_avg is not None else 0.0
+        context_agreement_avg = (
+            sum(other_agreements) / len(other_agreements) if other_agreements else None
+        )
+        context_mismatch = (
+            (1.0 - context_agreement_avg) if context_agreement_avg is not None else 0.0
+        )
 
         fault_score = compute_fault_score(
             FusionInputs(
@@ -78,14 +84,50 @@ class DecisionEngine:
         )
 
         context_available = context_result.external_context_available if context_result else False
-        overall_context_agreement = context_result.extreme_weather_score if context_result and context_available else None
+        overall_context_agreement = (
+            context_result.extreme_weather_score if context_result and context_available else None
+        )
 
-        anomaly_detected = fault_score >= thresholds["WATCH"]
+        operational_rules = [
+            r
+            for r in rule_results
+            if r.triggered
+            and (
+                r.rule in {"DROPOUT", "TELEMETRY_GAP", "TIMESTAMP_ANOMALY"}
+                or r.evidence.get("physically_impossible")
+            )
+        ]
+        operational_score = max((r.score for r in operational_rules), default=0.0)
+        # Missing layers must not dilute a strong available signal into NORMAL.
+        anomaly_detected = (
+            fault_score >= thresholds["WATCH"]
+            or rule_score >= thresholds["WATCH"]
+            or bool(ml_result and ml_result.is_anomalous)
+        )
         strong_anomaly_evidence = max(rule_score, ml_score) >= STRONG_ANOMALY_EVIDENCE
+        context_scores = [v for v in [neighbor_agreement, *other_agreements] if v is not None]
+        context_conflict = bool(context_scores) and (
+            min(context_scores) <= STRONG_CONTEXT_DISAGREEMENT
+            and max(context_scores) >= STRONG_CONTEXT_AGREEMENT
+        )
 
         classification: str
-        if anomaly_detected:
-            if context_available and overall_context_agreement is not None and overall_context_agreement >= STRONG_CONTEXT_AGREEMENT:
+        if operational_rules and all(r.rule == "TELEMETRY_GAP" for r in operational_rules):
+            # Missing collection intervals cannot identify which component failed.
+            classification = "INSUFFICIENT_CONTEXT"
+        elif operational_rules:
+            classification = (
+                "PROBABLE_SENSOR_FAULT" if operational_score >= STRONG_ANOMALY_EVIDENCE else "WATCH"
+            )
+        elif anomaly_detected:
+            if context_conflict:
+                classification = "SUSPICIOUS" if strong_anomaly_evidence else "WATCH"
+            elif (
+                strong_anomaly_evidence
+                and context_available
+                and overall_context_agreement is not None
+                and overall_context_agreement >= STRONG_CONTEXT_AGREEMENT
+            ):
                 classification = "LIKELY_GENUINE_EXTREME"
             elif (
                 strong_anomaly_evidence
@@ -98,34 +140,55 @@ class DecisionEngine:
                 classification = "INSUFFICIENT_CONTEXT" if strong_anomaly_evidence else "SUSPICIOUS"
             else:
                 classification = self._threshold_classification(fault_score, thresholds)
+                if classification == "NORMAL":
+                    classification = "WATCH"
         else:
             classification = "NORMAL" if fault_score < thresholds["WATCH"] else "WATCH"
+        if observation_source in {"OPEN_METEO", "ERA5", "NASA_GPM"} and classification == "PROBABLE_SENSOR_FAULT":
+            classification = "SUSPICIOUS"
 
         severity = severity_for_classification(classification, fault_score)
 
         evidence_source_count = sum(
             [
-                1 if rule_score > 0 else 0,
+                1 if rule_results else 0,
                 1 if ml_result is not None else 0,
                 1 if neighbor_agreement is not None else 0,
                 1 if context_agreement_avg is not None else 0,
             ]
         )
-        agreement_values = [v for v in [rule_score, ml_score, neighbor_mismatch, context_mismatch] if v is not None]
-        agreement = 1.0 - (max(agreement_values) - min(agreement_values)) if len(agreement_values) > 1 else 0.5
+        agreement_values = [
+            v
+            for v in [
+                rule_score if rule_results else None,
+                ml_score if ml_result else None,
+                neighbor_mismatch if neighbor_agreement is not None else None,
+                context_mismatch if context_agreement_avg is not None else None,
+            ]
+            if v is not None
+        ]
+        agreement = (
+            1.0 - (max(agreement_values) - min(agreement_values))
+            if len(agreement_values) > 1
+            else 0.0
+        )
 
         confidence = compute_confidence(
             ConfidenceInputs(
                 evidence_source_count=evidence_source_count,
                 agreement=max(0.0, min(1.0, agreement)),
                 context_available=context_available,
-                model_reliability=model_reliability,
+                model_reliability=model_reliability if ml_result else 0.0,
                 station_data_completeness_pct=station_data_completeness_pct,
                 station_historical_quality=station_historical_quality,
             )
         )
 
         reason_codes = collect_reason_codes(rule_results, ml_result, context_result)
+        if context_conflict:
+            reason_codes.append("CONTEXT_CONFLICT")
+        if operational_rules and all(r.rule == "TELEMETRY_GAP" for r in operational_rules):
+            reason_codes.append("COLLECTION_GAP_UNATTRIBUTED")
 
         return DecisionResult(
             classification=classification,
@@ -141,6 +204,11 @@ class DecisionEngine:
                 "telemetry_score": telemetry_score,
                 "context_available": context_available,
                 "overall_context_agreement": overall_context_agreement,
+                "operational_score": operational_score,
+                "evidence_source_count": evidence_source_count,
+                "confidence_is_calibrated": False,
+                "context_conflict": context_conflict,
+                "observation_source": observation_source,
             },
         )
 

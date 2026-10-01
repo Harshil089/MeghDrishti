@@ -5,62 +5,42 @@ Distinguishes genuine extreme weather from sensor malfunction using rule-based
 QC, Isolation Forest, and external context validation — never on statistical
 extremity alone.
 
-## Quickstart (Docker)
+## Local development
 
-Runs the whole project — frontend, API (behind nginx, round-robin
-load-balanced), Postgres, Redis, Celery workers, Airflow — in containers.
-Migrations run once via a dedicated `migrate` service before `api` starts,
-so this is safe to scale.
+Recommended for laptop development. Follow the root [Quickstart](../README.md#quickstart):
 
 ```bash
-cp .env.example .env
-docker compose up -d --build
-docker compose exec api python -m app.db.seed
+# From repository root, after installing dependencies:
+npm run dev
+npm run status
+npm run stop
 ```
 
-Then open:
+The launcher uses `.venv`, dedicated Postgres/Redis data in `../.local/`,
+one Celery worker with a solo pool, and Celery Beat instead of Airflow.
+`DB_POOLING=false` on the worker prevents reuse of asyncpg connections across
+Celery tasks' separate event loops. API database pooling stays enabled.
+Optional Grafana and Prometheus processes are not started by the launcher.
 
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- Swagger: http://localhost:8000/docs
-- Grafana: http://localhost:3001 (admin/admin)
-- Airflow: http://localhost:8080
-- Prometheus: http://localhost:9090
+Four UTC schedules run ingestion, model training, calibration,
+and station roster jobs. Backfill is available through the native scheduled
+job task; see the root README. Candidate models and calibration profiles
+remain inactive until explicitly activated. Scheduled failures are logged;
+Beat does not provide DAG run history or scheduled-operation retries.
 
-Scale the API horizontally: `docker compose up -d --scale api=3` (nginx
-round-robins across replicas — see `nginx/nginx.conf`).
-
-## Local development without Docker
-
-Also fully supported — this is what the project was originally built and
-tested against (native Homebrew Postgres 16 + Redis). Both paths are kept
-working; pick whichever fits. To reproduce the native path:
-
-```bash
-brew install postgresql@16
-/opt/homebrew/opt/postgresql@16/bin/pg_ctl -D /opt/homebrew/var/postgresql@16 start
-redis-server --daemonize yes
-
-createuser meghdrishti --pwprompt   # password: meghdrishti
-createdb meghdrishti -O meghdrishti
-createdb meghdrishti_test -O meghdrishti   # used by the test suite
-
-uv venv --python 3.12 .venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-cp .env.example .env
-alembic upgrade head
-python -m app.db.seed
-uvicorn app.main:app --reload
-```
+Open http://localhost:3000 for the app and http://localhost:8000/docs for the
+API. From this backend directory, `make up`, `make down`, and `make status`
+also control the full native stack. Logs are in `../.local/logs/`.
 
 ## Tests
 
 ```bash
-pytest -q          # 57 tests: unit, integration, API — all against a real
-                    # Postgres + Redis, not mocks/sqlite
-ruff check app
-mypy app            # non-blocking in CI; a handful of SQLAlchemy Mapped[]
+# Create a dedicated test database first; never use the application database.
+"$(brew --prefix postgresql@16)/bin/createdb" -h localhost -O meghdrishti meghdrishti_test
+DATABASE_URL=postgresql+asyncpg://meghdrishti:meghdrishti@localhost:5432/meghdrishti_test \
+  REDIS_URL=redis://localhost:6379/3 .venv/bin/pytest -q
+.venv/bin/ruff check app
+.venv/bin/mypy app   # non-blocking in CI; a handful of SQLAlchemy Mapped[]
                     # typing false-positives remain (see below)
 ```
 
@@ -98,8 +78,7 @@ RAW OBSERVATION → INGESTION → SCHEMA VALIDATION → NORMALIZATION → FEATUR
 
 Raw observations (`raw_observations`) are never mutated. Rule/ML/context
 outputs are persisted independently (`qc_rule_results`, `ml_results`,
-`context_results`) before fusion. See `AGENTS.md` at the repo root for the
-full original specification this implements.
+`context_results`) before fusion. See the root README for the application overview.
 
 ### Modules
 
@@ -108,7 +87,7 @@ full original specification this implements.
 | API | `app/api/` |
 | Domain models | `app/models/` |
 | Repositories | `app/repositories/` |
-| Ingestion adapters | `app/ingestion/` (Open-Meteo real, IMD real+demo, GHCN/ERA5/GPM real-interface-with-graceful-fallback) |
+| Ingestion adapters | `app/ingestion/` (Open-Meteo real, IMD real, credentials required, GHCN/ERA5/GPM real-interface-with-graceful-fallback) |
 | QC rule engine | `app/qc/` |
 | Feature engineering | `app/features/` |
 | ML (Isolation Forest) | `app/ml/` |
@@ -116,25 +95,30 @@ full original specification this implements.
 | Evidence fusion / decision | `app/scoring/` |
 | Alerting | `app/alerts/` |
 | Station health | `app/health/` |
-| Celery workers | `app/workers/` |
-| Airflow DAGs | `airflow/dags/` |
+| Celery worker and Beat schedules | `app/workers/` |
+| Optional legacy Airflow DAGs | `airflow/dags/` |
 
-## What's fully implemented and tested (73 automated tests, real Postgres/Redis)
+## Implemented capabilities
 
 - Foundation: FastAPI app, structured JSON logging, `/health`, `/ready`, `/metrics`
 - Full DB schema (26 tables) + Alembic migration, verified upgrade/downgrade
 - JWT auth (access + refresh), Argon2 password hashing, RBAC (5 roles)
-- Ingestion: adapter interface, Open-Meteo (real HTTP), IMD (real interface +
-  labelled demo fallback when no credentials), raw preservation, idempotent
+- Ingestion: adapter interface, Open-Meteo (real HTTP), IMD (real interface; credentials required), raw preservation, idempotent
   dedup by payload hash, schema validation, normalization
+  Synthetic data and its generator have been removed. IMD is scheduled only
+  when enabled with credentials.
+  See the [stored alert audit](docs/alert-audit.md).
 - QC rule engine: all 11 rules from the spec, configurable thresholds
 - Feature engineering: deltas, rolling stats, rate of change, z-score,
   neighbor stats, historical baselines — never zero-fills missing data
 - Isolation Forest: training, candidate registry (never auto-activates),
   evaluation, inference — all on engineered features, never raw values.
-  **6 models (one per measurement) trained on real ingested data and
-  activated** (`scripts/train_models.py`) — ML genuinely contributes to
-  fusion scores now, not a placeholder.
+  Models contribute to fusion when an active version is registered.
+  Train with `scripts/train_models.py`; API/CLI use the same source-filtered,
+  chronological holdout policy. Demo data and unverified wind units are excluded.
+  Forecast candidates are diagnostic only and cannot be activated. Activation
+  of eligible sensor candidates is explicit; it does not establish accuracy.
+  See [ML evidence and limitations](docs/provider-ml-audit.md#ml-improvement-follow-up--2026-10-01).
 - Context engine: distinguishes "unavailable" from "disagrees", neighbor/
   forecast/ERA5/GPM consistency scoring. **Station neighbors computed**
   (`scripts/compute_neighbors.py`) — spatial context is real.
@@ -160,31 +144,28 @@ full original specification this implements.
 - WebSocket relay over real Redis Pub/Sub (`/ws/dashboard`, `/ws/alerts`,
   `/ws/stations/{id}`)
 - Prometheus metrics wired into ingestion/QC/ML/context/alerts/websockets;
-  **Prometheus + Grafana verified actually running** (locally via Homebrew,
-  no Docker needed — dashboard imported and confirmed scraping live data),
-  not just configured on disk
+  Optional native Prometheus scrape configuration and an importable Grafana
+  dashboard are supplied; neither process is started by the launcher
 - Rate limiting on login, security headers, error envelope, audit logging
 - Synthetic fault generator (`scripts/inject_fault.py`), all 6 fault types
   verified against a live database
 
 ## Known gaps / follow-ups
 
-- **Docker Compose / full multi-container stack** — written, never booted
-  (no Docker in this dev environment). Each piece has been verified to
-  actually work standalone outside Docker (Postgres/Redis via Homebrew,
-  Prometheus/Grafana via Homebrew), which derisks the compose file
-  somewhat, but the compose file itself has not been run.
-- **Airflow DAGs** (`airflow/dags/*.py`) are written and syntax-checked but
-  not runtime-verified — no Docker in this environment to run the Airflow
-  image. They're thin wrappers around already-tested service code
-  (`IngestionService`, `ModelRegistry`, etc.), so the risk is limited to
-  DAG-definition glue, not business logic.
-- **ERA5 / NASA GPM adapters** implement the real interface but return
-  `[]` (correctly surfaced as "context unavailable", not "zero") until
-  CDS/Earthdata credentials are configured — these require batch retrieval
-  workflows (cdsapi jobs, IMERG granule subsetting) out of scope for a
-  synchronous per-observation fetch; wire them through the backfill DAG
-  when credentials are available.
+- **Scheduled operations**: native startup and worker connectivity are
+  verified; full execution of each Beat scheduled operation remains unverified.
+- **Airflow DAGs** are an optional alternative in a separate Python environment.
+  Use a localhost backend API URL and export the admin credentials to Airflow.
+  Do not schedule the same jobs concurrently with Beat.
+- **Live providers / ML validation**: Open-Meteo passed 15/15 live samples
+  on 2026-10-01. Its wind-unit mapping and UTC handling are fixed; historical
+  wind data remains affected. Zero independent labels and zero active models
+  mean ML accuracy is unknown. See [the audit](docs/provider-ml-audit.md) and
+  [fused decision evaluation](docs/decision-accuracy.md).
+- **ERA5 / NASA GPM adapters** require CDS/Earthdata credentials and batch
+  retrieval. Missing credentials are surfaced as unavailable context.
+  ERA5 credentials are present locally, but retrieval was not verified in
+  this audit; use the backfill workflow to validate access and data delivery.
 - **mypy**: 41 findings remain, almost entirely `Mapped[datetime]` being
   seen as `DateTime` across module boundaries (a stub-resolution artifact,
   not a real type error — every one of those call sites is exercised by a

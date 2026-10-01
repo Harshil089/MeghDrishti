@@ -1,13 +1,16 @@
-.PHONY: dev up down migrate seed test lint
+.PHONY: dev up down status migrate seed test lint
 
 dev:
 	uvicorn app.main:app --reload
 
 up:
-	docker compose up -d
+	bash ../scripts/local.sh start
 
 down:
-	docker compose down
+	bash ../scripts/local.sh stop
+
+status:
+	bash ../scripts/local.sh status
 
 migrate:
 	alembic upgrade head

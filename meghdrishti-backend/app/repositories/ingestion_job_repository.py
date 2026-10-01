@@ -13,10 +13,11 @@ class IngestionJobRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def create(self, source: str, station_id: uuid.UUID | None) -> IngestionJob:
+    async def create(self, source: str, station_id: uuid.UUID | None, stats: dict | None = None) -> IngestionJob:
         job = IngestionJob(
             source=source, station_id=station_id, status="RUNNING",
             started_at=datetime.now(UTC),
+            stats=stats or {},
         )
         self.session.add(job)
         await self.session.commit()

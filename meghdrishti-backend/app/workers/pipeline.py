@@ -6,6 +6,7 @@ pipeline logic is directly unit/integration-testable without Celery.
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
 from sqlalchemy import extract, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,17 +54,20 @@ async def run_rule_engine(
     result = await session.execute(select(WeatherObservation).where(WeatherObservation.id == observation_id))
     obs = result.scalar_one()
 
-    history_rows = await obs_repo.recent_for_station(obs.station_id, before=obs.timestamp, limit=100)
-    history_rows = [h for h in history_rows if h.id != obs.id]
+    history_rows = await obs_repo.recent_for_station(obs.station_id, before=obs.timestamp, limit=100, source=obs.source)
+    history_rows = [h for h in history_rows if h.timestamp < obs.timestamp]
     history = [{"timestamp": h.timestamp, **_measurements_dict(h)} for h in history_rows]
 
+    thresholds = merge_thresholds(rule_thresholds)
+    if obs.source == "OPEN_METEO":
+        thresholds["TELEMETRY_GAP"]["expected_interval_minutes"] = 60
     ctx = QCContext(
         timestamp=obs.timestamp,
         received_at=obs.received_at,
         measurements=_measurements_dict(obs),
         history=history,
         last_observation_timestamp=history[0]["timestamp"] if history else None,
-        thresholds=merge_thresholds(rule_thresholds),
+        thresholds=thresholds,
     )
     results = QCEngine().run(ctx)
     for r in results:
@@ -78,8 +82,8 @@ async def calculate_features(session: AsyncSession, observation_id: uuid.UUID) -
     result = await session.execute(select(WeatherObservation).where(WeatherObservation.id == observation_id))
     obs = result.scalar_one()
 
-    history_rows = await obs_repo.recent_for_station(obs.station_id, before=obs.timestamp, limit=100)
-    history_rows = [h for h in history_rows if h.id != obs.id]
+    history_rows = await obs_repo.recent_for_station(obs.station_id, before=obs.timestamp, limit=100, source=obs.source)
+    history_rows = [h for h in history_rows if h.timestamp < obs.timestamp]
     history = [{"timestamp": h.timestamp, **_measurements_dict(h)} for h in history_rows]
 
     same_hour_history: dict[str, list[float]] = {m: [] for m in MEASUREMENTS}
@@ -87,8 +91,9 @@ async def calculate_features(session: AsyncSession, observation_id: uuid.UUID) -
         select(WeatherObservation).where(
             WeatherObservation.station_id == obs.station_id,
             extract("hour", WeatherObservation.timestamp) == obs.timestamp.hour,
-            WeatherObservation.id != obs.id,
-        ).limit(200)
+            WeatherObservation.source == obs.source,
+            WeatherObservation.timestamp < obs.timestamp,
+        ).order_by(WeatherObservation.timestamp.desc()).limit(200)
     )
     for row in same_hour_rows.scalars().all():
         for m in MEASUREMENTS:
@@ -99,8 +104,9 @@ async def calculate_features(session: AsyncSession, observation_id: uuid.UUID) -
     neighbors = await StationRepository(session).neighbors_of(obs.station_id)
     neighbor_values: dict[str, list[float]] = {m: [] for m in MEASUREMENTS}
     for n in neighbors[:5]:
-        neighbor_latest = await obs_repo.recent_for_station(n.neighbor_station_id, before=obs.timestamp, limit=1)
-        if neighbor_latest:
+        neighbor_latest = await obs_repo.recent_for_station(n.neighbor_station_id, before=obs.timestamp, limit=1, source=obs.source)
+        max_age = timedelta(minutes=120 if obs.source == "OPEN_METEO" else 30)
+        if neighbor_latest and obs.timestamp - neighbor_latest[0].timestamp <= max_age:
             for m in MEASUREMENTS:
                 v = getattr(neighbor_latest[0], m)
                 if v is not None:
@@ -173,12 +179,14 @@ async def run_context_validation(session: AsyncSession, observation_id: uuid.UUI
             continue
 
         neighbor_median = None
-        if feature_row:
+        if feature_row and obs.source != "OPEN_METEO":
             neighbor_median = feature_row.features.get(measurement, {}).get("neighbor_median")
 
-        forecast_value = await fetch_forecast_value(station, measurement, obs.timestamp)
-        era5_value = await fetch_era5_value(station, measurement, obs.timestamp)
-        gpm_value = await fetch_gpm_rainfall(station, obs.timestamp) if measurement == "rainfall_mm" else None
+        # A provider agreeing with its own output is not independent evidence
+        # that an unusual reading is genuine weather rather than a fault.
+        forecast_value = await fetch_forecast_value(station, measurement, obs.timestamp) if obs.source != "OPEN_METEO" else None
+        era5_value = await fetch_era5_value(station, measurement, obs.timestamp) if obs.source != "ERA5" else None
+        gpm_value = await fetch_gpm_rainfall(station, obs.timestamp) if measurement == "rainfall_mm" and obs.source != "NASA_GPM" else None
 
         data = engine.evaluate(
             ContextInputs(
@@ -208,39 +216,35 @@ async def calculate_final_decision(
     result = await session.execute(select(WeatherObservation).where(WeatherObservation.id == observation_id))
     obs = result.scalar_one()
 
-    # Pick the measurement with the strongest rule signal to drive the decision.
-    triggered_by_measurement: dict[str, float] = {}
-    for r in rule_results:
-        if r.triggered:
-            m = r.evidence.get("measurement")
-            if m:
-                triggered_by_measurement[m] = max(triggered_by_measurement.get(m, 0.0), r.score)
-
-    if triggered_by_measurement:
-        measurement = max(triggered_by_measurement, key=triggered_by_measurement.get)
-    else:
-        measurement = next((m for m in MEASUREMENTS if getattr(obs, m) is not None), None)
-
-    if measurement is None:
-        return None
-
-    measurement_rule_results = [r for r in rule_results if r.evidence.get("measurement") in (measurement, None)]
-    ml_result = ml_results.get(measurement)
-    context_result = context_results.get(measurement)
-
     feature_row = (
         await session.execute(select(ObservationFeatures).where(ObservationFeatures.observation_id == observation_id))
     ).scalar_one_or_none()
-    completeness = feature_row.completeness_pct if feature_row else 100.0
+    completeness = feature_row.completeness_pct if feature_row else None
+    triggered_measurements = {r.evidence.get("measurement") for r in rule_results if r.triggered}
+    decisions = []
+    for measurement in MEASUREMENTS:
+        if getattr(obs, measurement) is None and measurement not in triggered_measurements:
+            continue
+        measurement_rules = [r for r in rule_results if r.evidence.get("measurement") in (measurement, None) and measurement in r.evidence.get("measurements", [measurement])]
+        decision = DecisionEngine().decide(
+            measurement_rules,
+            ml_results.get(measurement),
+            context_results.get(measurement),
+            station_data_completeness_pct=completeness if completeness is not None else 100.0,
+            fusion_weights=fusion_weights,
+            decision_thresholds=decision_thresholds,
+            observation_source=obs.source,
+        )
+        decisions.append((measurement, decision, measurement_rules))
 
-    decision = DecisionEngine().decide(
-        measurement_rule_results,
-        ml_result,
-        context_result,
-        station_data_completeness_pct=completeness or 100.0,
-        fusion_weights=fusion_weights,
-        decision_thresholds=decision_thresholds,
+    if not decisions:
+        return None
+    # A corroborated weather extreme must not hide a fault in another sensor.
+    measurement, decision, measurement_rule_results = max(
+        decisions, key=lambda item: (item[1].classification == "PROBABLE_SENSOR_FAULT", item[1].fault_score)
     )
+    ml_result = ml_results.get(measurement)
+    context_result = context_results.get(measurement)
 
     anomaly_repo = AnomalyRepository(session)
     anomaly = await anomaly_repo.create(
@@ -256,6 +260,16 @@ async def calculate_final_decision(
             "RULE": [r.model_dump() for r in measurement_rule_results if r.triggered],
             "ML": ml_result.__dict__ if ml_result else {},
             "CONTEXT": context_result.__dict__ if context_result else {},
+            "DECISION": {
+                **decision.evidence,
+                "policy_version": 2,
+                "per_measurement": [
+                    {"measurement": m, "classification": d.classification,
+                     "fault_score": d.fault_score, "confidence": d.confidence,
+                     "reason_codes": d.reason_codes}
+                    for m, d, _ in decisions
+                ],
+            },
         },
     )
 
@@ -273,9 +287,16 @@ async def calculate_final_decision(
 
 async def create_alert_if_required(session: AsyncSession, anomaly) -> None:
     anomaly_repo = AnomalyRepository(session)
-    recent = await anomaly_repo.recent_for_station(anomaly.station_id, limit=20)
-    recent_summaries = [AnomalySummary(a.classification, a.severity, a.created_at) for a in recent]
-    current_summary = AnomalySummary(anomaly.classification, anomaly.severity, anomaly.created_at)
+    observation = await session.get(WeatherObservation, anomaly.observation_id)
+    recent = await anomaly_repo.recent_for_station(
+        anomaly.station_id, limit=20, before=observation.timestamp, source=observation.source
+    )
+    times = dict((await session.execute(
+        select(WeatherObservation.id, WeatherObservation.timestamp)
+        .where(WeatherObservation.id.in_({a.observation_id for a in recent}))
+    )).all())
+    recent_summaries = [AnomalySummary(a.classification, a.severity, a.created_at, times[a.observation_id]) for a in recent]
+    current_summary = AnomalySummary(anomaly.classification, anomaly.severity, anomaly.created_at, observation.timestamp)
 
     alert = await AlertEngine(session).process_anomaly(
         anomaly.station_id,

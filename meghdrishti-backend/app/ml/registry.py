@@ -9,6 +9,7 @@ import joblib
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import ValidationAppError
 from app.core.logging import get_logger
 from app.ml.training import TrainedModel
 from app.models.ml import ModelVersion
@@ -37,7 +38,7 @@ class ModelRegistry:
         metrics: dict | None = None,
     ) -> ModelVersion:
         model_id = f"iforest__{measurement}__{region or 'global'}__{season or 'all'}"
-        version = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+        version = datetime.now(UTC).strftime("%Y%m%d%H%M%S%f")
         artifact_path = self._artifact_path(model_id, version)
         joblib.dump(trained.estimator, artifact_path)
 
@@ -65,6 +66,17 @@ class ModelRegistry:
         """Explicit activation only — never automatic just because training succeeded."""
         result = await self.session.execute(select(ModelVersion).where(ModelVersion.id == model_version_id))
         candidate = result.scalar_one()
+        metrics = candidate.metrics or {}
+        if (
+            metrics.get("training_policy_version") != 2
+            or metrics.get("evaluation_method") != "chronological_holdout"
+            or not metrics.get("sensor_data_only")
+        ):
+            raise ValidationAppError(
+                "Retrain on sensor observations with chronological holdout evaluation before activation. "
+                "Legacy and forecast-based candidates are diagnostic only.",
+                code="MODEL_NOT_ELIGIBLE",
+            )
 
         prev = await self.session.execute(
             select(ModelVersion).where(

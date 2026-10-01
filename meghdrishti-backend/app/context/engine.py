@@ -3,9 +3,11 @@
 Critically distinguishes "no external context available" from "external
 context disagrees" — these must never be conflated.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from math import isfinite
 
 TOLERANCES = {
     "temperature_c": 3.0,
@@ -17,10 +19,14 @@ TOLERANCES = {
 }
 
 
-def _consistency(observed: float | None, reference: float | None, tolerance: float) -> float | None:
-    if observed is None or reference is None:
+def _consistency(
+    observed: float | None, reference: float | None, tolerance: float, circular: bool = False
+) -> float | None:
+    if observed is None or reference is None or not isfinite(observed) or not isfinite(reference):
         return None
     diff = abs(observed - reference)
+    if circular:
+        diff = abs((observed - reference + 180) % 360 - 180)
     return round(max(0.0, 1.0 - diff / tolerance), 4)
 
 
@@ -49,15 +55,22 @@ class ContextEngine:
     def evaluate(self, inputs: ContextInputs) -> ContextResultData:
         tolerance = TOLERANCES.get(inputs.measurement, 5.0)
 
-        spatial = _consistency(inputs.observed_value, inputs.neighbor_median, tolerance)
-        forecast = _consistency(inputs.observed_value, inputs.forecast_value, tolerance)
-        era5 = _consistency(inputs.observed_value, inputs.era5_value, tolerance)
-        gpm = _consistency(inputs.observed_value, inputs.gpm_value, tolerance) if inputs.measurement == "rainfall_mm" else None
+        circular = inputs.measurement == "wind_direction_deg"
+        spatial = _consistency(inputs.observed_value, inputs.neighbor_median, tolerance, circular)
+        forecast = _consistency(inputs.observed_value, inputs.forecast_value, tolerance, circular)
+        era5 = _consistency(inputs.observed_value, inputs.era5_value, tolerance, circular)
+        gpm = (
+            _consistency(inputs.observed_value, inputs.gpm_value, tolerance)
+            if inputs.measurement == "rainfall_mm"
+            else None
+        )
 
         available_scores = [s for s in [spatial, forecast, era5, gpm] if s is not None]
         external_context_available = len(available_scores) > 0
 
-        extreme_weather_score = round(sum(available_scores) / len(available_scores), 4) if available_scores else None
+        extreme_weather_score = (
+            round(sum(available_scores) / len(available_scores), 4) if available_scores else None
+        )
 
         return ContextResultData(
             spatial_consistency=spatial,

@@ -5,13 +5,16 @@ from collections.abc import AsyncGenerator
 
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
 engine = create_async_engine(
     settings.database_url,
-    pool_size=settings.db_pool_size,
-    max_overflow=settings.db_max_overflow,
+    # Celery's asyncio.run creates a new loop per task; pooled asyncpg
+    # connections cannot be reused across those loops.
+    **({"pool_size": settings.db_pool_size, "max_overflow": settings.db_max_overflow}
+       if settings.db_pooling else {"poolclass": NullPool}),
     pool_pre_ping=True,
     future=True,
 )
@@ -46,7 +49,7 @@ async def check_db_health() -> bool:
 
 async def check_redis_health() -> bool:
     try:
-        client = get_redis()
-        return bool(await client.ping())
+        async with get_redis() as client:
+            return bool(await client.ping())
     except Exception:
         return False

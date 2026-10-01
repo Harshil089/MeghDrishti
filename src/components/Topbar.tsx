@@ -83,7 +83,7 @@ export default function Topbar({ title }: { title: string }) {
           </div>
 
           {showResults && (
-            <div className="absolute top-full mt-1.5 w-full rounded-lg border border-border bg-panel-2 shadow-2xl overflow-hidden z-50">
+            <div className="absolute top-full mt-1.5 w-full rounded-lg border border-border bg-panel-3 shadow-2xl overflow-hidden z-50">
               {stationMatches.length === 0 && alertMatches.length === 0 ? (
                 <p className="px-3 py-2.5 text-xs text-muted">No matches.</p>
               ) : (
@@ -165,7 +165,7 @@ export default function Topbar({ title }: { title: string }) {
           <>
             <div className="fixed inset-0 z-[100]" onClick={() => setOpen(false)} />
             <div
-              className="fixed w-80 rounded-xl border border-border bg-panel-2 shadow-2xl z-[101] overflow-hidden"
+              className="fixed w-80 rounded-xl border border-border bg-panel-3 shadow-2xl z-[101] overflow-hidden"
               style={{ top: menuPos.top, right: menuPos.right }}
             >
               <div className="px-4 py-3 border-b border-border">

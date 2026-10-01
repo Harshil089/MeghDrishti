@@ -6,10 +6,10 @@ GHCNAdapter uses to resolve the nearest GHCN station to an AWS station.
 """
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime, timedelta
 
 from airflow.decorators import dag, task
+from backend_api import API_BASE, backend_session
 
 DEFAULT_ARGS = {
     "owner": "meghdrishti",
@@ -29,9 +29,10 @@ DEFAULT_ARGS = {
 def ghcn_stations():
     @task
     def refresh() -> int:
-        from app.ingestion.ghcn_stations import refresh_india_stations
-
-        return asyncio.run(refresh_india_stations())
+        with backend_session() as session:
+            response = session.post(f"{API_BASE}/admin/ghcn-stations/refresh", timeout=60)
+            response.raise_for_status()
+            return response.json()["data"]["stations"]
 
     refresh()
 

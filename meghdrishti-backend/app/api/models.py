@@ -4,6 +4,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Pagination, pagination_params
@@ -11,6 +12,7 @@ from app.core.exceptions import NotFoundError
 from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
 from app.ml.registry import ModelRegistry
+from app.ml.workflow import train_candidates
 from app.models.ml import ModelVersion
 
 router = APIRouter()
@@ -59,6 +61,15 @@ async def get_model(model_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     return {"data": _out(model)}
 
 
+@router.post("/train")
+async def train_models(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_MODELS)),
+) -> dict:
+    """Train candidates with source filtering and chronological holdout evaluation."""
+    return {"data": await train_candidates(db)}
+
+
 @router.post("/{model_id}/activate")
 async def activate_model(
     model_id: uuid.UUID,
@@ -68,6 +79,6 @@ async def activate_model(
     registry = ModelRegistry(db)
     try:
         model = await registry.activate(model_id)
-    except Exception as exc:  # noqa: BLE001 - unknown id from a bad UUID lookup
+    except NoResultFound as exc:
         raise NotFoundError("Model version does not exist", code="MODEL_NOT_FOUND") from exc
     return {"data": _out(model)}

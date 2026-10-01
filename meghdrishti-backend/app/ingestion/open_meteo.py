@@ -1,7 +1,7 @@
 """Open-Meteo adapter — no API key required, easiest source for end-to-end testing."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -34,6 +34,8 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
         retry=retry_if_exception_type((httpx.TransportError, httpx.HTTPStatusError)),
     )
     async def fetch(self, station: Any, start_time: datetime, end_time: datetime) -> list[dict]:
+        start_time = start_time.replace(tzinfo=UTC) if start_time.tzinfo is None else start_time.astimezone(UTC)
+        end_time = end_time.replace(tzinfo=UTC) if end_time.tzinfo is None else end_time.astimezone(UTC)
         params = {
             "latitude": station.latitude,
             "longitude": station.longitude,
@@ -41,6 +43,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
             "start_date": start_time.date().isoformat(),
             "end_date": end_time.date().isoformat(),
             "timezone": "UTC",
+            "wind_speed_unit": "ms",
         }
         client = self._http()
         try:
@@ -74,6 +77,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
                     "surface_pressure": _at(hourly.get("surface_pressure"), i),
                     "precipitation": _at(hourly.get("precipitation"), i),
                     "wind_speed_10m": _at(hourly.get("wind_speed_10m"), i),
+                    "wind_speed_unit": data.get("hourly_units", {}).get("wind_speed_10m"),
                     "wind_direction_10m": _at(hourly.get("wind_direction_10m"), i),
                 }
             )
@@ -82,7 +86,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
     def normalize(self, payload: dict) -> CanonicalObservation:
         return CanonicalObservation(
             station_id=payload["station_id"],
-            timestamp=datetime.fromisoformat(payload["time"]),
+            timestamp=datetime.fromisoformat(payload["time"]).replace(tzinfo=UTC),
             location=Location(
                 latitude=payload["latitude"],
                 longitude=payload["longitude"],

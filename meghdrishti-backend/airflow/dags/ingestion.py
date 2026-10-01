@@ -26,14 +26,14 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=2),
 }
 
-API_BASE = Variable.get("meghdrishti_api_base", default_var="http://api:8000/api/v1")
+API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:8000/api/v1")
 INGEST_SOURCES = ["OPEN_METEO", "IMD"]
 
 
 def _admin_token() -> str:
     """Log in as the demo admin — same credentials the backend seeds itself
-    with (DEMO_ADMIN_EMAIL/PASSWORD), already available via this container's
-    env_file. Not a new auth mechanism, just reusing the existing one."""
+    with (DEMO_ADMIN_EMAIL/PASSWORD), provided through the Airflow
+    process environment. Not a new auth mechanism, just reusing the existing one."""
     import os
 
     resp = requests.post(

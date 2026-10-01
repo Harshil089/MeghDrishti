@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     database_url_sync: str = "postgresql+psycopg://meghdrishti:meghdrishti@localhost:5432/meghdrishti"
     db_pool_size: int = 10
     db_max_overflow: int = 20
+    db_pooling: bool = True
 
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -75,6 +77,18 @@ class Settings(BaseSettings):
             except Exception:
                 return [o.strip() for o in v.split(",") if o.strip()]
         return v
+
+    @field_validator("cors_origins")
+    @classmethod
+    def _exact_origins(cls, origins: list[str]) -> list[str]:
+        for origin in origins:
+            parts = urlsplit(origin)
+            if (parts.scheme not in {"http", "https"} or not parts.hostname
+                or "*" in origin or parts.path or parts.query or parts.fragment
+                or parts.username or parts.password):
+                raise ValueError("CORS_ORIGINS must contain exact http(s) origins without paths or wildcards")
+            _port = parts.port  # accessing the property rejects malformed port numbers
+        return list(dict.fromkeys(origins))
 
     @model_validator(mode="after")
     def _guard_production(self) -> Settings:

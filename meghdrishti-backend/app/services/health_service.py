@@ -82,7 +82,8 @@ class HealthService:
         avg_completeness = (
             await self.session.execute(
                 select(func.avg(ObservationFeatures.completeness_pct)).where(
-                    ObservationFeatures.station_id == station_id
+                    ObservationFeatures.station_id == station_id,
+                    ObservationFeatures.observation_id.in_(select(obs_ids_subq.c.id)),
                 )
             )
         ).scalar_one()

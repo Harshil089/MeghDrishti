@@ -64,9 +64,17 @@ export default function GoogleSignInButton({ onSuccess }: { onSuccess: () => voi
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={() => setScriptReady(true)}
+        onError={() => setError("Couldn't load Google sign-in (check network or ad-blocker)")}
       />
-      <div ref={ref} />
-      {error && <p className="text-[11px] text-rose-400">{error}</p>}
+      {/* Fixed height matches the rendered button (size="large") so nothing
+          shifts, and a skeleton fills the gap instead of looking blank while
+          the GSI script loads. */}
+      <div ref={ref} className="h-10 w-[320px] max-w-full relative">
+        {!scriptReady && !error && (
+          <div className="absolute inset-0 rounded-full bg-panel-2 animate-pulse" />
+        )}
+      </div>
+      {error && <p className="text-[11px] text-rose-400 text-center">{error}</p>}
     </div>
   );
 }

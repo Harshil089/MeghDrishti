@@ -60,7 +60,3 @@ jobs:
       - name: Unit + integration + API tests
         working-directory: meghdrishti-backend
         run: pytest -q
-
-      - name: Build Docker image
-        working-directory: meghdrishti-backend
-        run: docker build -t meghdrishti-backend:ci .

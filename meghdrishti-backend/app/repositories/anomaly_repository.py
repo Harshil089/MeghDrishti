@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.anomalies import Anomaly, AnomalyEvidence
+from app.models.observations import WeatherObservation
 
 
 class AnomalyRepository:
@@ -75,7 +76,16 @@ class AnomalyRepository:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def recent_for_station(self, station_id: uuid.UUID, limit: int = 50) -> list[Anomaly]:
+    async def recent_for_station(self, station_id: uuid.UUID, limit: int = 50,
+                                 before: datetime | None = None, source: str | None = None) -> list[Anomaly]:
+        if before is not None:
+            stmt = select(Anomaly).join(WeatherObservation, WeatherObservation.id == Anomaly.observation_id).where(
+                Anomaly.station_id == station_id, WeatherObservation.timestamp <= before
+            )
+            if source is not None:
+                stmt = stmt.where(WeatherObservation.source == source)
+            result = await self.session.execute(stmt.order_by(WeatherObservation.timestamp.desc(), Anomaly.created_at.desc()).limit(limit))
+            return list(result.scalars().all())
         stmt = (
             select(Anomaly)
             .where(Anomaly.station_id == station_id)

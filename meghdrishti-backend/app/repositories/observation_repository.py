@@ -79,11 +79,15 @@ class ObservationRepository:
         return obs
 
     async def recent_for_station(
-        self, station_id: uuid.UUID, before: datetime, limit: int = 200
+        self, station_id: uuid.UUID, before: datetime, limit: int = 200, source: str | None = None
     ) -> list[WeatherObservation]:
+        stmt = select(WeatherObservation).where(
+            WeatherObservation.station_id == station_id, WeatherObservation.timestamp <= before
+        )
+        if source is not None:
+            stmt = stmt.where(WeatherObservation.source == source)
         result = await self.session.execute(
-            select(WeatherObservation)
-            .where(WeatherObservation.station_id == station_id, WeatherObservation.timestamp <= before)
+            stmt
             .order_by(WeatherObservation.timestamp.desc())
             .limit(limit)
         )

@@ -19,8 +19,8 @@ async def publish_event(channel: str, event_type: str, payload: dict[str, Any]) 
     message = json.dumps(
         {"event_type": event_type, "timestamp": datetime.now(UTC).isoformat(), "payload": payload}
     )
-    redis = get_redis()
-    await redis.publish(channel, message)
+    async with get_redis() as redis:
+        await redis.publish(channel, message)
 
 
 async def publish_dashboard_event(event_type: str, payload: dict) -> None:

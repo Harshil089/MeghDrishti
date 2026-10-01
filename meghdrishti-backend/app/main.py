@@ -5,6 +5,7 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import websocket as websocket_api
@@ -27,8 +28,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
 )
 
 app.add_exception_handler(AppError, app_error_handler)
@@ -58,6 +59,11 @@ async def request_context_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    if request.method not in {"GET", "HEAD", "OPTIONS"} and origin is not None and origin not in settings.cors_origins:
+        return JSONResponse(status_code=403, content={"error": {
+            "code": "ORIGIN_NOT_ALLOWED", "message": "Request origin is not allowed", "details": {}
+        }})
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -84,7 +90,7 @@ async def ready():
     db_ok = await check_db_health()
     redis_ok = await check_redis_health()
     ok = db_ok and redis_ok
-    return {
+    return JSONResponse(status_code=200 if ok else 503, content={
         "status": "ready" if ok else "not_ready",
         "checks": {"database": db_ok, "redis": redis_ok},
-    }
+    })

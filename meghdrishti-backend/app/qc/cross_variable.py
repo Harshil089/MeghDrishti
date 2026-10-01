@@ -26,7 +26,7 @@ def evaluate_cross_variable(measurements: dict, thresholds: dict) -> RuleResult:
         score=round(score, 3),
         severity="MEDIUM" if score < 0.7 else "HIGH",
         reason_code="RAIN_HUMIDITY_INCONSISTENT",
-        evidence={"rainfall_mm": rainfall, "humidity_pct": humidity, "min_expected_humidity_pct": min_humidity},
+        evidence={"measurements": ["rainfall_mm", "humidity_pct"], "rainfall_mm": rainfall, "humidity_pct": humidity, "min_expected_humidity_pct": min_humidity},
     )
 
 
@@ -43,7 +43,7 @@ def evaluate_rain_accumulation(rainfall_mm: float | None, thresholds: dict) -> R
         score=round(score, 3),
         severity="HIGH" if score < 0.85 else "CRITICAL",
         reason_code="RAINFALL_EXTREME",
-        evidence={"rainfall_mm": rainfall_mm, "extreme_threshold_mm": extreme},
+        evidence={"measurement": "rainfall_mm", "rainfall_mm": rainfall_mm, "extreme_threshold_mm": extreme},
     )
 
 

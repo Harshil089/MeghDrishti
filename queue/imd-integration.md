@@ -23,12 +23,8 @@ process with a timeline outside this codebase's control. See
   Currently inert: `fetch()` returns `[]` and `health_check()` returns `False`
   when `IMD_API_BASE_URL` / `IMD_API_KEY` aren't set — this is intentional
   graceful degradation, not a stub that needs rewriting.
-- `IMDDemoAdapter` in the same file is the fallback used today (tagged
-  `IMD_DEMO` in the DB, never presented as real data) so the rest of the
-  pipeline (schema validation, dedup, QC, ML, context, alerts) can be
-  exercised end-to-end without credentials.
-- `get_imd_adapter()` already picks `IMDAdapter` vs `IMDDemoAdapter`
-  automatically based on config — no code change needed to switch over.
+- Synthetic fallback has been removed. The registry uses only `IMDAdapter`;
+  scheduled ingestion includes it only when enabled with credentials.
 
 ## What unblocks it
 

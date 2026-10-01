@@ -21,7 +21,7 @@ def _consecutive_identical(value: float, history: list[float], tolerance: float)
 
 def evaluate_persistence(measurement: str, value: float, history: list[float], thresholds: dict) -> RuleResult:
     cfg = thresholds.get("PERSISTENCE", {})
-    if value is None:
+    if value is None or (measurement in {"rainfall_mm", "wind_speed_ms"} and value == 0):
         return RuleResult(rule="PERSISTENCE", triggered=False, score=0.0, severity="LOW")
 
     count = _consecutive_identical(value, history, tolerance=1e-9)
@@ -42,7 +42,7 @@ def evaluate_persistence(measurement: str, value: float, history: list[float], t
 
 def evaluate_stuck_sensor(measurement: str, value: float, history: list[float], thresholds: dict) -> RuleResult:
     cfg = thresholds.get("STUCK_SENSOR", {})
-    if value is None:
+    if value is None or (measurement in {"rainfall_mm", "wind_speed_ms"} and value == 0):
         return RuleResult(rule="STUCK_SENSOR", triggered=False, score=0.0, severity="LOW")
 
     tolerance = cfg.get("tolerance", 0.01)

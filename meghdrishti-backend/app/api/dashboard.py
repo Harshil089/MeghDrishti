@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.alerts import Alert
 from app.models.anomalies import Anomaly
 from app.models.health import StationHealth
+from app.models.observations import WeatherObservation
 from app.models.stations import Station
 
 router = APIRouter()
@@ -19,25 +20,41 @@ router = APIRouter()
 async def dashboard_summary(db: AsyncSession = Depends(get_db)):
     total_stations = (await db.execute(select(func.count()).select_from(Station))).scalar_one()
     active_stations = (
-        await db.execute(select(func.count()).select_from(Station).where(Station.is_active.is_(True)))
-    ).scalar_one()
-
-    open_alerts = (
-        await db.execute(select(func.count()).select_from(Alert).where(Alert.status == "OPEN"))
-    ).scalar_one()
-    critical_alerts = (
         await db.execute(
-            select(func.count()).select_from(Alert).where(Alert.status == "OPEN", Alert.priority == "CRITICAL")
+            select(func.count()).select_from(Station).where(Station.is_active.is_(True))
         )
     ).scalar_one()
 
-    since = datetime.now(UTC) - timedelta(hours=24)
+    alert_count = (
+        select(func.count())
+        .select_from(Alert)
+        .outerjoin(Anomaly, Anomaly.id == Alert.anomaly_id)
+        .outerjoin(WeatherObservation, WeatherObservation.id == Anomaly.observation_id)
+    )
+    open_alerts = (await db.execute(alert_count.where(Alert.status == "OPEN"))).scalar_one()
+    critical_alerts = (
+        await db.execute(alert_count.where(Alert.status == "OPEN", Alert.priority == "CRITICAL"))
+    ).scalar_one()
+
+    now = datetime.now(UTC)
+    since = now - timedelta(hours=24)
+    anomaly_window = (
+        select(Anomaly)
+        .join(WeatherObservation, WeatherObservation.id == Anomaly.observation_id)
+        .where(
+            WeatherObservation.timestamp >= since,
+            WeatherObservation.timestamp <= now,
+        )
+        .subquery()
+    )
     anomalies_24h = (
-        await db.execute(select(func.count()).select_from(Anomaly).where(Anomaly.created_at >= since))
+        await db.execute(select(func.count()).select_from(anomaly_window))
     ).scalar_one()
 
     classification_counts_result = await db.execute(
-        select(Anomaly.classification, func.count()).where(Anomaly.created_at >= since).group_by(Anomaly.classification)
+        select(anomaly_window.c.classification, func.count()).group_by(
+            anomaly_window.c.classification
+        )
     )
     classification_counts = {row[0]: row[1] for row in classification_counts_result.all()}
 

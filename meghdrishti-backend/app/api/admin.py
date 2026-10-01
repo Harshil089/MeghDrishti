@@ -3,25 +3,65 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Pagination, pagination_params
 from app.core.exceptions import NotFoundError
 from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
+from app.ingestion.ghcn_stations import refresh_india_stations
+from app.models.calibration import CalibrationProfile
 from app.models.ingestion import RawObservation
 from app.models.observations import WeatherObservation
+from app.models.reviews import OperatorReview
 from app.models.stations import DataSource
+from app.qc.defaults import DEFAULT_RULE_THRESHOLDS
 from app.repositories.calibration_repository import CalibrationRepository
 from app.repositories.ingestion_job_repository import IngestionJobRepository
 from app.repositories.station_repository import StationRepository
+from app.scoring.defaults import DEFAULT_DECISION_THRESHOLDS, DEFAULT_FUSION_WEIGHTS
 from app.services.ingestion_service import IngestionService
 from app.workers.qc_tasks import process_observation_task
 
 router = APIRouter()
+
+
+@router.post("/ghcn-stations/refresh")
+async def refresh_ghcn_stations(_user=Depends(require_permission(Permission.MANAGE_SOURCES))):
+    return {"data": {"stations": await refresh_india_stations()}}
+
+
+@router.post("/calibration/propose")
+async def propose_calibration(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_CALIBRATION)),
+):
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(OperatorReview.operator_classification, func.count())
+        .where(OperatorReview.created_at >= now - timedelta(days=30))
+        .group_by(OperatorReview.operator_classification)
+    )
+    label_counts = {row[0]: row[1] for row in result.all()}
+    total = sum(label_counts.values())
+    false_positive_rate = label_counts.get("FALSE_POSITIVE", 0) / max(total, 1)
+    thresholds = dict(DEFAULT_DECISION_THRESHOLDS)
+    if false_positive_rate > 0.3:
+        thresholds["WATCH"] = min(0.5, thresholds["WATCH"] + 0.05)
+        thresholds["SUSPICIOUS"] = min(0.7, thresholds["SUSPICIOUS"] + 0.05)
+    elif false_positive_rate < 0.05 and total >= 20:
+        thresholds["WATCH"] = max(0.15, thresholds["WATCH"] - 0.05)
+    profile = CalibrationProfile(
+        name=f"auto-calibration-{now:%Y%m%d}", is_active=False,
+        rule_thresholds=DEFAULT_RULE_THRESHOLDS, fusion_weights=DEFAULT_FUSION_WEIGHTS,
+        decision_thresholds=thresholds, health_weights={}, health_boundaries={},
+    )
+    db.add(profile)
+    await db.commit()
+    return {"data": {"profile_id": str(profile.id), "false_positive_rate": false_positive_rate, "label_counts": label_counts}}
 
 
 @router.get("/calibration")
@@ -59,7 +99,7 @@ async def list_data_sources(db: AsyncSession = Depends(get_db)):
 async def trigger_ingestion(
     station_id: uuid.UUID,
     source: str = "OPEN_METEO",
-    window_minutes: int = 60,
+    window_minutes: int = Query(60, ge=1, le=525600),
     db: AsyncSession = Depends(get_db),
     _user=Depends(require_permission(Permission.MANAGE_REPLAY)),
 ):

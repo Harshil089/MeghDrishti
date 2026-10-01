@@ -16,14 +16,19 @@ class TrainedModel:
 
 
 def build_feature_matrix(feature_rows: list[dict[str, float | None]], feature_names: list[str]) -> np.ndarray:
-    """Rows with any missing selected feature are dropped rather than zero-filled."""
+    """Drop missing/non-finite features; never invent values for training."""
     matrix = []
     for row in feature_rows:
         values = [row.get(name) for name in feature_names]
         if any(v is None for v in values):
             continue
-        matrix.append(values)
-    return np.array(matrix, dtype=float)
+        try:
+            values = np.asarray(values, dtype=float)
+        except (TypeError, ValueError):
+            continue
+        if np.isfinite(values).all():
+            matrix.append(values)
+    return np.asarray(matrix, dtype=float).reshape(-1, len(feature_names))
 
 
 def train_isolation_forest(

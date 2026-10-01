@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "bash scripts/local.sh start",
+    "stop": "bash scripts/local.sh stop",
+    "status": "bash scripts/local.sh status",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

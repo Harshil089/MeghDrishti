@@ -7,6 +7,7 @@ import numpy as np
 
 from app.core.metrics import model_inference_duration_seconds
 from app.ml.loader import load_estimator
+from app.ml.training import build_feature_matrix
 from app.models.ml import ModelVersion
 
 
@@ -29,17 +30,18 @@ class MLInferenceResult:
 
 
 def run_inference(model_row: ModelVersion, features: dict[str, float | None]) -> MLInferenceResult | None:
-    values = [features.get(name) for name in model_row.feature_names]
-    if any(v is None for v in values):
+    X = build_feature_matrix([features], model_row.feature_names)
+    if not len(X):
         return None  # insufficient features — caller must treat as "no ML evidence", not a score
 
     estimator = load_estimator(model_row.artifact_path)
-    X = np.array([values], dtype=float)
     start = time.perf_counter()
     raw_score = float(-estimator.score_samples(X)[0])
     model_inference_duration_seconds.labels(measurement=model_row.measurement).observe(time.perf_counter() - start)
 
-    threshold = model_row.threshold or 0.5
+    threshold = model_row.threshold if model_row.threshold is not None else 0.5
+    if not np.isfinite(raw_score) or not np.isfinite(threshold) or threshold <= 0:
+        return None
     normalized = min(1.0, max(0.0, raw_score / (threshold * 2))) if threshold > 0 else 0.0
 
     return MLInferenceResult(

@@ -103,8 +103,8 @@ export default function LeafletMapScene({
               </span>
             </Tooltip>
 
-            <Popup minWidth={220}>
-              <div className="text-xs space-y-1.5">
+            <Popup minWidth={220} maxWidth={280} keepInView autoPanPadding={[24, 24]}>
+              <div className="text-xs space-y-1.5 break-words">
                 <p className="font-semibold text-sm">
                   {s.id} · {s.name}
                 </p>
@@ -116,7 +116,14 @@ export default function LeafletMapScene({
                 {stationAlerts.length === 0 ? (
                   <p className="text-muted">No active anomaly. Readings within expected range.</p>
                 ) : (
-                  <ul className="space-y-1.5 pt-1 border-t border-border">
+                  <div className="pt-2 border-t border-border">
+                    <p className="font-semibold">Alerts ({stationAlerts.length})</p>
+                    <ul
+                      tabIndex={0}
+                      aria-label={`Alerts for ${s.name}`}
+                      className="space-y-1.5 overflow-y-auto overscroll-contain pr-2 focus-visible:outline-2 focus-visible:outline-cyan-500"
+                      style={{ maxHeight: "min(240px, 35dvh)" }}
+                    >
                     {stationAlerts.map((a) => (
                       <li key={a.id}>
                         <p className={`font-mono text-[11px] ${severityStyle[a.severity]}`}>{a.code}</p>
@@ -126,7 +133,8 @@ export default function LeafletMapScene({
                         </p>
                       </li>
                     ))}
-                  </ul>
+                    </ul>
+                  </div>
                 )}
               </div>
             </Popup>

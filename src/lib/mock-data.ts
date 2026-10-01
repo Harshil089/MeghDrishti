@@ -29,6 +29,21 @@ export interface SeriesPoint {
 }
 
 export interface Alert {
+  policyTitle?: string;
+  detectedAt?: string;
+  receivedAt?: string | null;
+  explanation?: {
+    summary: string;
+    reading: string;
+    classification: string;
+    source: string | null;
+    observed_at: string | null;
+    findings: string[];
+    context: string[];
+    related_readings?: { anomaly_id: string; summary: string; observed_at: string | null }[];
+    group_note?: string;
+    quality_notes?: string[];
+  };
   id: string;
   anomalyId: string | null;
   status: string;

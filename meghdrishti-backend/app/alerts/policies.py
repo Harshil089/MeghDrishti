@@ -17,6 +17,7 @@ class AnomalySummary:
     classification: str
     severity: str
     created_at: datetime
+    event_at: datetime | None = None
 
 
 @dataclass
@@ -38,9 +39,9 @@ def evaluate_policies(
     if current.classification in INFORMATIONAL_CLASSIFICATIONS:
         return AlertDecision(True, "GENUINE_EXTREME_EVENT", "MEDIUM", "Genuine extreme weather event detected")
 
-    now = current.created_at
+    now = current.event_at or current.created_at
     window_start = now - timedelta(minutes=BURST_WINDOW_MINUTES)
-    burst = [a for a in recent if a.created_at >= window_start and a.classification != "NORMAL"]
+    burst = [a for a in recent if window_start <= (a.event_at or a.created_at) <= now and a.classification != "NORMAL"]
     if len(burst) >= BURST_COUNT_THRESHOLD:
         max_severity = _max_severity([a.severity for a in burst])
         return AlertDecision(True, "ANOMALY_BURST", max_severity, f"{len(burst)} anomalies in {BURST_WINDOW_MINUTES} minutes")

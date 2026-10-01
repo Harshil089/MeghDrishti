@@ -71,8 +71,12 @@ export async function fetchAlerts(): Promise<Alert[]> {
         priority: string;
         policy: string;
         title: string;
+        explanation?: Alert["explanation"];
         details: Record<string, unknown>;
         created_at: string;
+        observed_at: string | null;
+        received_at: string | null;
+        detected_at: string;
       }[]
     >("/alerts?limit=50"),
     getJSON<{ id: string; station_code: string }[]>("/stations?limit=100"),
@@ -90,12 +94,23 @@ export async function fetchAlerts(): Promise<Alert[]> {
         status: a.status,
         station: codeById.get(a.station_id) ?? a.station_id.slice(0, 8),
         code: reasonCodes[0] ?? a.policy,
-        message: a.title,
+        message: a.explanation?.summary ?? a.title,
+        policyTitle: a.title,
+        explanation: a.explanation,
         severity: PRIORITY_TO_SEVERITY[a.priority] ?? "info",
-        time: new Date(a.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: a.observed_at
+          ? new Date(a.observed_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+          : "Reading time unavailable",
+        detectedAt: a.detected_at,
+        receivedAt: a.received_at,
         confidence: confidence !== null ? Math.round(confidence * 100) : 0,
       };
     });
+}
+
+export async function fetchAlertExplanation(id: string): Promise<Alert["explanation"]> {
+  const alert = await getJSON<{ explanation?: Alert["explanation"] }>(`/alerts/${id}`);
+  return alert.explanation;
 }
 
 export interface DashboardStat {

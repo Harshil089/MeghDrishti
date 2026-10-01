@@ -16,10 +16,10 @@ def rate_limit(key_prefix: str, max_requests: int = 10, window_seconds: int = 60
     async def _checker(request: Request):
         client_ip = request.client.host if request.client else "unknown"
         key = f"ratelimit:{key_prefix}:{client_ip}"
-        redis = get_redis()
-        count = await redis.incr(key)
-        if count == 1:
-            await redis.expire(key, window_seconds)
+        async with get_redis() as redis:
+            count = await redis.incr(key)
+            if count == 1:
+                await redis.expire(key, window_seconds)
         if count > max_requests:
             raise RateLimitedError(f"Too many requests, try again in {window_seconds}s")
 

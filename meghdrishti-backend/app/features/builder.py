@@ -55,7 +55,7 @@ class FeatureBuilder:
                 "historical_same_hour_mean": historical.historical_mean(inputs.same_hour_history.get(measurement, [])),
                 "historical_same_month_mean": historical.historical_mean(inputs.same_month_history.get(measurement, [])),
                 **temporal.rolling_stats(history_values),
-                **spatial.neighbor_stats(current, inputs.neighbor_values.get(measurement, [])),
+                **spatial.neighbor_stats(current, inputs.neighbor_values.get(measurement, []), circular=measurement == "wind_direction_deg"),
             }
             features[measurement] = m
 

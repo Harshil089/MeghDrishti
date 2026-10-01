@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -37,7 +37,7 @@ async def test_full_pipeline_produces_anomaly_for_spike(db_session):
     db_session.add(station)
     await db_session.commit()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     await _seed_history(db_session, station, base_value=24.0, base_ts=now)
 
     spike_obs = WeatherObservation(
@@ -76,3 +76,74 @@ async def test_full_pipeline_produces_anomaly_for_spike(db_session):
         await db_session.execute(select(func.count()).select_from(Anomaly).where(Anomaly.observation_id == spike_obs.id))
     ).scalar_one()
     assert count == 1
+
+
+@pytest.mark.asyncio
+async def test_ingested_fault_reaches_alert_health_and_event(db_session, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from sqlalchemy import select
+
+    from app.db.session import get_redis
+    from app.ingestion.imd import IMDAdapter
+    from app.models.alerts import Alert
+    from app.models.ingestion import RawObservation
+    from app.repositories.health_repository import HealthRepository
+    from app.services import ingestion_service
+    from app.services.event_publisher import CHANNEL_ALERTS
+    from app.workers import pipeline
+
+    class FaultAdapter(IMDAdapter):
+        source_name = "VERIFICATION_SYNTHETIC"
+
+        async def fetch(self, station, start_time, end_time):
+            return [{"station_id": station.station_code,
+                     "timestamp": (start_time + timedelta(minutes=15 * i)).isoformat(),
+                     "location": {"latitude": station.latitude, "longitude": station.longitude},
+                     "measurements": {"temperature_c": 49.2 if i == 15 else 24.0}}
+                    for i in range(16)]
+
+    station = Station(station_code="VERIFY_RAW", name="Synthetic verification",
+                      source="TEST", latitude=18.5, longitude=73.8)
+    db_session.add(station)
+    await db_session.commit()
+    monkeypatch.setattr(ingestion_service, "get_adapter_registry",
+                        lambda: {"VERIFICATION_SYNTHETIC": FaultAdapter()})
+
+    async def forecast(_station, measurement, _timestamp):
+        return 24.0 if measurement == "temperature_c" else None
+
+    monkeypatch.setattr(pipeline, "fetch_forecast_value", forecast)
+    monkeypatch.setattr(pipeline, "fetch_era5_value", AsyncMock(return_value=None))
+    monkeypatch.setattr(pipeline, "fetch_gpm_rainfall", AsyncMock(return_value=None))
+    now = datetime.now(UTC)
+    result = await ingestion_service.IngestionService(db_session).run_for_station(
+        station, "VERIFICATION_SYNTHETIC", now - timedelta(minutes=15 * 15), now,
+    )
+    assert result["normalized"] == result["raw_stored"] == 16
+    observation = (await db_session.execute(
+        select(WeatherObservation).where(WeatherObservation.station_id == station.id)
+        .order_by(WeatherObservation.timestamp.desc()).limit(1)
+    )).scalar_one()
+    raw = await db_session.get(RawObservation, observation.raw_observation_id)
+    assert raw.raw_payload["measurements"]["temperature_c"] == 49.2
+
+    async with get_redis() as redis:
+        async with redis.pubsub() as pubsub:
+            await pubsub.subscribe(CHANNEL_ALERTS)
+            await pubsub.get_message(timeout=2)  # Consume subscription acknowledgement.
+            anomaly_id = await process_observation(observation.id)
+            alert = (await db_session.execute(
+                select(Alert).where(Alert.anomaly_id == anomaly_id)
+            )).scalar_one()
+            assert alert.status == "OPEN"
+            assert alert.policy == "SINGLE_PROBABLE_FAULT"
+            assert await HealthRepository(db_session).get_latest(station.id) is not None
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=2)
+            import json
+
+            event = json.loads(message["data"])
+            assert event["event_type"] == "ALERT_CREATED"
+            assert event["payload"]["alert_id"] == str(alert.id)
+            assert await process_observation(observation.id) == anomaly_id
+            assert len((await db_session.execute(select(Alert))).scalars().all()) == 1

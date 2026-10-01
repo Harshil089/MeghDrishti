@@ -23,6 +23,7 @@ meghdrishti-backend/dump.rdb
 meghdrishti-backend/.env
 dump.rdb
 graphify-out/
+.local/
 
 # --- OS / editor ---
 .DS_Store

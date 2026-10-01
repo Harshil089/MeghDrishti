@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, ShieldCheck, X, Check, Ban, CloudLightning, HelpCircle } from "lucide-react";
 import { alertSafetySteps, defaultSafetySteps, type Alert } from "@/lib/mock-data";
-import { submitReview, updateAlertStatus, type ReviewClassification } from "@/lib/api";
+import { fetchAlertExplanation, submitReview, updateAlertStatus, type ReviewClassification } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 
 const severityStyle: Record<Alert["severity"], string> = {
@@ -34,6 +34,21 @@ export default function AlertDetailModal({
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [evidence, setEvidence] = useState<{ id: string; explanation?: Alert["explanation"]; error?: string }>();
+  const alertId = alert?.id;
+  const explanation = evidence?.id === alertId ? evidence?.explanation ?? alert?.explanation : alert?.explanation;
+  const evidenceError = evidence?.id === alertId ? evidence?.error : undefined;
+  useEffect(() => {
+    let cancelled = false;
+    if (alertId) {
+      fetchAlertExplanation(alertId).then((data) => {
+        if (!cancelled) setEvidence({ id: alertId, explanation: data });
+      }).catch(() => {
+        if (!cancelled) setEvidence({ id: alertId, error: "Could not load additional recorded readings." });
+      });
+    }
+    return () => { cancelled = true; };
+  }, [alertId]);
 
   const steps = alert ? alertSafetySteps[alert.code] ?? defaultSafetySteps : [];
 
@@ -88,7 +103,7 @@ export default function AlertDetailModal({
           <motion.div
             role="dialog"
             aria-modal="true"
-            className="relative w-full max-w-md rounded-2xl border border-border bg-panel-2 p-5 shadow-2xl"
+            className="relative w-full max-w-lg max-h-[85dvh] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-panel-3 p-5 shadow-2xl"
             initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -114,7 +129,53 @@ export default function AlertDetailModal({
               {alert.station} <span className="text-muted font-normal">— what&apos;s wrong</span>
             </h3>
             <p className="text-sm text-muted leading-relaxed mb-4">{alert.message}</p>
+            {explanation && (
+              <section className="space-y-3 text-xs text-muted mb-4" aria-label="Recorded anomaly evidence">
+                {explanation.quality_notes?.map((note) => (
+                  <p key={note} className="text-amber-400">{note}</p>
+                ))}
+                <p>
+                  Source: {explanation.source ?? "Not recorded"}
+                  {explanation.source === "OPEN_METEO" && " (forecast output, not a sensor measurement)"}
+                  {explanation.observed_at && ` · Reading time: ${new Date(explanation.observed_at).toLocaleString()}`}
+                </p>
+                <p>
+                  {alert.receivedAt && `Received by API: ${new Date(alert.receivedAt).toLocaleString()}. `}
+                  {alert.detectedAt && `Processed: ${new Date(alert.detectedAt).toLocaleString()}. `}
+                  Times shown in your local timezone.
+                </p>
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1">Why it was flagged</h4>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {explanation.findings.map((finding, i) => <li key={i}>{finding}</li>)}
+                    {explanation.findings.length === 0 && <li>No detailed detection evidence recorded.</li>}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground mb-1">Weather comparisons</h4>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {explanation.context.map((comparison, i) => <li key={i}>{comparison}</li>)}
+                  </ul>
+                </div>
+                {!!explanation.related_readings?.length && (
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-1">Readings behind this alert</h4>
+                    <ul className="space-y-2">
+                      {explanation.related_readings.map((reading) => (
+                        <li key={reading.anomaly_id} className="border-l border-border pl-2">
+                          {reading.observed_at && <p className="font-medium">{new Date(reading.observed_at).toLocaleString()}</p>}
+                          <p>{reading.summary}</p>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2">{explanation.group_note}</p>
+                  </div>
+                )}
+                <p>Alert trigger: {alert.policyTitle}. Confidence is a heuristic, not a calibrated fault probability.</p>
+              </section>
+            )}
 
+            {evidenceError && <p role="status" className="text-xs text-amber-400 mb-3">{evidenceError}</p>}
             <div className="flex items-center gap-4 text-xs text-muted mb-5 pb-4 border-b border-border">
               <span>{alert.time}</span>
               <span>confidence {alert.confidence}%</span>

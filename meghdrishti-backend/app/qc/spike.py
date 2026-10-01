@@ -18,7 +18,8 @@ REASON_CODES = {
 def evaluate_spike(measurement: str, value: float, history: list[float], thresholds: dict) -> RuleResult:
     cfg = thresholds.get("SPIKE", {})
     min_history = cfg.get("min_history", 8)
-    if value is None or len(history) < min_history:
+    # Linear z-scores cannot describe a circular bearing (359° and 1° are close).
+    if measurement == "wind_direction_deg" or value is None or len(history) < min_history:
         return RuleResult(rule="SPIKE", triggered=False, score=0.0, severity="LOW")
 
     mean = statistics.fmean(history)

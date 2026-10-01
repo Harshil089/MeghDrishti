@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import Logo from "@/components/Logo";
-import AtmosphereCanvas from "@/components/AtmosphereCanvas";
-import RadarSweepCanvas from "@/components/RadarSweepCanvas";
 import Counter from "@/components/Counter";
 import MagneticButton from "@/components/MagneticButton";
 import Reveal from "@/components/Reveal";
 import SpotlightCard from "@/components/SpotlightCard";
 import GradientText from "@/components/GradientText";
+import WeatherPipelineHero from "@/components/WeatherPipelineHero";
+import ThemeToggle from "@/components/ThemeToggle";
 import { pipelineStages } from "@/lib/mock-data";
 import {
   ArrowRight,
@@ -78,11 +78,6 @@ export default function LandingPage() {
 
   return (
     <div className="relative flex-1 min-h-[100dvh]">
-      {/* Ambient, decorative, real-time three.js motion — never a data source */}
-      <div className="fixed inset-0 -z-10 opacity-60">
-        <AtmosphereCanvas />
-      </div>
-
       <header className="relative h-16 flex items-center justify-between px-4 md:px-8 max-w-[1300px] mx-auto">
         <div className="flex items-center gap-2.5">
           <Logo size={32} />
@@ -98,9 +93,10 @@ export default function LandingPage() {
             <GitFork className="h-3.5 w-3.5" />
             Source
           </a>
+          <ThemeToggle />
           <Link
             href="/login"
-            className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-1.5 text-xs text-cyan-300 hover:bg-cyan-400/15 transition-colors"
+            className="rounded-full border border-orange-400/30 bg-orange-400/10 px-4 py-1.5 text-xs text-orange-300 hover:bg-orange-400/15 transition-colors"
           >
             Sign in
           </Link>
@@ -109,26 +105,30 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="max-w-[1300px] mx-auto px-4 md:px-8 pt-10 pb-14 md:pt-16 md:pb-16 grid md:grid-cols-2 gap-10 items-center">
+        <div className="max-w-[1300px] mx-auto grid items-center gap-6 lg:grid-cols-[0.9fr_1.1fr] px-4 md:px-8 pt-8 pb-10 md:pt-12">
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[620px] relative z-10"
           >
+            <p className="font-mono uppercase text-[11px] tracking-wide text-orange-400 mb-4">
+              Open-source · Smart India Hackathon 2026
+            </p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">
               Is that reading a real storm, or a{" "}
               <GradientText as="span">broken sensor</GradientText>?
             </h1>
             <p className="text-base text-muted leading-relaxed max-w-[52ch] mb-8">
-              MeghDrishti tells the difference. Rule checks, an Isolation Forest model, and
-              cross-checks against nearby stations and forecasts decide together, so a genuine
-              extreme is never mistaken for a faulty probe.
+              Follow a reading through quality checks, ML and weather context.
+              MeghDrishti combines available evidence to help operators distinguish
+              unusual weather from a sensor fault—with a reason behind every flag.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <MagneticButton>
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
+                  className="flex items-center gap-2 rounded-full bg-orange-500 text-black text-sm font-medium px-5 py-3 hover:bg-orange-400 transition-colors"
                 >
                   Sign in to the console
                   <ArrowRight className="h-4 w-4" />
@@ -147,20 +147,12 @@ export default function LandingPage() {
               </MagneticButton>
             </div>
           </motion.div>
-
           <motion.div
-            initial={reduce ? false : { opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={reduce ? false : { opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="relative h-72 md:h-96 rounded-2xl border border-border glass overflow-hidden"
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <RadarSweepCanvas size={180} />
-            </div>
-            <div className="absolute bottom-4 left-4 flex items-center gap-1.5 text-[11px] text-muted">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-slow" />
-              Continuous anomaly monitoring
-            </div>
+            <WeatherPipelineHero />
           </motion.div>
         </div>
 
@@ -169,8 +161,8 @@ export default function LandingPage() {
           <Reveal>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {ARCHITECTURE_STATS.map((s) => (
-                <div key={s.label} className="rounded-xl border border-border glass p-4">
-                  <Counter value={s.value} className="text-3xl font-semibold text-cyan-300 font-mono" />
+                <div key={s.label} className="rounded-lg border border-border bg-panel-2/60 p-4">
+                  <Counter value={s.value} className="text-3xl font-semibold text-orange-400 font-mono" />
                   <p className="text-[11px] text-muted mt-1 leading-snug">{s.label}</p>
                 </div>
               ))}
@@ -195,7 +187,7 @@ export default function LandingPage() {
               className={f.big ? "md:col-span-2" : "md:col-span-1"}
             >
               <SpotlightCard className="h-full p-6">
-                <f.icon className="h-5 w-5 text-cyan-400 mb-4" />
+                <f.icon className="h-5 w-5 text-orange-400 mb-4" />
                 <h3 className="text-sm font-semibold text-foreground mb-2">{f.title}</h3>
                 <p className="text-sm text-muted leading-relaxed">{f.body}</p>
               </SpotlightCard>
@@ -259,12 +251,14 @@ export default function LandingPage() {
           {pipelineStages.map((stage, i) => (
             <Reveal key={stage.key} delay={i * 0.05}>
               <div className="flex items-center gap-3">
-                <div className="rounded-xl border border-border bg-panel-2/60 px-4 py-3 min-w-[160px]">
-                  <p className="text-sm font-medium text-foreground/90 mb-1">{stage.label}</p>
+                <div className="rounded-lg border border-border bg-panel-2/60 px-4 py-3 min-w-[160px]">
+                  <p className="text-[11px] font-mono uppercase tracking-wide text-foreground/90 mb-1">
+                    {stage.label}
+                  </p>
                   <p className="text-[11px] text-muted leading-snug">{stage.detail}</p>
                 </div>
                 {i < pipelineStages.length - 1 && (
-                  <ArrowRight className="h-3.5 w-3.5 text-muted/40 shrink-0" />
+                  <ArrowRight className="h-3.5 w-3.5 text-orange-400/50 shrink-0" />
                 )}
               </div>
             </Reveal>
@@ -275,20 +269,20 @@ export default function LandingPage() {
       {/* Closing CTA */}
       <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
         <Reveal>
-          <div className="rounded-2xl border border-border glass p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <ShieldCheck className="h-4 w-4 text-cyan-300" />
-                <span className="text-xs text-muted">Built for Smart India Hackathon 2026</span>
-              </div>
-              <h2 className="text-xl md:text-2xl font-semibold tracking-tight max-w-[28ch]">
-                Sign in to see live station data and anomaly decisions
-              </h2>
+          <div className="rounded-lg border border-border bg-panel-2/60 p-8 md:p-14 flex flex-col items-center text-center gap-6">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-orange-400" />
+              <span className="font-mono uppercase text-[11px] tracking-wide text-muted">
+                Built for Smart India Hackathon 2026
+              </span>
             </div>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[26ch]">
+              Sign in to see live station data and anomaly decisions
+            </h2>
             <MagneticButton>
               <Link
                 href="/login"
-                className="shrink-0 flex items-center gap-2 rounded-full bg-cyan-400 text-black text-sm font-medium px-5 py-3 hover:bg-cyan-300 transition-colors"
+                className="shrink-0 flex items-center gap-2 rounded-full bg-orange-500 text-black text-sm font-medium px-5 py-3 hover:bg-orange-400 transition-colors"
               >
                 Sign in to the console
                 <ArrowRight className="h-4 w-4" />
@@ -300,7 +294,7 @@ export default function LandingPage() {
 
       <footer className="max-w-[1300px] mx-auto px-4 md:px-8 py-8 flex items-center justify-between text-xs text-muted border-t border-border">
         <span>MeghDrishti</span>
-        <a href="https://github.com/Harshil089/MeghDrishti" target="_blank" rel="noreferrer" className="hover:text-foreground transition-colors">
+        <a href="https://github.com/Harshil089/MeghDrishti" target="_blank" rel="noreferrer" className="hover:text-orange-400 transition-colors">
           github.com/Harshil089/MeghDrishti
         </a>
       </footer>

@@ -35,7 +35,8 @@ class AlertEngine:
         if not decision.should_alert:
             return None
 
-        dedup_key = build_dedup_key(station_id, decision.policy, current.created_at)
+        event_at = current.event_at or current.created_at
+        dedup_key = build_dedup_key(station_id, decision.policy, event_at)
         existing = await self.repo.get_by_dedup_key(dedup_key)
         if existing is not None:
             return existing  # idempotent: duplicate source data must not create duplicate alerts
@@ -47,7 +48,8 @@ class AlertEngine:
             policy=decision.policy,
             dedup_key=dedup_key,
             title=decision.title,
-            details={"classification": current.classification, "severity": current.severity, **evidence},
+            details={"classification": current.classification, "severity": current.severity,
+                     "event_at": event_at.isoformat(), **evidence},
         )
         alerts_created_total.labels(priority=decision.priority, policy=decision.policy).inc()
         return alert

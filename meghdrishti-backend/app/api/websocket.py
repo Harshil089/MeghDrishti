@@ -1,6 +1,7 @@
 """FastAPI WebSocket endpoints that relay Redis Pub/Sub events to browsers."""
 from __future__ import annotations
 
+import anyio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
 from app.core.logging import get_logger
@@ -40,18 +41,32 @@ async def _relay(websocket: WebSocket, channel: str) -> None:
     websocket_connections.labels(channel=channel).inc()
     redis = get_redis()
     pubsub = redis.pubsub()
-    await pubsub.subscribe(channel)
-    try:
+
+    async def forward_events():
         async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
-            await websocket.send_text(message["data"])
+            if message["type"] == "message":
+                await websocket.send_text(message["data"])
+
+    async def wait_for_disconnect():
+        while (await websocket.receive())["type"] != "websocket.disconnect":
+            pass
+
+    try:
+        await pubsub.subscribe(channel)
+        async with anyio.create_task_group() as group:
+            group.start_soon(forward_events)
+            await wait_for_disconnect()
+            group.cancel_scope.cancel()
     except WebSocketDisconnect:
         pass
     finally:
         websocket_connections.labels(channel=channel).dec()
-        await pubsub.unsubscribe(channel)
-        await pubsub.aclose()
+        # Finish cleanup even when the server cancels the connection handler.
+        with anyio.CancelScope(shield=True):
+            try:
+                await pubsub.aclose()
+            finally:
+                await redis.aclose()
 
 
 @router.websocket("/ws/dashboard")

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pytest
 
-from app.ingestion.imd import IMDDemoAdapter
+from app.ingestion.imd import IMDAdapter
 from app.ingestion.manager import ingest_station
 from app.ingestion.open_meteo import OpenMeteoAdapter
 from app.models.stations import Station
@@ -64,9 +64,15 @@ async def test_duplicate_payload_does_not_create_duplicate_observation(db_sessio
     db_session.add(station)
     await db_session.commit()
 
-    adapter = IMDDemoAdapter()
+    class FixedAdapter(IMDAdapter):
+        async def fetch(self, station, start_time, end_time):
+            return [{"station_id": station.station_code, "timestamp": start_time.isoformat(),
+                     "location": {"latitude": station.latitude, "longitude": station.longitude},
+                     "measurements": {"temperature_c": 24.0}}]
+
+    adapter = FixedAdapter()
     start = datetime(2026, 9, 24, tzinfo=timezone.utc)
-    end = start  # single 15-min record
+    end = start  # single fixed provider fixture
 
     first = await ingest_station(db_session, station, adapter, start, end)
     second = await ingest_station(db_session, station, adapter, start, end)
@@ -82,8 +88,8 @@ async def test_schema_invalid_payload_rejected_not_lost(db_session):
     db_session.add(station)
     await db_session.commit()
 
-    class BrokenAdapter(IMDDemoAdapter):
-        source_name = "IMD_DEMO_BROKEN"
+    class BrokenAdapter(IMDAdapter):
+        source_name = "TEST_INVALID"
 
         async def fetch(self, station, start_time, end_time):
             return [{"station_id": station.station_code, "timestamp": "not-a-real-payload"}]

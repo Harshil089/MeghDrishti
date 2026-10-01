@@ -1,4 +1,5 @@
 """PHYSICAL_RANGE rule: measurement must fall within physically plausible bounds."""
+
 from __future__ import annotations
 
 from app.schemas.qc import RuleResult
@@ -14,10 +15,31 @@ REASON_CODES = {
 
 
 def evaluate(measurement: str, value: float, thresholds: dict) -> RuleResult:
+    # These are unit/domain invariants, unlike configurable climatology bounds.
+    impossible = value is not None and (
+        (measurement == "humidity_pct" and not 0 <= value <= 100)
+        or (measurement in {"rainfall_mm", "wind_speed_ms"} and value < 0)
+        or (measurement == "wind_direction_deg" and not 0 <= value <= 360)
+        or (measurement == "pressure_hpa" and value <= 0)
+        or (measurement == "temperature_c" and value < -273.15)
+    )
+    if impossible:
+        return RuleResult(
+            rule="PHYSICAL_RANGE",
+            triggered=True,
+            score=1.0,
+            severity="CRITICAL",
+            reason_code=REASON_CODES.get(measurement, "PHYSICAL_LIMIT"),
+            evidence={"measurement": measurement, "value": value, "physically_impossible": True},
+        )
     bounds = thresholds.get(measurement)
     if bounds is None or value is None:
         return RuleResult(
-            rule="PHYSICAL_RANGE", triggered=False, score=0.0, severity="LOW", evidence={"measurement": measurement}
+            rule="PHYSICAL_RANGE",
+            triggered=False,
+            score=0.0,
+            severity="LOW",
+            evidence={"measurement": measurement},
         )
 
     lo, hi = bounds["min"], bounds["max"]
