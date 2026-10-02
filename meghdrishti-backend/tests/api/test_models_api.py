@@ -48,7 +48,11 @@ async def test_activate_model_as_admin(client, db_session):
     await db_session.commit()
 
     trained = train_isolation_forest(_rows(), ["value"])
-    model = await ModelRegistry(db_session).register_candidate("temperature_c", trained)
+    model = await ModelRegistry(db_session).register_candidate("temperature_c", trained, metrics={
+        "training_policy_version": 2,
+        "evaluation_method": "chronological_holdout",
+        "sensor_data_only": True,
+    })
 
     login = await client.post("/api/v1/auth/login", data={"username": "admin2@x.local", "password": "secret123"})
     token = login.json()["access_token"]

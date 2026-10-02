@@ -44,7 +44,11 @@ async def test_registered_model_starts_as_candidate_and_requires_explicit_activa
     rows = _normal_rows(50)
     trained = train_isolation_forest(rows, FEATURE_NAMES)
     registry = ModelRegistry(db_session)
-    model = await registry.register_candidate("temperature_c", trained)
+    model = await registry.register_candidate("temperature_c", trained, metrics={
+        "training_policy_version": 2,
+        "evaluation_method": "chronological_holdout",
+        "sensor_data_only": True,
+    })
 
     assert model.status == "CANDIDATE"
     active = await registry.get_active("temperature_c", None, None)
@@ -62,7 +66,11 @@ async def test_inference_returns_none_when_features_missing(db_session):
     rows = _normal_rows(50)
     trained = train_isolation_forest(rows, FEATURE_NAMES)
     registry = ModelRegistry(db_session)
-    model = await registry.register_candidate("temperature_c", trained)
+    model = await registry.register_candidate("temperature_c", trained, metrics={
+        "training_policy_version": 2,
+        "evaluation_method": "chronological_holdout",
+        "sensor_data_only": True,
+    })
     await registry.activate(model.id)
 
     result = run_inference(model, {"value": 24.0, "delta_5m": None, "rolling_std": 0.2})

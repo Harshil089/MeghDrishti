@@ -19,7 +19,7 @@ from app.workers import pipeline
 @pytest.mark.parametrize("weak_rule", [False, True])
 async def test_final_decision_keeps_secondary_ml_signal_and_completeness(monkeypatch, completeness, weak_rule):
     observation = SimpleNamespace(
-        id=uuid.uuid4(), station_id=uuid.uuid4(),
+        id=uuid.uuid4(), station_id=uuid.uuid4(), source="IMD",
         **{measurement: 1.0 for measurement in MEASUREMENTS},
     )
     session = AsyncMock()
@@ -48,7 +48,7 @@ async def test_final_decision_keeps_secondary_ml_signal_and_completeness(monkeyp
 async def test_historical_baseline_excludes_future_observations(monkeypatch):
     now = datetime.now(UTC)
     observation = SimpleNamespace(
-        id=uuid.uuid4(), station_id=uuid.uuid4(), timestamp=now,
+        id=uuid.uuid4(), station_id=uuid.uuid4(), timestamp=now, source="IMD",
         **{measurement: 1.0 for measurement in MEASUREMENTS},
     )
     session = AsyncMock()

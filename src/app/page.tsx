@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import Logo from "@/components/Logo";
 import Counter from "@/components/Counter";
@@ -8,7 +9,6 @@ import MagneticButton from "@/components/MagneticButton";
 import Reveal from "@/components/Reveal";
 import SpotlightCard from "@/components/SpotlightCard";
 import GradientText from "@/components/GradientText";
-import WeatherPipelineHero from "@/components/WeatherPipelineHero";
 import ThemeToggle from "@/components/ThemeToggle";
 import { pipelineStages } from "@/lib/mock-data";
 import {
@@ -23,6 +23,16 @@ import {
   ClipboardCheck,
   HeartPulse,
 } from "lucide-react";
+
+// Keep the WebGL scene and its readiness-dependent controls in one client boundary.
+const WeatherPipelineHero = dynamic(() => import("@/components/WeatherPipelineHero"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid min-h-[560px] sm:min-h-[660px] lg:min-h-[690px] place-items-center text-xs text-muted">
+      Loading the weather pipeline…
+    </div>
+  ),
+});
 
 // Static facts about the system's own architecture — verifiable in the
 // codebase, not live operational data. Safe to show to an unauthenticated
