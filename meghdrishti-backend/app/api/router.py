@@ -1,8 +1,6 @@
 """Aggregates all v1 API routers."""
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_current_user
-
 from app.api import (
     admin,
     alerts,
@@ -15,6 +13,7 @@ from app.api import (
     reviews,
     stations,
 )
+from app.api.deps import get_current_user
 
 # Every route except /auth requires a valid access token. Per-route permission
 # checks (require_permission) still apply on top.

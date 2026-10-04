@@ -11,10 +11,9 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.api import websocket as websocket_api
 from app.api.router import api_router
 from app.core.config import settings
-from app.db.session import get_redis
 from app.core.exceptions import AppError, app_error_handler, unhandled_error_handler
 from app.core.logging import configure_logging, get_logger, new_request_id, request_id_ctx
-from app.db.session import check_db_health, check_redis_health
+from app.db.session import check_db_health, check_redis_health, get_redis
 
 configure_logging()
 logger = get_logger("meghdrishti.main")

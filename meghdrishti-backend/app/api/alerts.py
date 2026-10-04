@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Literal
-
 import uuid
 from datetime import timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel

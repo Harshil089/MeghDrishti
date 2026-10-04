@@ -7,7 +7,6 @@ import time
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import UnauthorizedError
-from app.db.session import get_redis
 from app.core.google_auth import GoogleTokenError, verify_google_id_token
 from app.core.security import (
     create_access_token,
@@ -16,6 +15,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.db.session import get_redis
 from app.models.users import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import TokenPair
