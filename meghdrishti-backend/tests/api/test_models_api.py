@@ -14,21 +14,21 @@ def _rows(n=30):
 
 
 @pytest.mark.asyncio
-async def test_list_and_get_model(client, db_session):
+async def test_list_and_get_model(client, db_session, auth_headers):
     trained = train_isolation_forest(_rows(), ["value"])
     model = await ModelRegistry(db_session).register_candidate("temperature_c", trained)
 
-    resp = await client.get("/api/v1/models")
+    resp = await client.get("/api/v1/models", headers=auth_headers)
     assert resp.status_code == 200
     assert any(m["id"] == str(model.id) for m in resp.json()["data"])
 
-    resp = await client.get(f"/api/v1/models/{model.id}")
+    resp = await client.get(f"/api/v1/models/{model.id}", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["data"]["status"] == "CANDIDATE"
 
 
 @pytest.mark.asyncio
-async def test_activate_model_requires_permission(client, db_session):
+async def test_activate_model_requires_permission(client, db_session, auth_headers):
     trained = train_isolation_forest(_rows(), ["value"])
     model = await ModelRegistry(db_session).register_candidate("temperature_c", trained)
 

@@ -81,3 +81,25 @@ async def client(app_with_db):
     transport = ASGITransport(app=app_with_db)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+
+
+@pytest_asyncio.fixture
+async def auth_headers(db_session):
+    """Bearer headers for an ADMIN user. Read routes require a token."""
+    from sqlalchemy import select
+
+    from app.core.security import create_access_token, hash_password
+    from app.models.users import Role, User, UserRole
+
+    role = (await db_session.execute(select(Role).where(Role.name == "ADMIN"))).scalar_one_or_none()
+    if role is None:
+        role = Role(name="ADMIN")
+        db_session.add(role)
+        await db_session.flush()
+    user = User(email="reader@x.local", hashed_password=hash_password("secret123"))
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(UserRole(user_id=user.id, role_id=role.id))
+    await db_session.commit()
+    return {"Authorization": f"Bearer {create_access_token(str(user.id), ['ADMIN'])}"}
+

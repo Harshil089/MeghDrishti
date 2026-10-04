@@ -2,8 +2,8 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_analytics_anomalies_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/anomalies")
+async def test_analytics_anomalies_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/anomalies", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert "classification_counts" in body
@@ -12,8 +12,8 @@ async def test_analytics_anomalies_shape(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_analytics_station_health_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/station-health")
+async def test_analytics_station_health_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/station-health", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert "distribution" in body
@@ -21,8 +21,8 @@ async def test_analytics_station_health_shape(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_analytics_data_quality_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/data-quality")
+async def test_analytics_data_quality_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/data-quality", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert "total_raw_observations" in body
@@ -30,8 +30,8 @@ async def test_analytics_data_quality_shape(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_analytics_sensor_health_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/sensor-health")
+async def test_analytics_sensor_health_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/sensor-health", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert len(body["sensors"]) == 6
@@ -39,8 +39,8 @@ async def test_analytics_sensor_health_shape(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_analytics_maintenance_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/maintenance")
+async def test_analytics_maintenance_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/maintenance", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert "predictions" in body
@@ -48,16 +48,16 @@ async def test_analytics_maintenance_shape(client, db_session):
 
 
 @pytest.mark.asyncio
-async def test_analytics_fleet_series_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/fleet-series")
+async def test_analytics_fleet_series_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/fleet-series", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert set(body.keys()) == {"temperature_c", "humidity_pct", "pressure_hpa"}
 
 
 @pytest.mark.asyncio
-async def test_analytics_insights_shape(client, db_session):
-    resp = await client.get("/api/v1/analytics/insights")
+async def test_analytics_insights_shape(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/analytics/insights", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert len(body["insights"]) >= 1

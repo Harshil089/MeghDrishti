@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import uuid
 
 from fastapi import APIRouter, Depends
@@ -14,7 +16,9 @@ router = APIRouter()
 
 
 class ReviewCreate(BaseModel):
-    operator_classification: str
+    operator_classification: Literal[
+        "CONFIRMED_SENSOR_FAULT", "VALID_EXTREME_WEATHER", "FALSE_POSITIVE", "UNKNOWN", "REVIEW_LATER"
+    ]
     comment: str | None = None
     supporting_metadata: dict = {}
 

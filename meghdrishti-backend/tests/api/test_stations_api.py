@@ -36,28 +36,28 @@ async def test_create_and_list_station(client, db_session):
     assert resp.status_code == 200
     station_id = resp.json()["data"]["id"]
 
-    resp = await client.get("/api/v1/stations")
+    resp = await client.get("/api/v1/stations", headers=headers)
     assert resp.status_code == 200
     assert any(s["id"] == station_id for s in resp.json()["data"])
 
-    resp = await client.get(f"/api/v1/stations/{station_id}")
+    resp = await client.get(f"/api/v1/stations/{station_id}", headers=headers)
     assert resp.status_code == 200
     assert resp.json()["data"]["station_code"] == "API001"
 
 
 @pytest.mark.asyncio
-async def test_station_not_found_returns_error_envelope(client, db_session):
+async def test_station_not_found_returns_error_envelope(client, db_session, auth_headers):
     import uuid
 
-    resp = await client.get(f"/api/v1/stations/{uuid.uuid4()}")
+    resp = await client.get(f"/api/v1/stations/{uuid.uuid4()}", headers=auth_headers)
     assert resp.status_code == 404
     body = resp.json()
     assert body["error"]["code"] == "STATION_NOT_FOUND"
 
 
 @pytest.mark.asyncio
-async def test_dashboard_summary(client, db_session):
-    resp = await client.get("/api/v1/dashboard/summary")
+async def test_dashboard_summary(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/dashboard/summary", headers=auth_headers)
     assert resp.status_code == 200
     body = resp.json()["data"]
     assert "stations" in body

@@ -21,6 +21,14 @@ class UserRepository:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_google_sub(self, sub: str) -> User | None:
+        stmt = (
+            select(User)
+            .where(User.google_sub == sub)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+        )
+        return (await self.session.execute(stmt)).scalar_one_or_none()
+
     async def get_by_id(self, user_id) -> User | None:
         stmt = (
             select(User)

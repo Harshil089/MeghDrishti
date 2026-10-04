@@ -65,7 +65,10 @@ async def propose_calibration(
 
 
 @router.get("/calibration")
-async def get_active_calibration(db: AsyncSession = Depends(get_db)):
+async def get_active_calibration(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_CALIBRATION)),
+):
     profile = await CalibrationRepository(db).get_active()
     if profile is None:
         return {"data": None, "meta": {"message": "No active calibration profile — running on hardcoded defaults"}}
@@ -85,7 +88,10 @@ async def get_active_calibration(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/data-sources")
-async def list_data_sources(db: AsyncSession = Depends(get_db)):
+async def list_data_sources(
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_SOURCES)),
+):
     rows = (await db.execute(select(DataSource))).scalars().all()
     return {
         "data": [

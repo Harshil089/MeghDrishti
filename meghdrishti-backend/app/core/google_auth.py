@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 
 import httpx
-from jose import jwt
+import jwt
 
 from app.core.config import settings
 
@@ -54,13 +54,16 @@ async def verify_google_id_token(id_token: str) -> dict:
     try:
         payload = jwt.decode(
             id_token,
-            key,
+            jwt.PyJWK(key).key,
             algorithms=["RS256"],
             audience=settings.google_client_id,
-            issuer=list(GOOGLE_ISSUERS),
+            # PyJWT takes one issuer string; check membership in the allowed set ourselves.
+            options={"verify_iss": False},
         )
     except Exception as exc:  # noqa: BLE001
         raise GoogleTokenError("Invalid Google token") from exc
+    if payload.get("iss") not in GOOGLE_ISSUERS:
+        raise GoogleTokenError("Invalid Google token issuer")
 
     if not payload.get("email_verified", False):
         raise GoogleTokenError("Google email not verified")

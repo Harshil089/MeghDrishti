@@ -11,6 +11,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.api import websocket as websocket_api
 from app.api.router import api_router
 from app.core.config import settings
+from app.db.session import get_redis
 from app.core.exceptions import AppError, app_error_handler, unhandled_error_handler
 from app.core.logging import configure_logging, get_logger, new_request_id, request_id_ctx
 from app.db.session import check_db_health, check_redis_health
@@ -22,6 +23,10 @@ app = FastAPI(
     title="MeghDrishti Backend",
     description="AI/ML-based intelligent anomaly detection for Automatic Weather Stations",
     version="0.1.0",
+    # Route map is only exposed in local development.
+    docs_url="/docs" if settings.environment == "development" else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if settings.environment == "development" else None,
 )
 
 app.add_middleware(
@@ -64,6 +69,17 @@ async def security_headers_middleware(request: Request, call_next):
         return JSONResponse(status_code=403, content={"error": {
             "code": "ORIGIN_NOT_ALLOWED", "message": "Request origin is not allowed", "details": {}
         }})
+    # ponytail: per-IP fixed window for all writes; per-user/endpoint limits if abuse shows up.
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        ip = request.client.host if request.client else "unknown"
+        async with get_redis() as redis:
+            count = await redis.incr(f"ratelimit:write:{ip}")
+            if count == 1:
+                await redis.expire(f"ratelimit:write:{ip}", 60)
+        if count > settings.write_rate_limit_per_minute:
+            return JSONResponse(status_code=429, content={"error": {
+                "code": "RATE_LIMITED", "message": "Too many write requests", "details": {}
+            }})
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"

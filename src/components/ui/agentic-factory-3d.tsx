@@ -635,7 +635,20 @@ function initMachineScene(root: HTMLElement, fontFamily: string, options: Machin
       screen(group, 1.54, 0.345, 0, 0.27, 0.891, plaque)
       const label = document.createElement('div')
       label.className = 'station-label'
-      label.innerHTML = `<div class="stem"></div><div class="label-card"><div class="label-title"><span>${String(d.step).padStart(2, '0')}</span>${d.name}</div><div class="label-meta">Step ${d.step} · ${d.output}</div></div>`
+      const stem = document.createElement('div')
+      stem.className = 'stem'
+      const card = document.createElement('div')
+      card.className = 'label-card'
+      const title = document.createElement('div')
+      title.className = 'label-title'
+      const num = document.createElement('span')
+      num.textContent = String(d.step).padStart(2, '0')
+      title.append(num, document.createTextNode(d.name))
+      const meta = document.createElement('div')
+      meta.className = 'label-meta'
+      meta.textContent = `Step ${d.step} · ${d.output}`
+      card.append(title, meta)
+      label.append(stem, card)
       $('labels').appendChild(label)
       cleanups.push(() => label.remove())
 
@@ -1149,8 +1162,11 @@ function initMachineScene(root: HTMLElement, fontFamily: string, options: Machin
       renderer.domElement.style.cursor = s ? 'pointer' : 'grab'
       tooltip.classList.toggle('visible', !!s)
       if (s) {
-        tooltip.querySelector('strong')!.innerHTML =
-          `<span>${String(s.step).padStart(2, '0')}</span>${s.name}`
+        const strong = tooltip.querySelector('strong')!
+        strong.textContent = ''
+        const sNum = document.createElement('span')
+        sNum.textContent = String(s.step).padStart(2, '0')
+        strong.append(sNum, document.createTextNode(s.name))
         tooltip.querySelector('p')!.textContent = s.desc
         tooltip.style.left = Math.min(width - 255, Math.max(10, (e.clientX - root.getBoundingClientRect().left) + 16)) + 'px'
         tooltip.style.top = Math.max(10, Math.min(height - 95, (e.clientY - root.getBoundingClientRect().top) - 65)) + 'px'

@@ -23,6 +23,9 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Google account subject id. Once bound, Google sign-in must match it, so a
+    # recycled or changed email address cannot take over the account.
+    google_sub: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
 
     user_roles: Mapped[list[UserRole]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

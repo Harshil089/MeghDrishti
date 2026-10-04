@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 import uuid
 from datetime import timedelta
 
@@ -24,7 +26,7 @@ router = APIRouter()
 
 
 class AlertStatusUpdate(BaseModel):
-    status: str
+    status: Literal["OPEN", "ACKNOWLEDGED", "UNDER_REVIEW", "RESOLVED", "DISMISSED"]
 
 
 def _alert_out(a: Alert) -> dict:

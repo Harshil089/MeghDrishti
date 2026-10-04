@@ -9,14 +9,14 @@ from app.models.users import Role, User, UserRole
 
 
 @pytest.mark.asyncio
-async def test_get_active_calibration_none(client, db_session):
-    resp = await client.get("/api/v1/admin/calibration")
+async def test_get_active_calibration_none(client, db_session, auth_headers):
+    resp = await client.get("/api/v1/admin/calibration", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["data"] is None
 
 
 @pytest.mark.asyncio
-async def test_get_active_calibration_present(client, db_session):
+async def test_get_active_calibration_present(client, db_session, auth_headers):
     db_session.add(
         CalibrationProfile(
             name="default", is_active=True, rule_thresholds={}, fusion_weights={},
@@ -24,22 +24,22 @@ async def test_get_active_calibration_present(client, db_session):
         )
     )
     await db_session.commit()
-    resp = await client.get("/api/v1/admin/calibration")
+    resp = await client.get("/api/v1/admin/calibration", headers=auth_headers)
     assert resp.status_code == 200
     assert resp.json()["data"]["name"] == "default"
 
 
 @pytest.mark.asyncio
-async def test_list_data_sources(client, db_session):
+async def test_list_data_sources(client, db_session, auth_headers):
     db_session.add(DataSource(name="OPEN_METEO", kind="FORECAST_API", is_enabled=True, config={}))
     await db_session.commit()
-    resp = await client.get("/api/v1/admin/data-sources")
+    resp = await client.get("/api/v1/admin/data-sources", headers=auth_headers)
     assert resp.status_code == 200
     assert any(s["name"] == "OPEN_METEO" for s in resp.json()["data"])
 
 
 @pytest.mark.asyncio
-async def test_trigger_ingestion_requires_permission(client, db_session):
+async def test_trigger_ingestion_requires_permission(client, db_session, auth_headers):
     station = Station(station_code="ADMIN001", name="Admin Test", source="TEST", latitude=1.0, longitude=1.0)
     db_session.add(station)
     await db_session.commit()

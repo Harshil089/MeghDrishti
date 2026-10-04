@@ -42,6 +42,11 @@ async def refresh(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
     return await service.refresh(payload.refresh_token)
 
 
+@router.post("/logout", status_code=204)
+async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)):
+    await AuthService(db).logout(payload.refresh_token)
+
+
 @router.get("/me", response_model=UserOut)
 async def me(current=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     repo = UserRepository(db)

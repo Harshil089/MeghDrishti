@@ -54,3 +54,17 @@ async def test_google_login_rejects_unverified_email(client, db_session):
     ):
         resp = await client.post("/api/v1/auth/google", json={"id_token": "fake"})
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_google_login_refuses_email_bound_to_other_identity(client, db_session):
+    from app.core.security import hash_password
+    from app.models.users import User
+
+    db_session.add(User(email="bound@gmail.com", hashed_password=hash_password("x"), google_sub="old-sub"))
+    await db_session.commit()
+
+    fake_payload = {"email": "bound@gmail.com", "name": "Other", "email_verified": True, "sub": "new-sub"}
+    with patch("app.services.auth_service.verify_google_id_token", new=AsyncMock(return_value=fake_payload)):
+        resp = await client.post("/api/v1/auth/google", json={"id_token": "fake"})
+    assert resp.status_code == 401

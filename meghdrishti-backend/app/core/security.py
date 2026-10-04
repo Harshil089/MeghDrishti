@@ -1,10 +1,11 @@
 """Password hashing and JWT helpers."""
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -44,12 +45,12 @@ def create_refresh_token(subject: str) -> str:
     return create_token(
         subject,
         timedelta(minutes=settings.refresh_token_expire_minutes),
-        {"type": "refresh"},
+        {"type": "refresh", "jti": uuid.uuid4().hex},
     )
 
 
 def decode_token(token: str) -> dict[str, Any]:
     try:
         return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-    except JWTError as exc:
+    except jwt.PyJWTError as exc:
         raise ValueError("invalid token") from exc

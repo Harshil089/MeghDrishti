@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import UnauthorizedError
 from app.core.security import decode_token
+from app.db.session import get_db
+from app.repositories.user_repository import UserRepository
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
@@ -22,6 +24,7 @@ class CurrentUser:
 
 async def get_current_user(
     token: str | None = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
 ) -> CurrentUser:
     if not token:
         raise UnauthorizedError("Not authenticated")
@@ -31,9 +34,12 @@ async def get_current_user(
         raise UnauthorizedError("Invalid or expired token") from exc
     if payload.get("type") != "access":
         raise UnauthorizedError("Invalid token type")
-    return CurrentUser(
-        id=payload["sub"], email=payload.get("email", ""), roles=payload.get("roles", [])
-    )
+    # Re-check the account on every request so deactivation and role changes
+    # take effect immediately instead of waiting for the access token to expire.
+    user = await UserRepository(db).get_by_id(payload["sub"])
+    if user is None or not user.is_active:
+        raise UnauthorizedError("User no longer active")
+    return CurrentUser(id=str(user.id), email=user.email, roles=user.role_names)
 
 
 @dataclass

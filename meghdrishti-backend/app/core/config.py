@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_minutes: int = 10080
+    write_rate_limit_per_minute: int = 120
 
     demo_admin_email: str = "admin@meghdrishti.local"
     demo_admin_password: str = "change-me"
@@ -92,11 +93,14 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _guard_production(self) -> Settings:
-        if self.environment == "production":
+        # Anything other than local development must not run with dev defaults.
+        if self.environment != "development":
             if self.debug:
-                raise ValueError("DEBUG must be false when ENVIRONMENT=production")
+                raise ValueError("DEBUG must be false outside ENVIRONMENT=development")
             if self.jwt_secret == "insecure-dev-secret-change-me":
-                raise ValueError("JWT_SECRET must be set to a real secret when ENVIRONMENT=production")
+                raise ValueError("JWT_SECRET must be set to a real secret outside ENVIRONMENT=development")
+            if self.demo_admin_password == "change-me":
+                raise ValueError("DEMO_ADMIN_PASSWORD must be changed outside ENVIRONMENT=development")
         return self
 
 
