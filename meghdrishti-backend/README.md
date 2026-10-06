@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚙️ MeghDrishti Backend
+# MeghDrishti Backend
 
 **The engine behind the console:** ingestion, QC rules, Isolation Forest, context validation,
 evidence fusion, alerting and operator review.
@@ -25,22 +25,22 @@ evidence fusion, alerting and operator review.
 
 ---
 
-## 🔄 Pipeline
+## Pipeline
 
 ```mermaid
 flowchart TD
     R[Raw observation<br/><i>never mutated</i>] --> V[Schema validation + normalization]
     V --> F[Feature engineering<br/>deltas · rolling stats · z-score · neighbors · climatology]
-    F --> Q[📏 Rule engine<br/>app/qc]
-    F --> M[🌲 Isolation Forest<br/>app/ml]
-    F --> C[🛰️ Context validator<br/>app/context]
-    Q --> X[⚖️ Evidence fusion → confidence → ExtremeEventGuard<br/>app/scoring]
+    F --> Q[Rule engine<br/>app/qc]
+    F --> M[Isolation Forest<br/>app/ml]
+    F --> C[Context validator<br/>app/context]
+    Q --> X[Evidence fusion → confidence → ExtremeEventGuard<br/>app/scoring]
     M --> X
     C --> X
     X --> D{NORMAL · WATCH · SUSPICIOUS<br/>PROBABLE_SENSOR_FAULT<br/>LIKELY_GENUINE_EXTREME<br/>INSUFFICIENT_CONTEXT}
-    D --> A[🚨 Alert policy<br/>app/alerts]
-    A --> W[📡 WebSocket + station health]
-    A --> O[🧑‍💼 Operator review → label store]
+    D --> A[Alert policy<br/>app/alerts]
+    A --> W[WebSocket + station health]
+    A --> O[Operator review → label store]
 ```
 
 Rule, ML and context outputs are persisted independently (`qc_rule_results`, `ml_results`,
@@ -48,10 +48,10 @@ Rule, ML and context outputs are persisted independently (`qc_rule_results`, `ml
 
 ---
 
-## 🚀 Run it
+## Run it
 
 The backend is started together with the frontend from the repository root.
-Follow the root [Quickstart](../README.md#-quickstart), then:
+Follow the root [Quickstart](../README.md#quickstart), then:
 
 ```bash
 npm run dev      # Postgres, Redis, API, worker, beat, frontend
@@ -80,7 +80,7 @@ From this directory, `make up`, `make down` and `make status` do the same.
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 # Use a dedicated test database, never the application database.
@@ -91,7 +91,7 @@ DATABASE_URL=postgresql+asyncpg://meghdrishti:meghdrishti@localhost:5432/meghdri
 .venv/bin/mypy app   # non-blocking in CI
 ```
 
-### 🎬 Demo: inject a fault and watch it flow through
+### Demo: inject a fault and watch it flow through
 
 ```bash
 python scripts/inject_fault.py --station IMD_PUNE_001 --type spike \
@@ -105,7 +105,7 @@ Fault types: `stuck` · `spike` · `drift` · `dropout` · `telemetry_gap` · `p
 
 ---
 
-## 🛰️ Data sources and credentials
+## Data sources and credentials
 
 All credentials go in `meghdrishti-backend/.env` (see `.env.example`). Missing credentials are reported
 as "context unavailable", never as zero.
@@ -123,7 +123,7 @@ as "context unavailable", never as zero.
 
 ---
 
-## 🗺️ Code map
+## Code map
 
 | Layer | Path |
 |---|---|
@@ -143,7 +143,7 @@ as "context unavailable", never as zero.
 
 ---
 
-## 🧩 What's implemented
+## What's implemented
 
 <table>
 <tr><td>
@@ -190,7 +190,7 @@ as "context unavailable", never as zero.
 
 ---
 
-## ⚠️ Known gaps
+## Known gaps
 
 - **ML accuracy is unknown.** There are no independent labels yet and no active model.
   Forecast-trained candidates are diagnostic only; activation needs real sensor data with

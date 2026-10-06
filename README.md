@@ -20,7 +20,7 @@ from sensor faults, drift, spikes and telemetry gaps. It never decides on statis
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-Isolation%20Forest-F7931E?logo=scikitlearn&logoColor=white)
 ![SIH 2026](https://img.shields.io/badge/Smart%20India%20Hackathon-2026-FF6F00)
 
-[Screenshots](#-a-look-inside) · [How it works](#-how-it-works) · [Quickstart](#-quickstart) · [Data sources](#-data-sources) · [Backend docs](meghdrishti-backend/README.md)
+[Screenshots](#a-look-inside) · [How it works](#how-it-works) · [Quickstart](#quickstart) · [Data sources](#data-sources) · [Backend docs](meghdrishti-backend/README.md)
 
 <br />
 
@@ -30,21 +30,21 @@ from sensor faults, drift, spikes and telemetry gaps. It never decides on statis
 
 ---
 
-## ✨ Why MeghDrishti
+## Why MeghDrishti
 
 A weather station reports 48 °C. Is it a heatwave or a sensor sitting in the sun?
 Classic QC either throws away real extremes or lets faulty sensors through.
 MeghDrishti treats every unusual reading as a question and answers it with evidence:
 
-- 🧪 **11 rule checks** for stuck values, spikes, drift, dropouts, physical impossibilities and gaps
-- 🌲 **Isolation Forest** scoring on engineered features, never raw values
-- 🛰️ **Independent context** from nearby stations, forecasts, ERA5 reanalysis and NASA GPM satellite rain
-- ⚖️ **Evidence fusion** with a guard that refuses to call an extreme "fake" when the context backs it up
-- 🧑‍💼 **Operator review loop**: every decision is explainable, and every review becomes a label
+- **11 rule checks** for stuck values, spikes, drift, dropouts, physical impossibilities and gaps
+- **Isolation Forest** scoring on engineered features, never raw values
+- **Independent context** from nearby stations, forecasts, ERA5 reanalysis and NASA GPM satellite rain
+- **Evidence fusion** with a guard that refuses to call an extreme "fake" when the context backs it up
+- **Operator review loop**: every decision is explainable, and every review becomes a label
 
 ---
 
-## 📸 A look inside
+## A look inside
 
 ### Overview
 Fleet health, live averages, open alerts and sensor reliability on one screen.
@@ -100,21 +100,21 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
 
 ---
 
-## 🧠 How it works
+## How it works
 
 ```mermaid
 flowchart LR
-    A[🌦️ Providers<br/>Open-Meteo · IMD] --> B[Ingestion<br/>raw preserved]
+    A[Providers<br/>Open-Meteo · IMD] --> B[Ingestion<br/>raw preserved]
     B --> C[Schema check<br/>+ normalize]
     C --> D[Features]
-    D --> E1[📏 Rule engine]
-    D --> E2[🌲 Isolation Forest]
-    D --> E3[🛰️ Context<br/>neighbors · forecast<br/>ERA5 · GPM]
-    E1 & E2 & E3 --> F[⚖️ Evidence fusion<br/>+ ExtremeEventGuard]
+    D --> E1[Rule engine]
+    D --> E2[Isolation Forest]
+    D --> E3[Context<br/>neighbors · forecast<br/>ERA5 · GPM]
+    E1 & E2 & E3 --> F[Evidence fusion<br/>+ ExtremeEventGuard]
     F --> G{Decision}
-    G --> H[🚨 Alert policy]
-    H --> I[🧑‍💼 Operator review]
-    I --> J[(🏷️ Label store)]
+    G --> H[Alert policy]
+    H --> I[Operator review]
+    I --> J[(Label store)]
 ```
 
 Every reading ends up as one of:
@@ -133,7 +133,7 @@ so every alert can show exactly why it was raised.
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
 **Prerequisites:** Node.js, Python 3.12+, Homebrew and [`uv`](https://docs.astral.sh/uv/).
 
@@ -156,14 +156,14 @@ npm run stop     # stop everything
 
 | Service | URL |
 |---|---|
-| 🖥️ App | http://localhost:3000 |
-| 📚 API + Swagger | http://localhost:8000/docs |
+| App | http://localhost:3000 |
+| API + Swagger | http://localhost:8000/docs |
 
 `npm run dev` starts dedicated Postgres and Redis instances, FastAPI, one Celery worker,
 Celery Beat and Next.js. State and logs live in the ignored `.local/` folder.
 Ports 5432, 6379, 8000 and 3000 must be free.
 
-> 💤 **Running on a laptop?** The scheduler only runs while the machine is awake.
+> **Running on a laptop?** The scheduler only runs while the machine is awake.
 > After sleep, open **Live** and click **Pull latest** to backfill the last 24 hours.
 
 <details>
@@ -195,23 +195,23 @@ Ports 5432, 6379, 8000 and 3000 must be free.
 
 ---
 
-## 🛰️ Data sources
+## Data sources
 
 | Source | Role | What it covers | Setup |
 |---|---|---|---|
-| **Open-Meteo** | Primary feed | All measurements, every 15 minutes | ✅ No key needed |
+| **Open-Meteo** | Primary feed | All measurements, every 15 minutes | No key needed |
 | **NASA GPM** (IMERG Early) | Context | Rainfall, about 4 hours behind real time | Earthdata or PPS login in `.env` |
 | **ERA5** (Copernicus) | Context | Temperature, pressure, humidity, about 5 days behind | CDS key + accepted licence |
 | **NOAA GHCN** | Station network | Daily summaries from nearby stations | Token in `.env` (sparse recent coverage for India) |
 | **IMD** | Primary feed | Real Indian station observations | Adapter built, waiting for API access |
 
-> ℹ️ Open-Meteo is model output, so it is never used to confirm itself. Until real sensor data or
+> Open-Meteo is model output, so it is never used to confirm itself. Until real sensor data or
 > independent context is available, recent readings can show `INSUFFICIENT_CONTEXT`. That is the system
 > being honest, not a bug. See [`queue/imd-integration.md`](queue/imd-integration.md) for the IMD status.
 
 ---
 
-## 🧱 Tech stack
+## Tech stack
 
 | Layer | Tools |
 |---|---|
@@ -224,7 +224,7 @@ Ports 5432, 6379, 8000 and 3000 must be free.
 
 ---
 
-## 🗂️ Project structure
+## Project structure
 
 ```
 MeghDrishti/
@@ -245,7 +245,7 @@ MeghDrishti/
 
 ---
 
-## 🔐 Sign-in and roles
+## Sign-in and roles
 
 - The landing page at `/` is public. Everything in the console needs sign-in;
   signed-out visitors are sent back to `/`.
@@ -257,7 +257,7 @@ MeghDrishti/
 
 ---
 
-## ✅ Status and honesty notes
+## Status and honesty notes
 
 - **Real data only.** Every number in the console comes from a live backend query.
   `src/lib/mock-data.ts` holds only types, colours and static reference text.
