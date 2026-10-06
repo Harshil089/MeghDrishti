@@ -149,7 +149,7 @@ export default function LandingPage() {
                   href="https://github.com/Harshil089/MeghDrishti"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 rounded-full border border-border text-sm px-5 py-3 text-foreground/80 hover:bg-white/[0.04] transition-colors"
+                  className="flex items-center gap-2 rounded-full border border-border text-sm px-5 py-3 text-foreground hover:bg-white/[0.04] transition-colors"
                 >
                   <GitFork className="h-4 w-4" />
                   View source
@@ -262,7 +262,7 @@ export default function LandingPage() {
             <Reveal key={stage.key} delay={i * 0.05}>
               <div className="flex items-center gap-3">
                 <div className="rounded-lg border border-border bg-panel-2/60 px-4 py-3 min-w-[160px]">
-                  <p className="text-[11px] font-mono uppercase tracking-wide text-foreground/90 mb-1">
+                  <p className="text-[11px] font-mono uppercase tracking-wide text-foreground mb-1">
                     {stage.label}
                   </p>
                   <p className="text-[11px] text-muted leading-snug">{stage.detail}</p>

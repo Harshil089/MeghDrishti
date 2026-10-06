@@ -1,118 +1,80 @@
 "use client";
 
-import Topbar from "@/components/Topbar";
-import StationMap from "@/components/StationMap";
-import RadarSweepCanvas from "@/components/RadarSweepCanvas";
-import Reveal from "@/components/Reveal";
-import SpotlightCard from "@/components/SpotlightCard";
-import { statusMeta, type Station } from "@/lib/mock-data";
-import { fetchMaintenance, fetchStations, type MaintenanceReport } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Wrench, ClipboardList } from "lucide-react";
+import StationMap from "@/components/StationMap";
+import { PageHeader, Section, Badge, Empty, type Tone } from "@/components/console/ui";
+import { statusMeta, type Station, type StationStatus } from "@/lib/mock-data";
+import { fetchStations } from "@/lib/api";
+import { useLiveData } from "@/lib/useLiveData";
 
-const EMPTY_MAINTENANCE: MaintenanceReport = { predictions: [], recommended_actions: [] };
-
-function severityBar(pct: number) {
-  if (pct >= 50) return "from-rose-500 to-rose-400";
-  if (pct >= 25) return "from-amber-400 to-amber-300";
-  return "from-emerald-400 to-emerald-300";
-}
+const statusTone: Record<StationStatus, Tone> = { normal: "ok", warning: "warn", critical: "crit", offline: "neutral" };
 
 export default function NetworkPage() {
   const stations = useLiveData(fetchStations, [] as Station[]);
-  const maintenance = useLiveData(fetchMaintenance, EMPTY_MAINTENANCE);
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string>(searchParams.get("station") ?? "");
-  const selected: Station | undefined = stations.find((s) => s.id === selectedId) ?? stations[0];
+  const selected = stations.find((s) => s.id === selectedId) ?? stations[0];
+
+  const counts = stations.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {});
 
   return (
     <>
-      <Topbar title="Network Map" />
-      <main className="flex-1 p-4 md:p-6 space-y-4">
-        <section className="glass rounded-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 pt-4">
-            <div className="flex items-center gap-2">
-              <RadarSweepCanvas size={32} />
-              <h3 className="text-sm font-semibold">Network Map (nearby stations)</h3>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] text-muted">
-              {Object.entries(statusMeta).map(([key, m]) => (
-                <span key={key} className="flex items-center gap-1.5">
-                  <span className={`h-2 w-2 rounded-full ${m.dot}`} />
-                  {m.label}
-                </span>
-              ))}
-            </div>
+      <PageHeader
+        title="Network"
+        description="Station locations and current status. Select a station on the map or in the list."
+        actions={
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(Object.keys(statusMeta) as StationStatus[]).map((key) => (
+              <Badge key={key} tone={statusTone[key]}>
+                {statusMeta[key].label} <span className="ml-1 font-mono">{counts[key] ?? 0}</span>
+              </Badge>
+            ))}
           </div>
+        }
+      />
 
-          <div className="relative h-[520px] md:h-[620px] mt-2">
+      <div className="grid gap-4 lg:grid-cols-12">
+        <Section flush className="lg:col-span-8 overflow-hidden">
+          <div className="relative h-[460px] md:h-[600px]">
             {stations.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-muted">Connecting to station network…</div>
+              <div className="flex h-full items-center justify-center text-sm text-sub">Loading station network</div>
             ) : (
               <StationMap stations={stations} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
             )}
           </div>
+        </Section>
 
-          {selected && (
-            <div className="px-4 pb-4 pt-2 flex items-center justify-between text-xs">
-              <span className="text-muted">
-                Selected: <span className="text-foreground/90 font-medium font-mono">{selected.id}</span> · {selected.name}
-              </span>
-              <span className={statusMeta[selected.status].color}>
-                {selected.status === "offline" ? "—" : `${selected.temp}°C`} · {statusMeta[selected.status].label}
-              </span>
-            </div>
+        <Section title="Stations" meta={stations.length ? `${stations.length}` : undefined} flush className="lg:col-span-4">
+          {stations.length === 0 ? (
+            <Empty>No stations yet</Empty>
+          ) : (
+            <ul className="max-h-[600px] overflow-y-auto">
+              {stations.map((s) => {
+                const active = s.id === selected?.id;
+                return (
+                  <li key={s.id}>
+                    <button
+                      onClick={() => setSelectedId(s.id)}
+                      aria-pressed={active}
+                      className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-3 border-b border-line px-4 py-2.5 text-left transition-colors last:border-0 ${
+                        active ? "bg-accent/10" : "hover:bg-raised"
+                      }`}
+                    >
+                      <span className="truncate text-[13px] font-medium text-ink">{s.name}</span>
+                      <Badge tone={statusTone[s.status]}>{statusMeta[s.status].label}</Badge>
+                      <span className="truncate font-mono text-[11px] text-sub">{s.id}</span>
+                      <span className="text-right font-mono text-xs tabular-nums text-ink">
+                        {s.status === "offline" ? "-" : `${s.temp}°C`}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
           )}
-        </section>
-
-        <Reveal className="grid md:grid-cols-2 gap-4">
-          <SpotlightCard className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Wrench className="h-4 w-4 text-amber-400" />
-              <h3 className="text-sm font-semibold">Maintenance prediction</h3>
-              <span className="text-[10px] text-muted ml-auto">from QC rule trigger rates, 7d</span>
-            </div>
-            <ul className="space-y-3">
-              {maintenance.predictions.length === 0 && (
-                <li className="text-xs text-muted">No station health data yet.</li>
-              )}
-              {maintenance.predictions.map((m) => (
-                <li key={m.station_id}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted">
-                      {m.station_code} <span className="text-foreground/60">· {m.name}</span>
-                    </span>
-                    <span className="text-foreground/80 font-mono">{m.pct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-panel-2 overflow-hidden">
-                    <div className={`h-full rounded-full bg-gradient-to-r ${severityBar(m.pct)}`} style={{ width: `${m.pct}%` }} />
-                  </div>
-                  <p className="text-[11px] text-muted mt-1">{m.note}</p>
-                </li>
-              ))}
-            </ul>
-          </SpotlightCard>
-
-          <SpotlightCard className="p-4 flex flex-col">
-            <div className="flex items-center gap-2 mb-3">
-              <ClipboardList className="h-4 w-4 text-cyan-300" />
-              <h3 className="text-sm font-semibold">Recommended action</h3>
-            </div>
-            <ul className="space-y-2 flex-1">
-              {maintenance.recommended_actions.length === 0 && (
-                <li className="text-xs text-muted">No actions recommended — fleet is healthy.</li>
-              )}
-              {maintenance.recommended_actions.map((a, i) => (
-                <li key={i} className="text-xs text-muted leading-relaxed pl-3 border-l border-cyan-400/30">
-                  {a}
-                </li>
-              ))}
-            </ul>
-          </SpotlightCard>
-        </Reveal>
-      </main>
+        </Section>
+      </div>
     </>
   );
 }

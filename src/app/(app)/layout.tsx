@@ -1,33 +1,24 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
-import PageTransition from "@/components/PageTransition";
-import Skeleton from "@/components/Skeleton";
+import { usePathname, useRouter } from "next/navigation";
+import ConsoleHeader from "@/components/console/ConsoleHeader";
 import { useAuth } from "@/lib/useAuth";
 
-// Silhouette of the console shell (sidebar rail + topbar + card grid) shown
-// while the auth check resolves, instead of a bare spinner — same shape as
-// every real page so nothing jumps once content swaps in.
-function AppShellSkeleton() {
+// Shell silhouette shown while auth resolves: header bars + metric strip,
+// the same shape every page opens with, so nothing jumps on swap.
+function ShellSkeleton() {
   return (
-    <div className="flex min-h-screen w-full">
-      <aside className="hidden md:flex w-64 shrink-0 flex-col gap-2 border-r border-border bg-panel/60 p-4">
-        <Skeleton className="h-8 w-32 mb-4" />
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full" />
-        ))}
-      </aside>
-      <div className="flex-1 flex flex-col">
-        <div className="h-16 shrink-0 border-b border-border flex items-center px-6">
-          <Skeleton className="h-5 w-40" />
-        </div>
-        <div className="flex-1 p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 content-start">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
+    <div className="min-h-dvh bg-canvas">
+      <div className="h-[89px] border-b border-line bg-surface" />
+      <div className="mx-auto max-w-[1440px] px-4 md:px-6 py-6 space-y-5">
+        <div className="h-6 w-48 rounded bg-raised animate-pulse" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-md border border-line bg-line overflow-hidden">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[84px] bg-surface" />
           ))}
         </div>
+        <div className="h-72 rounded-md border border-line bg-surface" />
       </div>
     </div>
   );
@@ -36,19 +27,19 @@ function AppShellSkeleton() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) router.replace("/");
   }, [loading, user, router]);
 
-  if (loading || !user) {
-    return <AppShellSkeleton />;
-  }
+  if (loading || !user) return <ShellSkeleton />;
 
   return (
-    <div className="flex min-h-screen w-full">
-      <Sidebar />
-      <PageTransition>{children}</PageTransition>
+    <div className="min-h-dvh w-full bg-canvas text-ink">
+      <ConsoleHeader />
+      {/* key remounts main on every tab switch so the fade replays */}
+      <main key={pathname} className="page-fade mx-auto max-w-[1440px] px-4 md:px-6 py-6">{children}</main>
     </div>
   );
 }

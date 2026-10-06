@@ -1,94 +1,91 @@
 "use client";
 
-import Topbar from "@/components/Topbar";
-import Reveal from "@/components/Reveal";
-import SpotlightCard from "@/components/SpotlightCard";
+import { PageHeader, Section, Badge, Empty } from "@/components/console/ui";
 import { fetchActiveCalibration, fetchDataSources, type CalibrationProfile, type DataSourceStatus } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
-import { Settings as SettingsIcon, Database, SlidersHorizontal } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
+
+function KeyValues({ title, values }: { title: string; values: Record<string, number | string> }) {
+  return (
+    <div>
+      <h3 className="px-4 pt-4 pb-2 text-xs font-medium text-sub">{title}</h3>
+      <dl className="border-y border-line">
+        {Object.entries(values).map(([k, v]) => (
+          <div key={k} className="flex items-center justify-between border-b border-line px-4 py-2 last:border-0">
+            <dt className="font-mono text-xs text-sub">{k}</dt>
+            <dd className="font-mono text-[13px] tabular-nums text-ink">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
-  const calibration = useLiveData(fetchActiveCalibration, null as CalibrationProfile | null, 30000);
-  const sources = useLiveData(fetchDataSources, [] as DataSourceStatus[], 30000);
+  // Both endpoints are permission-gated server-side (403 for viewers), and
+  // useLiveData swallows errors, so gate on role instead of loading forever.
+  const { user } = useAuth();
+  const isAdmin = !!user?.roles.includes("ADMIN");
+  const canCalibration = isAdmin || !!user?.roles.includes("SCIENTIST");
+  const calibration = useLiveData(
+    () => (canCalibration ? fetchActiveCalibration() : Promise.resolve(null)),
+    null as CalibrationProfile | null,
+    30000,
+    [canCalibration]
+  );
+  const sources = useLiveData(
+    () => (isAdmin ? fetchDataSources() : Promise.resolve([] as DataSourceStatus[])),
+    [] as DataSourceStatus[],
+    30000,
+    [isAdmin]
+  );
 
   return (
     <>
-      <Topbar title="Settings" />
-      <main className="flex-1 p-4 md:p-6 space-y-4">
-        <div className="glass rounded-xl p-4 flex items-center gap-2">
-          <SettingsIcon className="h-4 w-4 text-cyan-300" />
-          <h3 className="text-sm font-semibold">System configuration</h3>
-          <span className="text-[11px] text-muted ml-auto">read-only — edit via calibration DAG / admin API</span>
-        </div>
+      <PageHeader
+        title="Settings"
+        description="Active system configuration. Read-only here; edit through the calibration DAG or admin API."
+      />
 
-        <Reveal className="grid md:grid-cols-2 gap-4">
-          <SpotlightCard className="p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <SlidersHorizontal className="h-4 w-4 text-amber-400" />
-              <h4 className="text-sm font-semibold">Active calibration profile</h4>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Section
+          title="Calibration profile"
+          meta={calibration ? `Updated ${new Date(calibration.updated_at).toLocaleString()}` : undefined}
+          actions={calibration && <Badge tone="ok">{calibration.name}</Badge>}
+          flush
+        >
+          {!canCalibration ? (
+            <Empty>Requires an admin or scientist account.</Empty>
+          ) : !calibration ? (
+            <Empty>No active profile. The system is running on built-in defaults.</Empty>
+          ) : (
+            <div className="pb-4 space-y-2">
+              <KeyValues title="Decision thresholds" values={calibration.decision_thresholds} />
+              <KeyValues title="Fusion weights" values={calibration.fusion_weights} />
             </div>
-            {!calibration ? (
-              <p className="text-xs text-muted">No active profile — system running on hardcoded defaults.</p>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-muted">
-                  <span className="text-foreground/80 font-medium">{calibration.name}</span> · updated{" "}
-                  {new Date(calibration.updated_at).toLocaleString()}
-                </p>
-                <div>
-                  <p className="text-[11px] text-muted mb-1.5">Decision thresholds</p>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                    {Object.entries(calibration.decision_thresholds).map(([k, v]) => (
-                      <div key={k} className="flex justify-between rounded bg-panel-2 px-2 py-1">
-                        <span className="text-muted">{k}</span>
-                        <span>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted mb-1.5">Fusion weights</p>
-                  <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                    {Object.entries(calibration.fusion_weights).map(([k, v]) => (
-                      <div key={k} className="flex justify-between rounded bg-panel-2 px-2 py-1">
-                        <span className="text-muted">{k}</span>
-                        <span>{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </SpotlightCard>
+          )}
+        </Section>
 
-          <SpotlightCard className="p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Database className="h-4 w-4 text-emerald-400" />
-              <h4 className="text-sm font-semibold">Data sources</h4>
-            </div>
-            <ul className="space-y-2">
-              {sources.length === 0 && <li className="text-xs text-muted">Connecting…</li>}
+        <Section title="Data sources" meta={sources.length ? `${sources.length}` : undefined} flush>
+          {!isAdmin ? (
+            <Empty>Requires an admin account.</Empty>
+          ) : sources.length === 0 ? (
+            <Empty>No data sources configured</Empty>
+          ) : (
+            <ul>
               {sources.map((s) => (
-                <li key={s.name} className="flex items-center justify-between text-xs rounded-lg bg-panel-2 px-3 py-2">
-                  <div>
-                    <span className="font-medium text-foreground/90">{s.name}</span>
-                    <span className="text-muted ml-2">{s.kind}</span>
+                <li key={s.name} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium text-ink">{s.name}</p>
+                    <p className="text-xs text-sub">{s.kind}</p>
                   </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full border text-[10px] ${
-                      s.is_enabled
-                        ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                        : "text-muted border-border"
-                    }`}
-                  >
-                    {s.is_enabled ? "enabled" : "pending credentials"}
-                  </span>
+                  <Badge tone={s.is_enabled ? "ok" : "neutral"}>{s.is_enabled ? "Enabled" : "Needs credentials"}</Badge>
                 </li>
               ))}
             </ul>
-          </SpotlightCard>
-        </Reveal>
-      </main>
+          )}
+        </Section>
+      </div>
     </>
   );
 }

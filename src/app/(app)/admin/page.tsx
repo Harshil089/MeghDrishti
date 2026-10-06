@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Topbar from "@/components/Topbar";
-import Reveal from "@/components/Reveal";
-import SpotlightCard from "@/components/SpotlightCard";
+import { RotateCcw, Power } from "lucide-react";
+import { PageHeader, Section, Badge, Empty, button, table, type Tone } from "@/components/console/ui";
 import { useAuth } from "@/lib/useAuth";
 import { useLiveData } from "@/lib/useLiveData";
 import {
@@ -15,124 +14,139 @@ import {
   type IngestionJob,
   type ModelVersion,
 } from "@/lib/api";
-import { ShieldCheck, RotateCcw, Power, Database, Cpu } from "lucide-react";
 
-const jobStatusStyle: Record<string, string> = {
-  SUCCEEDED: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
-  FAILED: "text-rose-400 border-rose-500/30 bg-rose-500/10",
-  RUNNING: "text-cyan-300 border-cyan-400/30 bg-cyan-400/10",
-  PENDING: "text-muted border-border",
-};
+const jobTone: Record<string, Tone> = { SUCCEEDED: "ok", FAILED: "crit", RUNNING: "info", PENDING: "neutral" };
+const modelTone: Record<string, Tone> = { ACTIVE: "ok", CANDIDATE: "warn", RETIRED: "neutral", FAILED: "crit" };
+const small = `${button} h-7 px-2 text-xs`;
 
-const modelStatusStyle: Record<string, string> = {
-  ACTIVE: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
-  CANDIDATE: "text-amber-400 border-amber-400/30 bg-amber-400/10",
-  RETIRED: "text-muted border-border",
-  FAILED: "text-rose-400 border-rose-500/30 bg-rose-500/10",
-};
-
-function IngestionJobsPanel() {
+function IngestionJobs() {
   const jobs = useLiveData(fetchIngestionJobs, [] as IngestionJob[], 15000);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
   async function replay(jobId: string) {
     setBusy(jobId);
+    setError(null);
     try {
       await replayIngestionJob(jobId);
+    } catch (err) {
+      setError({ id: jobId, message: err instanceof Error ? err.message : "Replay failed" });
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <SpotlightCard className="p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Database className="h-4 w-4 text-cyan-300" />
-        <h4 className="text-sm font-semibold">Ingestion jobs</h4>
-      </div>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {jobs.length === 0 && <p className="text-xs text-muted">No ingestion jobs yet.</p>}
-        {jobs.map((j) => (
-          <div key={j.id} className="flex items-center justify-between rounded-lg bg-panel-2 px-3 py-2 text-xs">
-            <div className="min-w-0">
-              <p className="font-mono text-foreground/90 truncate">
-                {j.source} <span className="text-muted">· attempt {j.attempt}</span>
-              </p>
-              <p className="text-muted truncate">{new Date(j.created_at).toLocaleString()}</p>
-              {j.error_message && <p className="text-rose-400 truncate">{j.error_message}</p>}
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              <span className={`px-2 py-0.5 rounded-full border ${jobStatusStyle[j.status] ?? "text-muted border-border"}`}>
-                {j.status}
-              </span>
-              {j.status === "FAILED" && (
-                <button
-                  onClick={() => replay(j.id)}
-                  disabled={busy === j.id}
-                  className="flex items-center gap-1 text-cyan-300 hover:text-cyan-200 disabled:opacity-50"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  {busy === j.id ? "…" : "replay"}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </SpotlightCard>
+    <Section title="Ingestion jobs" meta={jobs.length ? `${jobs.length}` : undefined} flush>
+      {jobs.length === 0 ? (
+        <Empty>No ingestion jobs yet</Empty>
+      ) : (
+        <div className={`${table.wrap} max-h-[480px] overflow-y-auto`}>
+          <table className={table.table}>
+            <thead className={`${table.head} sticky top-0`}>
+              <tr>
+                <th className={table.th}>Source</th>
+                <th className={table.th}>Created</th>
+                <th className={table.th}>Status</th>
+                <th className={table.th}>
+                  <span className="sr-only">Action</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobs.map((j) => (
+                <tr key={j.id} className={table.row}>
+                  <td className={table.td}>
+                    <p className="font-mono text-xs text-ink">{j.source}</p>
+                    <p className="text-[11px] text-sub">Attempt {j.attempt}</p>
+                    {j.error_message && <p className="max-w-xs truncate text-[11px] text-crit" title={j.error_message}>{j.error_message}</p>}
+                  </td>
+                  <td className={`${table.td} font-mono text-xs text-sub whitespace-nowrap`}>{new Date(j.created_at).toLocaleString()}</td>
+                  <td className={table.td}>
+                    <Badge tone={jobTone[j.status] ?? "neutral"}>{j.status.toLowerCase()}</Badge>
+                  </td>
+                  <td className={`${table.td} text-right`}>
+                    {j.status === "FAILED" && (
+                      <button onClick={() => replay(j.id)} disabled={busy === j.id} className={small}>
+                        <RotateCcw className="h-3 w-3" />
+                        {busy === j.id ? "Replaying" : "Replay"}
+                      </button>
+                    )}
+                    {error?.id === j.id && <p role="alert" className="mt-1 max-w-xs text-left text-[11px] text-crit">{error.message}</p>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Section>
   );
 }
 
-function ModelsPanel() {
+function Models() {
   const models = useLiveData(fetchModels, [] as ModelVersion[], 15000);
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
   async function activate(id: string) {
     setBusy(id);
+    setError(null);
     try {
       await activateModel(id);
+    } catch (err) {
+      setError({ id, message: err instanceof Error ? err.message : "Activation failed" });
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <SpotlightCard className="p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Cpu className="h-4 w-4 text-amber-400" />
-        <h4 className="text-sm font-semibold">Isolation Forest models</h4>
-      </div>
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {models.length === 0 && <p className="text-xs text-muted">No models trained yet.</p>}
-        {models.map((m) => (
-          <div key={m.id} className="flex items-center justify-between rounded-lg bg-panel-2 px-3 py-2 text-xs">
-            <div className="min-w-0">
-              <p className="font-mono text-foreground/90 truncate">
-                {m.measurement} <span className="text-muted">v{m.model_version}</span>
-              </p>
-              <p className="text-muted">
-                contamination {m.contamination} · threshold {m.threshold?.toFixed(3) ?? "—"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              <span className={`px-2 py-0.5 rounded-full border ${modelStatusStyle[m.status] ?? "text-muted border-border"}`}>
-                {m.status}
-              </span>
-              {m.status === "CANDIDATE" && (
-                <button
-                  onClick={() => activate(m.id)}
-                  disabled={busy === m.id}
-                  className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 disabled:opacity-50"
-                >
-                  <Power className="h-3 w-3" />
-                  {busy === m.id ? "…" : "activate"}
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </SpotlightCard>
+    <Section title="Isolation Forest models" meta={models.length ? `${models.length}` : undefined} flush>
+      {models.length === 0 ? (
+        <Empty>No models trained yet</Empty>
+      ) : (
+        <div className={`${table.wrap} max-h-[480px] overflow-y-auto`}>
+          <table className={table.table}>
+            <thead className={`${table.head} sticky top-0`}>
+              <tr>
+                <th className={table.th}>Model</th>
+                <th className={table.thNum}>Contamination</th>
+                <th className={table.thNum}>Threshold</th>
+                <th className={table.th}>Status</th>
+                <th className={table.th}>
+                  <span className="sr-only">Action</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {models.map((m) => (
+                <tr key={m.id} className={table.row}>
+                  <td className={table.td}>
+                    <span className="font-mono text-xs text-ink">{m.measurement}</span>{" "}
+                    <span className="font-mono text-[11px] text-sub">v{m.model_version}</span>
+                  </td>
+                  <td className={table.num}>{m.contamination}</td>
+                  <td className={table.num}>{m.threshold?.toFixed(3) ?? "-"}</td>
+                  <td className={table.td}>
+                    <Badge tone={modelTone[m.status] ?? "neutral"}>{m.status.toLowerCase()}</Badge>
+                  </td>
+                  <td className={`${table.td} text-right`}>
+                    {m.status === "CANDIDATE" && (
+                      <button onClick={() => activate(m.id)} disabled={busy === m.id} className={small}>
+                        <Power className="h-3 w-3" />
+                        {busy === m.id ? "Activating" : "Activate"}
+                      </button>
+                    )}
+                    {error?.id === m.id && <p role="alert" className="mt-1 max-w-xs text-left text-[11px] text-crit">{error.message}</p>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -142,30 +156,27 @@ export default function AdminPage() {
 
   return (
     <>
-      <Topbar title="Admin" />
-      <main className="flex-1 p-4 md:p-6 space-y-4">
-        <div className="glass rounded-xl p-4 flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cyan-300" />
-          <h3 className="text-sm font-semibold">Ingestion &amp; model administration</h3>
-        </div>
-
-        {loading ? (
-          <div className="glass rounded-xl p-8 text-center text-sm text-muted">Checking access…</div>
-        ) : !isAdmin ? (
-          <div className="glass rounded-xl p-8 text-center text-sm text-muted">
+      <PageHeader title="Admin" description="Replay failed ingestion jobs and promote candidate models." />
+      {loading ? (
+        <Section>
+          <Empty>Checking access</Empty>
+        </Section>
+      ) : !isAdmin ? (
+        <Section>
+          <Empty>
             Admin role required.{" "}
-            <Link href="/login" className="text-cyan-300 hover:underline">
+            <Link href="/login" className="text-accent hover:underline">
               Sign in as an admin
             </Link>{" "}
             to manage ingestion jobs and models.
-          </div>
-        ) : (
-          <Reveal className="grid md:grid-cols-2 gap-4">
-            <IngestionJobsPanel />
-            <ModelsPanel />
-          </Reveal>
-        )}
-      </main>
+          </Empty>
+        </Section>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          <IngestionJobs />
+          <Models />
+        </div>
+      )}
     </>
   );
 }

@@ -239,6 +239,17 @@ export async function fetchStationAnomalies(stationDbId: string, limit = 15): Pr
   return getJSON<StationAnomaly[]>(`/stations/${stationDbId}/anomalies?limit=${limit}`);
 }
 
+/** All anomalies created in [start, end), optionally for one station. */
+export async function fetchAnomaliesInRange(
+  start: string,
+  end: string,
+  stationDbId?: string
+): Promise<(StationAnomaly & { station_id: string; measurement: string | null })[]> {
+  const qs = new URLSearchParams({ start_time: start, end_time: end, limit: "500" });
+  if (stationDbId) qs.set("station_id", stationDbId);
+  return getJSON(`/anomalies?${qs}`);
+}
+
 export interface AnomalyAnalytics {
   window_hours: number;
   classification_counts: Record<string, number>;
@@ -375,6 +386,29 @@ export interface DataSourceStatus {
 
 export async function fetchDataSources(): Promise<DataSourceStatus[]> {
   return getJSON<DataSourceStatus[]>("/admin/data-sources");
+}
+
+/** Manually pull Open-Meteo for every station over the last `windowMinutes`
+ * and queue the new readings for QC. Same calls the scheduler makes. */
+export async function pullLatest(windowMinutes: number): Promise<{ stored: number; failed: number }> {
+  const stations = await fetchStationOptions();
+  const jobIds: string[] = [];
+  let stored = 0;
+  let failed = 0;
+  for (const s of stations) {
+    try {
+      const r = await authedJSON<{ job_id: string; normalized: number }>(
+        `/admin/ingest/${s.dbId}?source=OPEN_METEO&window_minutes=${windowMinutes}`,
+        "POST"
+      );
+      jobIds.push(r.job_id);
+      stored += r.normalized ?? 0;
+    } catch {
+      failed += 1;
+    }
+  }
+  if (jobIds.length) await authedJSON("/admin/enqueue-processing", "POST", { job_ids: jobIds });
+  return { stored, failed };
 }
 
 export interface IngestionJob {

@@ -66,7 +66,7 @@ export default function WeatherPipelineHero() {
       <div className="min-h-[128px] py-4" aria-live="polite">
         <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-orange-400">{stage.tech}</p>
         <p className="text-xs leading-relaxed text-muted">{stage.detail}</p>
-        <p className="mt-3 text-[10px] text-muted/70">Illustrative architecture · No live station telemetry</p>
+        <p className="mt-3 text-[10px] text-muted">Illustrative architecture · No live station telemetry</p>
       </div>
     </div>
   );

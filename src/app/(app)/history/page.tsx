@@ -1,12 +1,15 @@
-import PlaceholderPage from "@/components/PlaceholderPage";
-import { History } from "lucide-react";
+import { PageHeader, Section, Empty } from "@/components/console/ui";
 
 export default function HistoryPage() {
   return (
-    <PlaceholderPage
-      title="History"
-      icon={History}
-      description="Audit log of raw observations and quality flags, kept separately — every past flag stays reviewable, and nothing overwrites the original reading."
-    />
+    <>
+      <PageHeader
+        title="History"
+        description="Audit log of raw observations and quality flags. Past flags stay reviewable and original readings are never overwritten."
+      />
+      <Section title="Audit log">
+        <Empty>The audit log view is not available yet.</Empty>
+      </Section>
+    </>
   );
 }

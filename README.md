@@ -1,26 +1,144 @@
+<div align="center">
+
+<img src="src/app/icon.svg" width="72" alt="MeghDrishti logo" />
+
 # MeghDrishti
 
-AI/ML-based intelligent anomaly detection for Automatic Weather Stations.
-Distinguishes genuine extreme weather from sensor malfunction, drift,
-spikes, and telemetry faults — never on statistical extremity alone.
+**Tell a real storm from a broken sensor.**
 
-This repo has two parts:
+AI/ML quality control for Automatic Weather Stations. MeghDrishti flags suspicious readings,
+checks them against independent weather context, and separates genuine extreme weather
+from sensor faults, drift, spikes and telemetry gaps. It never decides on statistical extremity alone.
 
-- **`/`** (this directory) — Next.js frontend: dashboard, alerts, network
-  map, live monitor, analysis, maintenance, sensor health.
-- **`meghdrishti-backend/`** — FastAPI backend: ingestion, rule engine,
-  Isolation Forest, context validation, evidence fusion, alerting, operator
-  review, Celery worker, and Celery Beat schedules. See
-  [`meghdrishti-backend/README.md`](meghdrishti-backend/README.md) for
-  full backend docs.
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Tailwind](https://img.shields.io/badge/Tailwind-4-06B6D4?logo=tailwindcss&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-Celery-DC382D?logo=redis&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-Isolation%20Forest-F7931E?logo=scikitlearn&logoColor=white)
+![SIH 2026](https://img.shields.io/badge/Smart%20India%20Hackathon-2026-FF6F00)
 
-## Quickstart
+[Screenshots](#-a-look-inside) · [How it works](#-how-it-works) · [Quickstart](#-quickstart) · [Data sources](#-data-sources) · [Backend docs](meghdrishti-backend/README.md)
 
-**Run locally with native services.**
+<br />
 
-Install prerequisites once: Node.js, Python 3.12+, Homebrew, and `uv`.
+<img src="docs/screenshots/landing.png" alt="MeghDrishti landing page with the interactive 3D weather pipeline" width="100%" />
+
+</div>
+
+---
+
+## ✨ Why MeghDrishti
+
+A weather station reports 48 °C. Is it a heatwave or a sensor sitting in the sun?
+Classic QC either throws away real extremes or lets faulty sensors through.
+MeghDrishti treats every unusual reading as a question and answers it with evidence:
+
+- 🧪 **11 rule checks** for stuck values, spikes, drift, dropouts, physical impossibilities and gaps
+- 🌲 **Isolation Forest** scoring on engineered features, never raw values
+- 🛰️ **Independent context** from nearby stations, forecasts, ERA5 reanalysis and NASA GPM satellite rain
+- ⚖️ **Evidence fusion** with a guard that refuses to call an extreme "fake" when the context backs it up
+- 🧑‍💼 **Operator review loop**: every decision is explainable, and every review becomes a label
+
+---
+
+## 📸 A look inside
+
+### Overview
+Fleet health, live averages, open alerts and sensor reliability on one screen.
+
+<img src="docs/screenshots/overview.png" alt="Overview dashboard" width="100%" />
+
+<table>
+  <tr>
+    <td width="50%">
+      <b>Alert review</b><br />
+      Why it was flagged, the readings behind it, and one-click operator verdicts.<br /><br />
+      <img src="docs/screenshots/alert-drawer.png" alt="Alert review drawer" />
+    </td>
+    <td width="50%">
+      <b>Network</b><br />
+      Every station on the map with its live status and temperature.<br /><br />
+      <img src="docs/screenshots/network.png" alt="Network map" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <b>Analysis</b><br />
+      Classification mix, rule activity, and click-through anomalies per hour.<br /><br />
+      <img src="docs/screenshots/analysis.png" alt="Analysis page" />
+    </td>
+    <td width="50%">
+      <b>Live</b><br />
+      15-minute readings per station, with a one-click <i>Pull latest</i> catch-up.<br /><br />
+      <img src="docs/screenshots/live.png" alt="Live monitor" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <b>Alerts</b><br />
+      Filter by station, reason code, confidence and severity.<br /><br />
+      <img src="docs/screenshots/alerts.png" alt="Alerts table" />
+    </td>
+    <td width="50%">
+      <b>Sensors</b><br />
+      Reliability per measurement from QC trigger rates.<br /><br />
+      <img src="docs/screenshots/sensors.png" alt="Sensor health" />
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <b>Maintenance</b><br />
+      Stations ranked by maintenance need, with an action queue.<br /><br />
+      <img src="docs/screenshots/maintenance.png" alt="Maintenance" />
+    </td>
+  </tr>
+</table>
+
+
+---
+
+## 🧠 How it works
+
+```mermaid
+flowchart LR
+    A[🌦️ Providers<br/>Open-Meteo · IMD] --> B[Ingestion<br/>raw preserved]
+    B --> C[Schema check<br/>+ normalize]
+    C --> D[Features]
+    D --> E1[📏 Rule engine]
+    D --> E2[🌲 Isolation Forest]
+    D --> E3[🛰️ Context<br/>neighbors · forecast<br/>ERA5 · GPM]
+    E1 & E2 & E3 --> F[⚖️ Evidence fusion<br/>+ ExtremeEventGuard]
+    F --> G{Decision}
+    G --> H[🚨 Alert policy]
+    H --> I[🧑‍💼 Operator review]
+    I --> J[(🏷️ Label store)]
+```
+
+Every reading ends up as one of:
+
+| Classification | Meaning |
+|---|---|
+| `NORMAL` | Nothing unusual |
+| `WATCH` | Mildly unusual, keep an eye on it |
+| `SUSPICIOUS` | Unusual and unexplained |
+| `PROBABLE_SENSOR_FAULT` | Rules or model point at the instrument |
+| `LIKELY_GENUINE_EXTREME` | Unusual, but independent context agrees it is real weather |
+| `INSUFFICIENT_CONTEXT` | Unusual, and there is no independent evidence to decide either way |
+
+Raw observations are never mutated. Rule, ML and context outputs are stored separately before fusion,
+so every alert can show exactly why it was raised.
+
+---
+
+## 🚀 Quickstart
+
+**Prerequisites:** Node.js, Python 3.12+, Homebrew and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
+# one-time setup
 brew install postgresql@16 redis
 cd meghdrishti-backend
 uv venv --python 3.12 .venv
@@ -30,233 +148,157 @@ cd ..
 npm install
 ```
 
-Start or stop the whole local application from the repository root:
-
 ```bash
-npm run dev
-npm run status
-npm run stop
+npm run dev      # start everything
+npm run status   # what's running
+npm run stop     # stop everything
 ```
 
-This starts dedicated native Postgres and Redis instances, FastAPI, one
-Celery worker, Celery Beat, and Next.js. State and logs live in ignored
-`.local/`; the existing Homebrew Postgres cluster is not modified. Database
-and Redis must use the example localhost URLs. Services run in the background;
-use `npm run stop` to shut down the full stack. Repeating `npm run dev`
-reuses running services, including this project's existing Next dev server.
-Ports 5432, 6379, 8000, and 3000 must be available to this project.
-Services bind to loopback. Initial database setup seeds
-only an empty users table; existing data is retained.
+| Service | URL |
+|---|---|
+| 🖥️ App | http://localhost:3000 |
+| 📚 API + Swagger | http://localhost:8000/docs |
 
-Celery Beat schedules ingestion every 15 minutes, daily
-station roster refresh at 03:00 UTC, model candidate training Sunday
-03:00 UTC, and calibration proposals Monday 04:00 UTC. Run only one Beat
-instance. Optional legacy Airflow DAGs must not schedule the same jobs simultaneously.
-The single worker handles jobs sequentially; slow ingestion or training
-can delay QC. It is suitable for laptop development, not a throughput claim.
-Beat does not provide Airflow's DAG UI, dependency tracking, or task retry
-policy. Inspect `.local/logs/worker.log` for failed scheduled jobs.
+`npm run dev` starts dedicated Postgres and Redis instances, FastAPI, one Celery worker,
+Celery Beat and Next.js. State and logs live in the ignored `.local/` folder.
+Ports 5432, 6379, 8000 and 3000 must be free.
 
-Optional historical backfill uses the same native task (example: seven days):
+> 💤 **Running on a laptop?** The scheduler only runs while the machine is awake.
+> After sleep, open **Live** and click **Pull latest** to backfill the last 24 hours.
 
-```bash
-cd meghdrishti-backend
-.venv/bin/celery -A app.workers.celery_app call \
-  app.workers.schedule_tasks.run_scheduled_job --queue schedule \
-  --args '["ingest"]' --kwargs '{"window_minutes":10080,"sources":["OPEN_METEO"]}'
+<details>
+<summary><b>More on local operation</b></summary>
+
+- Celery Beat schedules ingestion every 15 minutes, the station roster refresh daily at 03:00 UTC,
+  model candidate training Sunday 03:00 UTC, and calibration proposals Monday 04:00 UTC.
+  Run only one Beat instance.
+- The single worker processes jobs sequentially, so slow ingestion or training can delay QC.
+  It is meant for laptop development, not as a throughput claim.
+- Logs: `.local/logs/` (API, worker, beat, frontend), `.local/postgres.log`, `.local/redis/redis.log`.
+- API shutdown allows 15 seconds for active requests. Workers finish their current task;
+  if that takes more than 60 seconds, run `stop` again.
+- Historical backfill (example: 7 days):
+
+  ```bash
+  cd meghdrishti-backend
+  .venv/bin/celery -A app.workers.celery_app call \
+    app.workers.schedule_tasks.run_scheduled_job --queue schedule \
+    --args '["ingest"]' --kwargs '{"window_minutes":10080,"sources":["OPEN_METEO"]}'
+  ```
+
+- Prometheus and Grafana are optional and not started by the launcher. Configs live in
+  `meghdrishti-backend/monitoring/`.
+- Optional legacy Airflow DAGs can replace Beat. Never run both on the same jobs.
+- Shutdown check: `meghdrishti-backend/.venv/bin/python scripts/verify_local_shutdown.py`.
+
+</details>
+
+---
+
+## 🛰️ Data sources
+
+| Source | Role | What it covers | Setup |
+|---|---|---|---|
+| **Open-Meteo** | Primary feed | All measurements, every 15 minutes | ✅ No key needed |
+| **NASA GPM** (IMERG Early) | Context | Rainfall, about 4 hours behind real time | Earthdata or PPS login in `.env` |
+| **ERA5** (Copernicus) | Context | Temperature, pressure, humidity, about 5 days behind | CDS key + accepted licence |
+| **NOAA GHCN** | Station network | Daily summaries from nearby stations | Token in `.env` (sparse recent coverage for India) |
+| **IMD** | Primary feed | Real Indian station observations | Adapter built, waiting for API access |
+
+> ℹ️ Open-Meteo is model output, so it is never used to confirm itself. Until real sensor data or
+> independent context is available, recent readings can show `INSUFFICIENT_CONTEXT`. That is the system
+> being honest, not a bug. See [`queue/imd-integration.md`](queue/imd-integration.md) for the IMD status.
+
+---
+
+## 🧱 Tech stack
+
+| Layer | Tools |
+|---|---|
+| Frontend | Next.js 16 (App Router, Turbopack), React 19, Tailwind 4, Recharts, Leaflet, Three.js, Framer Motion |
+| API | FastAPI, Pydantic, SQLAlchemy (async), Alembic, JWT + Argon2, RBAC with 5 roles |
+| Pipeline | Celery + Beat, Redis Pub/Sub, WebSockets |
+| ML | scikit-learn Isolation Forest with a candidate registry and explicit activation |
+| Context | gpm-api (NASA IMERG), cdsapi (ERA5), NOAA NCEI |
+| Observability | Structured JSON logs, Prometheus metrics, optional Grafana dashboard |
+
+---
+
+## 🗂️ Project structure
+
+```
+MeghDrishti/
+├── src/
+│   ├── app/
+│   │   ├── page.tsx              # public landing page with the 3D pipeline hero
+│   │   ├── login/                # Google Sign-In + email/password
+│   │   └── (app)/                # signed-in console (overview, live, alerts, ...)
+│   ├── components/
+│   │   ├── console/              # console design system: header, panels, charts
+│   │   └── ui/agentic-factory-3d.tsx
+│   └── lib/                      # API client, auth, live-data hooks
+├── meghdrishti-backend/          # FastAPI + Celery backend  → see its README
+├── scripts/local.sh              # native start / stop / status
+├── docs/screenshots/             # images used in this README
+└── queue/                        # items blocked on external processes
 ```
 
-Prometheus and Grafana are optional; the launcher does not start them.
-Prometheus's native scrape configuration is
-`meghdrishti-backend/monitoring/local/prometheus-local.yml`. Grafana's
-`meghdrishti-backend/monitoring/grafana/dashboards/overview.json` can be
-imported through its UI.
-Airflow DAGs remain an optional alternative in a separate Python environment;
-their backend API defaults to `http://localhost:8000/api/v1`. Provide the same
-`DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD` in the Airflow process environment.
+---
 
-Docker deployment files have been removed. Existing native data, models,
-and private migration backups remain under `.local/` and
-`meghdrishti-backend/model_store/`. Logs are in `.local/logs/`; Postgres and
-Redis logs are `.local/postgres.log` and `.local/redis/redis.log`.
-API shutdown allows up to 15 seconds for active requests, then cancels them.
-Workers finish their current task; if that exceeds 60 seconds, retry `stop`.
+## 🔐 Sign-in and roles
 
-Open:
+- The landing page at `/` is public. Everything in the console needs sign-in;
+  signed-out visitors are sent back to `/`.
+- **Google Sign-In** is the main path. It needs `GOOGLE_CLIENT_ID` (backend) and
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (frontend). A first-time Google user gets a `VIEWER` account.
+- **Email and password** works for the seeded demo admin.
+- **Roles:** `VIEWER`, `OPERATOR`, `MAINTENANCE`, `SCIENTIST`, `ADMIN`.
+  Settings data needs `SCIENTIST` or `ADMIN`; the Admin page and **Pull latest** need `ADMIN`.
 
-- Frontend: http://localhost:3000
-- Backend API + Swagger: http://localhost:8000/docs
+---
 
-## Architecture
+## ✅ Status and honesty notes
 
-```
-RAW OBSERVATION → INGESTION → SCHEMA VALIDATION → NORMALIZATION → FEATURES
-    ↓
- ┌──────────────┬────────────────┬───────────────────┐
- │ Rule Engine  │ Isolation      │ Context Validator  │
- │              │ Forest         │                    │
- └──────────────┴────────────────┴───────────────────┘
-    ↓
- EVIDENCE FUSION → CONFIDENCE → DECISION (ExtremeEventGuard)
-    ↓
- NORMAL / WATCH / SUSPICIOUS / PROBABLE_SENSOR_FAULT / LIKELY_GENUINE_EXTREME
-    ↓
- ALERT → OPERATOR REVIEW → LABEL STORE
-```
+- **Real data only.** Every number in the console comes from a live backend query.
+  `src/lib/mock-data.ts` holds only types, colours and static reference text.
+- **Tests.** The backend suite passes 120 tests. A synthetic-source integration test proves raw → anomaly
+  → alert → station health → WebSocket event.
+- **ML.** Isolation Forest models are trained as candidates and must be activated explicitly.
+  Candidates trained on forecast data are diagnostic only and cannot be activated; that needs real
+  sensor data with chronological holdout evaluation. ML accuracy is unknown until operator labels exist.
+- **Decisions.** 240 controlled synthetic scenarios match their intended classifications
+  ([decision evaluation](meghdrishti-backend/docs/decision-accuracy.md)). This is diagnostic, not field accuracy.
+- **Audits.** [Provider and ML audit](meghdrishti-backend/docs/provider-ml-audit.md) ·
+  [Stored alert audit](meghdrishti-backend/docs/alert-audit.md)
 
-Every number the frontend shows comes from a live backend query — nothing
-in `src/lib/api.ts` is fabricated. `src/lib/mock-data.ts` holds only types,
-UI color/legend config, and static reference copy (operator runbook text,
-pipeline-stage descriptions), never numbers presented as live data.
+<details>
+<summary><b>Security notes: feeds and browser origins</b></summary>
 
-## Interactive weather pipeline hero
+- `CORS_ORIGINS` accepts exact HTTP(S) origins only, with no paths or wildcards.
+  Writes from an unapproved origin are rejected before reaching API handlers.
+- There is no public observation-upload endpoint. Ingestion uses configured adapters only.
+- Each normalized record must match its adapter's source and requested station, and fall inside the requested window.
+- Rejected payloads stay in raw storage with a reason and never reach normalized observations.
+- These checks cannot detect every plausible forged reading from a compromised provider,
+  or protect against an attacker who already controls the database.
 
-The landing page (`/`) embeds the adapted 3D scene beside the headline.
-Five selectable modules illustrate ingestion, QC, ML, context and decision
-fusion, with the technologies and provider integrations used by MeghDrishti.
-The models are weather-system artifacts: an automatic weather station,
-QC diagnostic instrument, ML server rack, forecast context equipment and
-operator alert terminal. Rendering uses up to 2× pixel density, doubled
-canvas-texture resolution and a 30 fps animation cap to bound GPU work.
+</details>
 
-- Reusable component: `src/components/ui/agentic-factory-3d.tsx`.
-- Hero integration: `src/components/WeatherPipelineHero.tsx`, used by `src/app/page.tsx`.
-- Styles: global Tailwind styles live in `src/app/globals.css`; scene styles
-  are scoped inside the supplied component.
-- Dependencies: React, Three.js, `@types/three`, and lucide-react are already
-  installed. No image assets, context provider, or state store is needed.
-- Props: `height` (default `100vh`), `className`, `embed`, `onStation`, `onReady`.
-  The hero stacks on narrow screens and centers the machine in its column.
-  Reduced motion pauses simulation by default; pause/reset and module
-  controls are keyboard accessible. Labels describe architecture, not live
-  telemetry, and distinguish candidate ML and optional integrations.
+<details>
+<summary><b>3D pipeline hero (landing page)</b></summary>
 
-The project uses Tailwind 4 and TypeScript. `@/*` resolves to `src/*`, so
-`src/components/ui` is the equivalent of `/components/ui`. Keep reusable UI
-there so imports such as `@/components/ui/agentic-factory-3d` resolve and
-future shadcn components have a consistent home.
+- Component: `src/components/ui/agentic-factory-3d.tsx`, used by `src/components/WeatherPipelineHero.tsx`.
+- Five selectable modules: ingestion, QC, ML, context and decision fusion.
+- Rendering is capped at 2× pixel density and 30 fps to bound GPU work.
+- Reduced motion pauses the simulation. Pause, reset and module controls are keyboard accessible.
+- Labels describe the architecture, not live telemetry.
 
-shadcn CLI configuration (`components.json`) is not initialized. To add
-shadcn primitives later, run `npx shadcn@latest init` from the repository root;
-use `src/app/globals.css`, `@/components`, and `@/components/ui` when prompted.
-Review generated CSS/theme changes before accepting them into the existing
-design. This procedural component works without shadcn primitives.
+</details>
 
-## Live data sources
+---
 
-- **Open-Meteo** — live now, no API key required.
-- **IMD** (India Meteorological Department) — real adapter built
-  (`meghdrishti-backend/app/ingestion/imd.py`), inactive pending IMD API
-  access approval (external legal/institutional process). See
-  [`queue/imd-integration.md`](queue/imd-integration.md).
-- **GHCN / ERA5 / NASA GPM** — optional adapters requiring credentials
-  and available data. ERA5 access remains unverified; configured credentials
-  alone do not establish provider availability.
+<div align="center">
 
-## What's live
+Built for **Smart India Hackathon 2026** · Original pitch deck: `SIH2026-IDEA-MeghDrishti-Winner-Style-v2_ Edit (1).pptx.pdf`
 
-- Public landing page at `/` explaining the product; the operator console
-  (`/dashboard` and everything else under the sidebar) requires sign-in —
-  unauthenticated visitors are redirected to `/`.
-- Login (`/login`): Google Sign-In (OAuth2 ID token flow) as the primary
-  path, email/password as a fallback for the seeded demo admin. Google
-  sign-in needs `GOOGLE_CLIENT_ID` (backend) + `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-  (frontend) set to a real OAuth client ID — until then the button shows a
-  clear "not configured" message instead of failing silently. First-time
-  Google sign-in provisions a VIEWER account automatically.
-- JWT stored client-side; the Topbar reflects real sign-in state; alert
-  acknowledge/review actions require it.
-- Alert acknowledge/confirm-fault/valid-extreme/false-positive actions in
-  `AlertDetailModal` call the real `PATCH /alerts/{id}` and
-  `POST /anomalies/{id}/review` endpoints.
-- Alerts show the source observation time, including its date. API receipt and
-  decision processing times are separate fields in the detail view. New burst
-  windows, chronological ordering and deduplication use observation time, so
-  delayed ingestion/backfill does not make historical readings look new.
-  Synthetic readings, their derived alerts and demo-trained models have been
-  removed. IMD has no demo fallback and requires enabled access and credentials.
-  See the [stored alert audit](meghdrishti-backend/docs/alert-audit.md).
-  Existing alert creation times remain preserved for auditing; historical
-  processing-time policy counts have not been rewritten.
-- Dashboard alerts/stats and the Topbar notification bell use a real
-  WebSocket (`/ws/dashboard`, `/ws/alerts`) with poll fallback, not pure
-  polling — alert status changes push immediately.
-- Isolation Forest models contribute to fusion when an active model is
-  registered. Training produces candidates; activation is explicit. Retrain
-  with `scripts/train_models.py` from the backend directory.
-- Station neighbors computed (`meghdrishti-backend/scripts/compute_neighbors.py`) — spatial
-  context is real, not always "unavailable".
-- A default `calibration_profiles` row is active and the pipeline actually
-  loads it (rule thresholds, fusion weights, decision thresholds, health
-  weights) — not just stored and ignored.
-- `/settings` shows the real active calibration profile + data source
-  status; `/admin` (ADMIN role) lists/replays ingestion jobs and
-  lists/activates models.
-- Prometheus metrics are exposed by the API. Optional native Prometheus
-  and Grafana configurations are provided; they are not started by default.
-- CI actually runs on push (was previously in the wrong directory for
-  GitHub Actions to find it — fixed).
-
-## What's still not wired up
-
-- Native frontend/API startup and worker connectivity are verified. Full
-  execution of each Celery Beat scheduled operation remains unverified.
-- Optional legacy Airflow DAGs remain available; normal startup uses Celery Beat.
-- See [`queue/`](queue/) for anything blocked on an external process
-  (IMD credentials, etc).
-
-## Focused verification
-
-The backend suite passed 104 tests on isolated Postgres/Redis on 2026-10-01.
-A synthetic source test verifies raw ingestion, normalization, a persisted
-alert, station health, Redis publication, and duplicate processing protection.
-Scheduled-job tests cover pagination, protected endpoint calls, and failure
-reporting with HTTP fixtures; they do not prove live provider availability.
-
-Separately, Open-Meteo returned 15/15 successful live samples across five
-stations. The adapter now explicitly requests wind in m/s and normalizes
-timestamps/windows to UTC. Historical wind data still needs correction.
-ML accuracy cannot be measured with the current zero independent labels;
-all models remain inactive candidates. See the [provider and ML audit](meghdrishti-backend/docs/provider-ml-audit.md)
-for evidence, candidate diagnostics, and limitations.
-
-Fused decision improvements are documented in [the decision evaluation](meghdrishti-backend/docs/decision-accuracy.md):
-240 controlled synthetic scenarios matched their intended classifications,
-compared with 80 at the committed baseline. This is a diagnostic result,
-not field accuracy. The read-only evaluation script also reports actual
-operator-review precision/recall when labels become available.
-
-To repeat the native shutdown check from the repository root:
-
-```bash
-meghdrishti-backend/.venv/bin/python scripts/verify_local_shutdown.py
-```
-
-This starts and stops the app twice with an idle WebSocket open and leaves
-all native services stopped. Both verified cycles completed in 4.3 seconds
-without reaching the API's forced cancellation deadline.
-
-## Project background
-
-This is a Smart India Hackathon 2026 submission — see
-`SIH2026-IDEA-MeghDrishti-Winner-Style-v2_ Edit (1).pptx.pdf` for the
-original pitch deck.
-
-## Feed acceptance and browser origins
-
-`CORS_ORIGINS` accepts exact HTTP(S) origins only, without paths or wildcards.
-Browser methods and headers are explicit. Writes carrying an unapproved Origin
-are rejected before reaching API handlers. Scheduled jobs can omit Origin;
-the ingestion endpoints still require an authenticated admin permission.
-CORS is a browser boundary, not feed authentication or proof that data is true.
-
-There is no public observation-upload endpoint. Ingestion uses configured source
-adapters. Each normalized record must match the adapter's source identity and
-requested station (GHCN uses the resolved NOAA station ID), and its timestamp
-must be within the requested window. GHCN daily dates use daily window semantics.
-Rejected payloads remain in raw storage with a rejection reason and are excluded
-from normalized observations. API receipt time is assigned by the server.
-Existing measurement schema checks, payload deduplication, source-separated
-histories, demo exclusion from training and explicit model activation also apply.
-These checks do not detect every plausible forged reading from a compromised
-provider or protect against an attacker who already controls the database.
+</div>
