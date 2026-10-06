@@ -28,7 +28,7 @@ async def test_open_meteo_ingestion_end_to_end(db_session):
     await db_session.commit()
 
     fake_body = {
-        "hourly": {
+        "minutely_15": {
             "time": ["2026-09-24T00:00", "2026-09-24T01:00"],
             "temperature_2m": [28.5, 29.1],
             "relative_humidity_2m": [70.0, 68.0],

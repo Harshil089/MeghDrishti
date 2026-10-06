@@ -63,16 +63,18 @@ class ERA5Adapter(WeatherSourceAdapter):
             # small box around the station; ERA5's native grid is ~0.25deg
             "area": [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25],
             "data_format": "netcdf",
-            "download_format": "unarchived",
         }
         with tempfile.TemporaryDirectory() as tmp:
-            target = str(Path(tmp) / "era5.nc")
+            target = str(Path(tmp) / "era5.download")
             client.retrieve("reanalysis-era5-single-levels", request, target)
-            return [self._parse_netcdf(target, station, at)]
+            return [self._parse_netcdf(_netcdf_files(target, Path(tmp)), station, at)]
 
-    def _parse_netcdf(self, path: str, station: Any, at: datetime) -> dict:
-        ds = netCDF4.Dataset(path)
+    def _parse_netcdf(self, paths: list[str], station: Any, at: datetime) -> dict:
+        # CDS splits instantaneous (t2m, u10, ...) and accumulated (tp) variables
+        # into separate files, so look each variable up across all of them.
+        datasets = [netCDF4.Dataset(p) for p in paths]
         try:
+            ds = _Merged(datasets)
             # nearest grid cell to the station (small area request, so index 0 is fine
             # for single-cell boxes; fall back to nearest-match for multi-cell ones)
             lats = ds.variables.get("latitude", ds.variables.get("lat"))[:]
@@ -107,7 +109,8 @@ class ERA5Adapter(WeatherSourceAdapter):
                 },
             }
         finally:
-            ds.close()
+            for d in datasets:
+                d.close()
 
     def normalize(self, payload: dict) -> CanonicalObservation:
         return CanonicalObservation(
@@ -131,6 +134,24 @@ class ERA5Adapter(WeatherSourceAdapter):
                 return resp.status_code < 400
             except httpx.HTTPError:
                 return False
+
+
+class _Merged:
+    """Read-only view over several NetCDF datasets, exposing `.variables`."""
+
+    def __init__(self, datasets: list):
+        self.variables = {name: var for d in datasets for name, var in d.variables.items()}
+
+
+def _netcdf_files(downloaded: str, workdir: Path) -> list[str]:
+    """CDS returns a zip when a request spans several variable groups, else a bare .nc."""
+    import zipfile
+
+    if not zipfile.is_zipfile(downloaded):
+        return [downloaded]
+    with zipfile.ZipFile(downloaded) as z:
+        z.extractall(workdir)
+    return sorted(str(p) for p in workdir.glob("*.nc"))
 
 
 def _relative_humidity(t2m_k: float | None, d2m_k: float | None) -> float | None:

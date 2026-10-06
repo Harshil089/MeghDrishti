@@ -14,7 +14,9 @@ from app.schemas.observation import CanonicalObservation, Location, Measurements
 
 logger = get_logger("meghdrishti.ingestion.open_meteo")
 
-_HOURLY_VARS = "temperature_2m,relative_humidity_2m,surface_pressure,precipitation,wind_speed_10m,wind_direction_10m"
+# 15-minute steps so the console is at most ~15 min behind "now". Outside
+# US/EU Open-Meteo interpolates these from hourly model output.
+_VARS = "temperature_2m,relative_humidity_2m,surface_pressure,precipitation,wind_speed_10m,wind_direction_10m"
 
 
 class OpenMeteoAdapter(WeatherSourceAdapter):
@@ -39,7 +41,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
         params = {
             "latitude": station.latitude,
             "longitude": station.longitude,
-            "hourly": _HOURLY_VARS,
+            "minutely_15": _VARS,
             "start_date": start_time.date().isoformat(),
             "end_date": end_time.date().isoformat(),
             "timezone": "UTC",
@@ -54,7 +56,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
             if self._client is None:
                 await client.aclose()
 
-        hourly = data.get("hourly", {})
+        hourly = data.get("minutely_15", {})
         times = hourly.get("time", [])
         naive_start, naive_end = start_time.replace(tzinfo=None), end_time.replace(tzinfo=None)
         records = []
@@ -77,7 +79,7 @@ class OpenMeteoAdapter(WeatherSourceAdapter):
                     "surface_pressure": _at(hourly.get("surface_pressure"), i),
                     "precipitation": _at(hourly.get("precipitation"), i),
                     "wind_speed_10m": _at(hourly.get("wind_speed_10m"), i),
-                    "wind_speed_unit": data.get("hourly_units", {}).get("wind_speed_10m"),
+                    "wind_speed_unit": data.get("minutely_15_units", {}).get("wind_speed_10m"),
                     "wind_direction_10m": _at(hourly.get("wind_direction_10m"), i),
                 }
             )

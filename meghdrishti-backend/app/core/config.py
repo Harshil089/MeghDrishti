@@ -55,8 +55,12 @@ class Settings(BaseSettings):
     era5_cds_url: str = "https://cds.climate.copernicus.eu/api"
     era5_cds_key: str = ""
 
-    nasa_gpm_base_url: str = "https://gpm1.gesdisc.eosdis.nasa.gov"
-    nasa_gpm_token: str = ""
+    # NASA GPM IMERG via gpm-api. PPS storage needs a PPS account
+    # (registration.pps.eosdis.nasa.gov); GES_DISC needs an Earthdata login.
+    nasa_gpm_storage: str = "PPS"
+    nasa_gpm_username: str = ""
+    nasa_gpm_password: str = ""
+    nasa_gpm_data_dir: str = "var/GPM"
 
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"

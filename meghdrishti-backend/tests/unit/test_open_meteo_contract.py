@@ -13,7 +13,7 @@ async def test_open_meteo_requests_ms_and_preserves_utc_window():
         assert request.url.params["wind_speed_unit"] == "ms"
         assert request.url.params["timezone"] == "UTC"
         assert request.url.params["start_date"] == "2026-09-30"
-        return httpx.Response(200, json={"hourly": {
+        return httpx.Response(200, json={"minutely_15": {
             "time": ["2026-09-30T23:00", "2026-10-01T00:00", "2026-10-01T01:00"],
             "temperature_2m": [24.0] * 3,
             "wind_speed_10m": [3.6] * 3,

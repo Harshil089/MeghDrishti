@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Pagination, pagination_params
+from app.core.config import settings
 from app.core.exceptions import NotFoundError
 from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
@@ -87,6 +88,16 @@ async def get_active_calibration(
     }
 
 
+def _configured(name: str) -> bool | None:
+    """Whether credentials for a source are present. None = no credentials needed."""
+    return {
+        "IMD": bool(settings.imd_enabled and settings.imd_api_base_url and settings.imd_api_key),
+        "GHCN": bool(settings.ghcn_api_token),
+        "ERA5": bool(settings.era5_cds_key),
+        "NASA_GPM": bool(settings.nasa_gpm_username and settings.nasa_gpm_password),
+    }.get(name)
+
+
 @router.get("/data-sources")
 async def list_data_sources(
     db: AsyncSession = Depends(get_db),
@@ -95,7 +106,13 @@ async def list_data_sources(
     rows = (await db.execute(select(DataSource))).scalars().all()
     return {
         "data": [
-            {"name": s.name, "kind": s.kind, "is_enabled": s.is_enabled, "config": s.config}
+            {
+                "name": s.name,
+                "kind": s.kind,
+                # The DB flag is only seeded; credentials in the environment are the truth.
+                "is_enabled": s.is_enabled if (c := _configured(s.name)) is None else c,
+                "config": s.config,
+            }
             for s in rows
         ]
     }
