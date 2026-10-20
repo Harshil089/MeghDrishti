@@ -21,11 +21,16 @@ export default function ProductWindow() {
   return (
     <div className="rounded-lg border border-border bg-panel-2/60 overflow-hidden">
       <div className="flex items-center gap-1 border-b border-border px-3 py-2">
+        <span className="mr-2 flex gap-1.5" aria-hidden>
+          <i className="h-2 w-2 rounded-full bg-sub/40" />
+          <i className="h-2 w-2 rounded-full bg-sub/40" />
+          <i className="h-2 w-2 rounded-full bg-sub/40" />
+        </span>
         {TABS.map((t, i) => (
           <span
             key={t}
             className={`rounded-md px-2.5 py-1 text-xs font-mono ${
-              i === 0 ? "bg-panel text-foreground" : "text-muted"
+              i === 0 ? "bg-accent/15 text-accent" : "text-muted"
             }`}
           >
             {t}
@@ -37,7 +42,7 @@ export default function ProductWindow() {
         {TILES.map((t) => (
           <div key={t.label} className="bg-panel-2 p-4">
             <p className="text-[11px] font-mono uppercase tracking-wide text-muted mb-2">{t.label}</p>
-            <p className="text-2xl font-semibold text-foreground">{t.value}</p>
+            <p className="gradient-text bg-clip-text text-2xl font-semibold text-transparent">{t.value}</p>
             <p className="text-[11px] text-muted mt-1">{t.sub}</p>
           </div>
         ))}
@@ -53,7 +58,7 @@ export default function ProductWindow() {
               key={d.code}
               className="flex items-center justify-between gap-3 px-1 py-1.5 border-b border-border/60 last:border-0"
             >
-              <span className={d.verdict === "flagged" ? "text-orange-400" : "text-muted"}>{d.code}</span>
+              <span className={d.verdict === "flagged" ? "text-accent" : "text-muted"}>{d.code}</span>
               <span className="text-muted shrink-0">{d.detail}</span>
             </li>
           ))}

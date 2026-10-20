@@ -1,6 +1,6 @@
 // Console design system primitives. Every signed-in page is built only from
 // these, so spacing, type and status colour live in one place.
-import type { ReactNode, SelectHTMLAttributes } from "react";
+import type { ReactNode } from "react";
 
 export type Tone = "ok" | "warn" | "crit" | "info" | "neutral";
 
@@ -12,20 +12,12 @@ const toneText: Record<Tone, string> = {
   neutral: "text-sub",
 };
 
-const toneBadge: Record<Tone, string> = {
-  ok: "text-ok border-ok/30 bg-ok/10",
-  warn: "text-warn border-warn/30 bg-warn/10",
-  crit: "text-crit border-crit/30 bg-crit/10",
-  info: "text-accent border-accent/30 bg-accent/10",
-  neutral: "text-sub border-line bg-raised",
-};
-
 const toneFill: Record<Tone, string> = {
-  ok: "bg-ok",
-  warn: "bg-warn",
-  crit: "bg-crit",
-  info: "bg-accent",
-  neutral: "bg-sub",
+  ok: "c-grad-ok",
+  warn: "c-grad-warn",
+  crit: "c-grad-crit",
+  info: "c-grad-info",
+  neutral: "c-grad-neutral",
 };
 
 /** Page heading row: title, one-line description, optional controls. */
@@ -39,7 +31,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4 pb-5">
+    <header className="relative z-20 flex flex-wrap items-end justify-between gap-4 pb-5">
       <div className="min-w-0">
         <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-sub max-w-[70ch]">{description}</p>}
@@ -66,7 +58,7 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section className={`rounded-md border border-line bg-surface flex flex-col min-w-0 ${className}`}>
+    <section className={`rounded-lg border border-line c-card flex flex-col min-w-0 ${className}`}>
       {title && (
         <div className="flex items-center gap-3 border-b border-line px-4 h-11 shrink-0">
           <h2 className="text-[13px] font-semibold text-ink truncate">{title}</h2>
@@ -94,10 +86,11 @@ export function Metric({
   tone?: Tone;
 }) {
   return (
-    <div className="bg-surface px-4 py-3.5 min-w-0">
+    <div className="relative bg-surface px-4 py-3.5 min-w-0 overflow-hidden">
+      <span aria-hidden className={`absolute inset-x-0 top-0 h-0.5 c-grad-brand opacity-70`} />
       <p className="text-xs text-sub truncate">{label}</p>
       <p className="mt-1.5 flex items-baseline gap-1">
-        <span className={`font-mono text-2xl font-medium tabular-nums ${tone === "neutral" ? "text-ink" : toneText[tone]}`}>
+        <span className={`font-mono text-2xl font-medium tabular-nums ${tone === "neutral" ? "c-text-grad" : toneText[tone]}`}>
           {value}
         </span>
         {unit && <span className="text-xs text-sub">{unit}</span>}
@@ -116,14 +109,24 @@ export function MetricStrip({ children, cols = 4 }: { children: ReactNode; cols?
     6: "grid-cols-2 md:grid-cols-3 xl:grid-cols-6",
   }[cols];
   return (
-    <div className={`grid ${grid} gap-px overflow-hidden rounded-md border border-line bg-line`}>{children}</div>
+    <div className={`grid ${grid} gap-px overflow-hidden rounded-lg border border-line bg-line`}>{children}</div>
   );
 }
 
+const toneDot: Record<Tone, string> = {
+  ok: "bg-ok shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-ok)_22%,transparent)]",
+  warn: "bg-warn shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-warn)_22%,transparent)]",
+  crit: "bg-crit shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-crit)_22%,transparent)]",
+  info: "bg-accent shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-accent)_22%,transparent)]",
+  neutral: "bg-sub/70",
+};
+
+/** Status pill: neutral chip, state shown by a small haloed dot only. */
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center rounded-[4px] border px-1.5 py-px text-[11px] font-medium whitespace-nowrap ${toneBadge[tone]}`}>
-      {children}
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-full border border-line bg-raised pl-2 pr-2.5 text-xs font-medium leading-none whitespace-nowrap text-ink">
+      <i aria-hidden className={`mx-px h-1.5 w-1.5 shrink-0 rounded-full ${toneDot[tone]}`} />
+      <span className="inline-block leading-none first-letter:uppercase">{children}</span>
     </span>
   );
 }
@@ -131,8 +134,8 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
 /** Thin horizontal bar for a 0-100 value. */
 export function Meter({ pct, tone = "info" }: { pct: number; tone?: Tone }) {
   return (
-    <div className="h-1 w-full rounded-full bg-raised overflow-hidden" role="presentation">
-      <div className={`h-full rounded-full ${toneFill[tone]}`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+    <div className="h-1.5 w-full rounded-full bg-raised overflow-hidden" role="presentation">
+      <div className={`meter-fill h-full rounded-full ${toneFill[tone]}`} style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
     </div>
   );
 }
@@ -141,14 +144,7 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="px-4 py-10 text-center text-sm text-sub">{children}</p>;
 }
 
-export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      {...props}
-      className={`h-8 rounded-md border border-line bg-surface px-2.5 text-[13px] text-ink focus-visible:outline-2 focus-visible:outline-accent ${props.className ?? ""}`}
-    />
-  );
-}
+export { Select } from "@/components/console/Select";
 
 export const field =
   "h-8 w-full rounded-md border border-line bg-canvas px-2.5 text-[13px] text-ink placeholder:text-sub focus-visible:outline-2 focus-visible:outline-accent";

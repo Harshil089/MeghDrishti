@@ -221,12 +221,12 @@ export default function ConsoleHeader() {
                 <Link
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative flex items-center whitespace-nowrap px-3 text-[13px] transition-colors ${
+                  className={`relative flex items-center whitespace-nowrap px-3 text-[13px] transition-[color,transform] duration-200 active:scale-95 ${
                     active ? "text-ink font-medium" : "text-sub hover:text-ink"
                   }`}
                 >
                   {label}
-                  {active && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent" />}
+                  {active && <span className="tab-indicator absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent" />}
                 </Link>
               </li>
             );

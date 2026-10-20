@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import AlertDetailModal from "@/components/AlertDetailModal";
 import { PageHeader, Section, Metric, MetricStrip, Badge, Meter, Empty, healthTone, severityTone, type Tone } from "@/components/console/ui";
-import { TrendChart } from "@/components/console/TrendChart";
+import { TimelineChart } from "@/components/console/TrendChart";
 import { pipelineStages, type Alert } from "@/lib/mock-data";
 import {
   fetchAlerts,
@@ -20,10 +20,17 @@ import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
 
 const EMPTY_FLEET_SERIES = { temperature_c: [], humidity_pct: [], pressure_hpa: [] };
 
+const FLEET_TABS = [
+  { key: "temperature_c", label: "Temperature", unit: "°C" },
+  { key: "pressure_hpa", label: "Pressure", unit: "hPa" },
+  { key: "humidity_pct", label: "Humidity", unit: "%" },
+] as const;
+
 const statTone: Record<DashboardStat["tone"], Tone> = { emerald: "ok", rose: "crit", cyan: "info", amber: "warn" };
 
 export default function DashboardPage() {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [metric, setMetric] = useState<(typeof FLEET_TABS)[number]["key"]>("temperature_c");
   const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
   const stats = useLiveDataWs(fetchDashboardStats, [] as DashboardStat[], "/ws/dashboard");
   const fleet = useLiveData(fetchFleetSeries, EMPTY_FLEET_SERIES, 30000);
@@ -44,10 +51,30 @@ export default function DashboardPage() {
 
         <div className="grid gap-4 lg:grid-cols-12">
           <Section title="Fleet averages" meta="Hourly mean across active stations" flush className="lg:col-span-8">
-            <div className="grid gap-px bg-line md:grid-cols-3 rounded-b-md overflow-hidden">
-              <TrendChart label="Temperature" unit="°C" current={fleet.temperature_c.at(-1)?.value} data={fleet.temperature_c} />
-              <TrendChart label="Pressure" unit="hPa" current={fleet.pressure_hpa.at(-1)?.value} data={fleet.pressure_hpa} />
-              <TrendChart label="Humidity" unit="%" current={fleet.humidity_pct.at(-1)?.value} data={fleet.humidity_pct} />
+            <div role="tablist" aria-label="Measurement" className="grid grid-cols-3 gap-px border-b border-line bg-line">
+              {FLEET_TABS.map((t) => {
+                const on = metric === t.key;
+                const cur = fleet[t.key].at(-1)?.value;
+                return (
+                  <button
+                    key={t.key}
+                    role="tab"
+                    aria-selected={on}
+                    onClick={() => setMetric(t.key)}
+                    className={`relative px-4 py-3 text-left transition-colors ${on ? "bg-surface" : "bg-raised/60 hover:bg-surface"}`}
+                  >
+                    <span className="block text-xs text-sub">{t.label}</span>
+                    <span className="mt-1 flex items-baseline gap-1">
+                      <span className={`font-mono text-2xl tabular-nums transition-colors ${on ? "text-ink" : "text-sub"}`}>{cur ?? "-"}</span>
+                      <span className="text-xs text-sub">{t.unit}</span>
+                    </span>
+                    {on && <span aria-hidden className="tab-indicator absolute inset-x-0 bottom-0 h-0.5 c-grad-brand" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="h-56 p-4">
+              <TimelineChart key={metric} data={fleet[metric]} label={FLEET_TABS.find((t) => t.key === metric)!.label} />
             </div>
           </Section>
 
@@ -70,14 +97,14 @@ export default function DashboardPage() {
                   <li key={a.id}>
                     <button
                       onClick={() => setSelectedAlert(a)}
-                      className="grid w-full grid-cols-[1fr_auto] items-start gap-x-3 border-b border-line px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-raised"
+                      className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 border-b border-line px-4 py-3 text-left transition-colors last:border-0 hover:bg-raised"
                     >
                       <span className="truncate text-[13px] text-ink">{a.station}</span>
-                      <Badge tone={severityTone[a.severity]}>{a.severity}</Badge>
+                      <span className="justify-self-end"><Badge tone={severityTone[a.severity]}>{a.severity}</Badge></span>
                       <span className="truncate text-xs text-sub">
                         <span className="font-mono">{a.code}</span> {a.message}
                       </span>
-                      <span className="font-mono text-[11px] text-sub">{a.time}</span>
+                      <span className="justify-self-end font-mono text-[11px] leading-none text-sub">{a.time}</span>
                     </button>
                   </li>
                 ))}
@@ -87,7 +114,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Sensor reliability" meta="Last 7 days" flush>
+          <Section title="Sensor reliability" meta="Last 7 days" flush className="self-start">
             {sensors.length === 0 ? (
               <Empty>Waiting for sensor data</Empty>
             ) : (
@@ -110,9 +137,10 @@ export default function DashboardPage() {
             {insights.length === 0 ? (
               <p className="text-sm text-sub">Waiting for data</p>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2.5">
                 {insights.map((insight, i) => (
-                  <li key={i} className="text-[13px] leading-relaxed text-ink">
+                  <li key={i} className="flex gap-3 rounded-md border border-line bg-raised p-3 text-[13px] leading-relaxed text-ink">
+                    <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
                     {insight}
                   </li>
                 ))}
@@ -122,13 +150,12 @@ export default function DashboardPage() {
         </div>
 
         <Section title="Quality pipeline" meta="How each reading is checked">
-          <ol className="flex flex-wrap items-center gap-y-2">
+          <ol className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
             {pipelineStages.map((stage, i) => (
-              <li key={stage.key} className="flex items-center">
-                <span title={stage.detail} className="rounded-md border border-line bg-raised px-2.5 py-1 text-xs text-ink cursor-help">
-                  {stage.label}
-                </span>
-                {i < pipelineStages.length - 1 && <ChevronRight className="mx-1 h-3.5 w-3.5 text-sub" aria-hidden />}
+              <li key={stage.key} className="rounded-md border border-line bg-raised p-3">
+                <span className="mb-2 grid h-6 w-6 place-items-center rounded-full bg-accent/15 font-mono text-[11px] text-accent">{i + 1}</span>
+                <p className="text-[13px] font-medium text-ink">{stage.label}</p>
+                <p className="mt-0.5 text-xs leading-snug text-sub">{stage.detail}</p>
               </li>
             ))}
           </ol>

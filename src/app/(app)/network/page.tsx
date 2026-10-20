@@ -1,71 +1,133 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { ArrowRight, Bell, MapPin, Search, Thermometer } from "lucide-react";
 import StationMap from "@/components/StationMap";
-import { PageHeader, Section, Badge, Empty, type Tone } from "@/components/console/ui";
-import { statusMeta, type Station, type StationStatus } from "@/lib/mock-data";
-import { fetchStations } from "@/lib/api";
-import { useLiveData } from "@/lib/useLiveData";
+import { PageHeader, Badge, Empty, field, type Tone } from "@/components/console/ui";
+import { statusMeta, type Alert, type Station, type StationStatus } from "@/lib/mock-data";
+import { fetchAlerts, fetchStations } from "@/lib/api";
+import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
 
 const statusTone: Record<StationStatus, Tone> = { normal: "ok", warning: "warn", critical: "crit", offline: "neutral" };
+const order: StationStatus[] = ["normal", "warning", "critical", "offline"];
 
 export default function NetworkPage() {
   const stations = useLiveData(fetchStations, [] as Station[]);
   const searchParams = useSearchParams();
   const [selectedId, setSelectedId] = useState<string>(searchParams.get("station") ?? "");
+  const [filter, setFilter] = useState<StationStatus | "all">("all");
+  const [query, setQuery] = useState("");
   const selected = stations.find((s) => s.id === selectedId) ?? stations[0];
 
-  const counts = stations.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {});
+  const counts = useMemo(
+    () => stations.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {}),
+    [stations]
+  );
+  const online = stations.filter((s) => s.status !== "offline");
+  const avgTemp = online.length ? (online.reduce((a, s) => a + s.temp, 0) / online.length).toFixed(1) : "-";
+  const attention = (counts.warning ?? 0) + (counts.critical ?? 0);
+
+  const visible = stations.filter(
+    (s) =>
+      (filter === "all" || s.status === filter) &&
+      `${s.name} ${s.id}`.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
+  const stationAlerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts").filter((a) => a.station === selected?.id).length;
+
+  const chip = "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-sub";
 
   return (
     <>
       <PageHeader
         title="Network"
-        description="Station locations and current status. Select a station on the map or in the list."
+        description="Station locations and live status."
         actions={
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(Object.keys(statusMeta) as StationStatus[]).map((key) => (
-              <Badge key={key} tone={statusTone[key]}>
-                {statusMeta[key].label} <span className="ml-1 font-mono">{counts[key] ?? 0}</span>
-              </Badge>
-            ))}
-          </div>
+          <>
+            <span className={chip}>
+              <b className="font-mono font-medium text-ink">{stations.length || "-"}</b> stations
+            </span>
+            <span className={chip}>
+              <b className="font-mono font-medium text-ink">{online.length}</b> reporting
+            </span>
+            <span className={chip}>
+              <b className={`font-mono font-medium ${attention ? "text-warn" : "text-ink"}`}>{attention}</b> need attention
+            </span>
+            <span className={chip}>
+              <b className="font-mono font-medium text-ink">{avgTemp}</b>°C avg
+            </span>
+          </>
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-12">
-        <Section flush className="lg:col-span-8 overflow-hidden">
-          <div className="relative h-[460px] md:h-[600px]">
-            {stations.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-sub">Loading station network</div>
-            ) : (
-              <StationMap stations={stations} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
-            )}
-          </div>
-        </Section>
+      <div className="relative h-[calc(100dvh-210px)] min-h-[560px] overflow-hidden rounded-xl border border-line bg-surface">
+        {stations.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-sub">Loading station network</div>
+        ) : (
+          <StationMap stations={stations} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
+        )}
 
-        <Section title="Stations" meta={stations.length ? `${stations.length}` : undefined} flush className="lg:col-span-4">
-          {stations.length === 0 ? (
-            <Empty>No stations yet</Empty>
+        {/* Station list floats over the map */}
+        <aside className="absolute left-3 top-3 z-[900] flex max-h-[calc(100%-1.5rem)] w-[min(18rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface/90 shadow-xl shadow-black/20 backdrop-blur-md">
+          <div className="space-y-2.5 border-b border-line p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sub" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search stations"
+                aria-label="Search stations"
+                className={`${field} pl-8`}
+              />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(["all", ...order] as const).map((k) => {
+                const on = filter === k;
+                const n = k === "all" ? stations.length : counts[k] ?? 0;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => setFilter(k)}
+                    aria-pressed={on}
+                    className={`h-6 rounded-full border px-2.5 text-xs font-medium transition-colors ${
+                      on ? "border-accent bg-accent/15 text-ink" : "border-line text-sub hover:bg-raised hover:text-ink"
+                    }`}
+                  >
+                    {k === "all" ? "All" : statusMeta[k].label}
+                    <span className="ml-1.5 font-mono tabular-nums text-sub">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {visible.length === 0 ? (
+            <Empty>{stations.length ? "No stations match" : "No stations yet"}</Empty>
           ) : (
-            <ul className="max-h-[600px] overflow-y-auto">
-              {stations.map((s) => {
+            <ul className="min-h-0 flex-1 overflow-y-auto">
+              {visible.map((s) => {
                 const active = s.id === selected?.id;
                 return (
                   <li key={s.id}>
                     <button
                       onClick={() => setSelectedId(s.id)}
                       aria-pressed={active}
-                      className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-3 border-b border-line px-4 py-2.5 text-left transition-colors last:border-0 ${
+                      className={`relative grid w-full grid-cols-[1fr_auto] items-center gap-x-3 border-b border-line px-3.5 py-2.5 text-left transition-colors last:border-0 ${
                         active ? "bg-accent/10" : "hover:bg-raised"
                       }`}
                     >
+                      <span
+                        aria-hidden
+                        className={`absolute inset-y-0 left-0 w-0.5 bg-accent transition-transform duration-300 ${active ? "scale-y-100" : "scale-y-0"}`}
+                      />
                       <span className="truncate text-[13px] font-medium text-ink">{s.name}</span>
-                      <Badge tone={statusTone[s.status]}>{statusMeta[s.status].label}</Badge>
-                      <span className="truncate font-mono text-[11px] text-sub">{s.id}</span>
                       <span className="text-right font-mono text-xs tabular-nums text-ink">
                         {s.status === "offline" ? "-" : `${s.temp}°C`}
+                      </span>
+                      <span className="truncate font-mono text-[11px] text-sub">{s.id}</span>
+                      <span className="justify-self-end">
+                        <Badge tone={statusTone[s.status]}>{statusMeta[s.status].label}</Badge>
                       </span>
                     </button>
                   </li>
@@ -73,7 +135,39 @@ export default function NetworkPage() {
               })}
             </ul>
           )}
-        </Section>
+        </aside>
+
+        {/* Selected station */}
+        {selected && (
+          <div key={selected.id} className="page-fade absolute bottom-3 right-3 z-[900] w-[min(20rem,calc(100%-1.5rem))] rounded-xl border border-line bg-surface/90 p-4 shadow-xl shadow-black/20 backdrop-blur-md">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-ink">{selected.name}</p>
+                <p className="truncate font-mono text-[11px] text-sub">{selected.id}</p>
+              </div>
+              <Badge tone={statusTone[selected.status]}>{statusMeta[selected.status].label}</Badge>
+            </div>
+            <dl className="mt-3 grid grid-cols-3 gap-3 border-t border-line pt-3 text-xs">
+              <div>
+                <dt className="flex items-center gap-1 text-sub"><Thermometer className="h-3 w-3" />Temp</dt>
+                <dd className="mt-0.5 font-mono text-sm tabular-nums text-ink">{selected.status === "offline" ? "-" : `${selected.temp}°C`}</dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1 text-sub"><Bell className="h-3 w-3" />Alerts</dt>
+                <dd className="mt-0.5 font-mono text-sm tabular-nums text-ink">{stationAlerts}</dd>
+              </div>
+              <div>
+                <dt className="flex items-center gap-1 text-sub"><MapPin className="h-3 w-3" />Position</dt>
+                <dd className="mt-0.5 font-mono text-[11px] tabular-nums text-ink">{selected.lat.toFixed(1)}, {selected.lon.toFixed(1)}</dd>
+              </div>
+            </dl>
+            {stationAlerts > 0 && (
+              <Link href="/alerts" className="mt-3 flex items-center justify-end gap-1 text-xs text-accent hover:underline">
+                View alerts <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

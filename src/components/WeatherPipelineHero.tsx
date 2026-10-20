@@ -31,7 +31,7 @@ export default function WeatherPipelineHero() {
 
   return (
     <div className="relative min-w-0">
-      <div className="relative h-[360px] sm:h-[460px] lg:h-[490px]">
+      <div className="relative h-[320px] sm:h-[400px] lg:h-[430px]">
         <WeatherPipeline
           height="100%"
           embed
@@ -44,10 +44,10 @@ export default function WeatherPipelineHero() {
         <div className="absolute inset-x-2 top-1 flex items-center justify-between gap-3">
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">The weather intelligence engine</p>
           <div className="flex gap-1">
-            <button type="button" disabled={!ready} aria-label="Reset pipeline view" onClick={() => { window.__machine?.setMode("assembled"); window.__machine?.setCamera("overview"); }} className="rounded-full border border-border p-2 text-muted hover:text-foreground disabled:opacity-40">
+            <button type="button" disabled={!ready} aria-label="Reset pipeline view" onClick={() => { window.__machine?.setMode("assembled"); window.__machine?.setCamera("overview"); }} className="rounded-full border border-border bg-panel-2/70 p-2 text-muted backdrop-blur transition-all hover:border-accent/50 hover:text-accent active:scale-90 disabled:opacity-40">
               <RotateCcw size={13} />
             </button>
-            <button type="button" disabled={!ready} aria-label={playing ? "Pause pipeline animation" : "Play pipeline animation"} aria-pressed={!playing} onClick={() => { if (playing) window.__machine?.pause(); else window.__machine?.play(); setPlaying(!playing); }} className="rounded-full border border-border p-2 text-muted hover:text-foreground disabled:opacity-40">
+            <button type="button" disabled={!ready} aria-label={playing ? "Pause pipeline animation" : "Play pipeline animation"} aria-pressed={!playing} onClick={() => { if (playing) window.__machine?.pause(); else window.__machine?.play(); setPlaying(!playing); }} className="rounded-full border border-border bg-panel-2/70 p-2 text-muted backdrop-blur transition-all hover:border-accent/50 hover:text-accent active:scale-90 disabled:opacity-40">
               {playing ? <Pause size={13} /> : <Play size={13} />}
             </button>
           </div>
@@ -55,16 +55,16 @@ export default function WeatherPipelineHero() {
         <p className="absolute bottom-1 inset-x-0 text-center text-[10px] text-muted">Drag to rotate · Select a module below</p>
       </div>
 
-      <nav aria-label="Explore the weather pipeline" className="grid grid-cols-5 gap-1 border-y border-border py-3">
+      <nav aria-label="Explore the weather pipeline" className="relative grid grid-cols-5 gap-1 rounded-xl border border-border bg-panel-2/50 p-1.5">
         {STAGES.map((item, index) => (
-          <button key={item.id} type="button" disabled={!ready} aria-pressed={selected === item.id} onClick={() => focus(item.id)} className={`flex flex-col items-center gap-2 rounded-lg px-1 py-2 text-[10px] sm:text-xs transition-colors disabled:opacity-50 ${selected === item.id ? "bg-orange-400/10 text-orange-400" : "text-muted hover:bg-panel-2 hover:text-foreground"}`}>
+          <button key={item.id} type="button" disabled={!ready} aria-pressed={selected === item.id} onClick={() => focus(item.id)} className={`relative flex flex-col items-center gap-2 rounded-lg px-1 py-2.5 text-[10px] sm:text-xs transition-all duration-300 disabled:opacity-50 ${selected === item.id ? "bg-accent/15 text-accent shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--c-accent)_35%,transparent)]" : "text-muted hover:bg-panel-2 hover:text-foreground"}`}>
             <item.icon size={17} />
             <span>{index + 1}. {item.name}</span>
           </button>
         ))}
       </nav>
-      <div className="min-h-[128px] py-4" aria-live="polite">
-        <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-orange-400">{stage.tech}</p>
+      <div key={stage.id} className="mt-3 min-h-[104px] rounded-xl border border-border glass p-4 animate-[detail-in_450ms_cubic-bezier(0.22,1,0.36,1)]" aria-live="polite">
+        <p className="mb-2 inline-flex rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-accent">{stage.tech}</p>
         <p className="text-xs leading-relaxed text-muted">{stage.detail}</p>
         <p className="mt-3 text-[10px] text-muted">Illustrative architecture · No live station telemetry</p>
       </div>

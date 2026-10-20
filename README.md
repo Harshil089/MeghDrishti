@@ -60,7 +60,7 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
     </td>
     <td width="50%">
       <b>Network</b><br />
-      Every station on the map with its live status and temperature.<br /><br />
+      Every station on the map with a searchable status list and a detail card.<br /><br />
       <img src="docs/screenshots/network.png" alt="Network map" />
     </td>
   </tr>
@@ -72,19 +72,19 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
     </td>
     <td width="50%">
       <b>Live</b><br />
-      15-minute readings per station, with a one-click <i>Pull latest</i> catch-up.<br /><br />
+      Latest values with change since the last reading, live charts, and a one-click <i>Pull latest</i> catch-up.<br /><br />
       <img src="docs/screenshots/live.png" alt="Live monitor" />
     </td>
   </tr>
   <tr>
     <td width="50%">
       <b>Alerts</b><br />
-      Filter by station, reason code, confidence and severity.<br /><br />
+      Alert volume over time, a severity summary, and search with severity and confidence filters.<br /><br />
       <img src="docs/screenshots/alerts.png" alt="Alerts table" />
     </td>
     <td width="50%">
       <b>Sensors</b><br />
-      Reliability per measurement from QC trigger rates.<br /><br />
+      Reliability gauge per measurement from QC trigger rates.<br /><br />
       <img src="docs/screenshots/sensors.png" alt="Sensor health" />
     </td>
   </tr>
@@ -93,6 +93,30 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
       <b>Maintenance</b><br />
       Stations ranked by maintenance need, with an action queue.<br /><br />
       <img src="docs/screenshots/maintenance.png" alt="Maintenance" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <b>History</b><br />
+      Every stored reading as received, plus the operator review log.<br /><br />
+      <img src="docs/screenshots/history.png" alt="History" />
+    </td>
+    <td width="50%">
+      <b>Admin</b><br />
+      Replay failed ingestion jobs and activate candidate models.<br /><br />
+      <img src="docs/screenshots/admin.png" alt="Admin" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <b>Settings</b><br />
+      Active calibration profile, decision thresholds and data sources.<br /><br />
+      <img src="docs/screenshots/settings.png" alt="Settings" />
+    </td>
+    <td width="50%">
+      <b>Sign in</b><br />
+      Google or email sign-in.<br /><br />
+      <img src="docs/screenshots/login.png" alt="Sign in" />
     </td>
   </tr>
 </table>
@@ -156,12 +180,12 @@ npm run stop     # stop everything
 
 | Service | URL |
 |---|---|
-| App | http://localhost:3000 |
-| API + Swagger | http://localhost:8000/docs |
+| App | http://localhost:13000 |
+| API + Swagger | http://localhost:18000/docs |
 
 `npm run dev` starts dedicated Postgres and Redis instances, FastAPI, one Celery worker,
 Celery Beat and Next.js. State and logs live in the ignored `.local/` folder.
-Ports 5432, 6379, 8000 and 3000 must be free.
+Ports 15432, 16379, 18000 and 13000 must be free.
 
 > **Running on a laptop?** The scheduler only runs while the machine is awake.
 > After sleep, open **Live** and click **Pull latest** to backfill the last 24 hours.

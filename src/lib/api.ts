@@ -3,14 +3,23 @@
 // changes beyond swapping their data source.
 import type { Alert, SeriesPoint, Station, StationStatus } from "@/lib/mock-data";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:18000/api/v1";
 
 async function getJSON<T>(path: string): Promise<T> {
-  const { authHeaders } = await import("@/lib/auth");
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: authHeaders() });
+  const { authFetch } = await import("@/lib/auth");
+  const res = await authFetch(`${API_BASE}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`${path} -> ${res.status}`);
   const body = await res.json();
   return body.data as T;
+}
+
+/** Like getJSON, but keeps the paging total the list endpoints put in `meta`. */
+async function getPage<T>(path: string): Promise<{ rows: T[]; total: number }> {
+  const { authFetch } = await import("@/lib/auth");
+  const res = await authFetch(`${API_BASE}${path}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`${path} -> ${res.status}`);
+  const body = await res.json();
+  return { rows: body.data as T[], total: body.meta?.total ?? body.data.length };
 }
 
 function healthToStatus(healthStatus: string | undefined, isActive: boolean): StationStatus {
@@ -239,6 +248,55 @@ export async function fetchStationAnomalies(stationDbId: string, limit = 15): Pr
   return getJSON<StationAnomaly[]>(`/stations/${stationDbId}/anomalies?limit=${limit}`);
 }
 
+export interface HistoryReading {
+  id: string;
+  station_id: string;
+  timestamp: string;
+  source: string;
+  measurements: Record<string, number | null>;
+  flags: {
+    anomaly_id: string;
+    measurement: string | null;
+    classification: string;
+    severity: string;
+    fault_score: number;
+    confidence: number;
+    reason_codes: string[];
+  }[];
+}
+
+export async function fetchHistory(opts: {
+  stationId?: string;
+  source?: string;
+  start?: string;
+  end?: string;
+  limit: number;
+  offset: number;
+}): Promise<{ rows: HistoryReading[]; total: number }> {
+  const qs = new URLSearchParams({ limit: String(opts.limit), offset: String(opts.offset) });
+  if (opts.stationId) qs.set("station_id", opts.stationId);
+  if (opts.source) qs.set("source", opts.source);
+  if (opts.start) qs.set("start_time", opts.start);
+  if (opts.end) qs.set("end_time", opts.end);
+  return getPage<HistoryReading>(`/observations?${qs}`);
+}
+
+export interface OperatorReviewRow {
+  id: string;
+  anomaly_id: string;
+  station: string;
+  measurement: string | null;
+  previous_classification: string;
+  operator_classification: string;
+  comment: string | null;
+  reviewer: string | null;
+  created_at: string;
+}
+
+export async function fetchReviews(limit: number, offset: number): Promise<{ rows: OperatorReviewRow[]; total: number }> {
+  return getPage<OperatorReviewRow>(`/reviews?limit=${limit}&offset=${offset}`);
+}
+
 /** All anomalies created in [start, end), optionally for one station. */
 export async function fetchAnomaliesInRange(
   start: string,
@@ -329,10 +387,10 @@ class ApiError extends Error {
 }
 
 async function authedJSON<T>(path: string, method: "PATCH" | "POST", body?: unknown): Promise<T> {
-  const { authHeaders } = await import("@/lib/auth");
-  const res = await fetch(`${API_BASE}${path}`, {
+  const { authFetch } = await import("@/lib/auth");
+  const res = await authFetch(`${API_BASE}${path}`, {
     method,
-    headers: { "Content-Type": "application/json", ...authHeaders() },
+    headers: { "Content-Type": "application/json" },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {

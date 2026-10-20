@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { getToken } from "@/lib/auth";
 
-const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1")
+const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:18000/api/v1")
   .replace(/^http/, "ws")
   .replace(/\/api\/v1$/, "");
 

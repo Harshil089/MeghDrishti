@@ -1,14 +1,41 @@
 "use client";
 
-import { useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { PageHeader, Section, Select, Empty, button, table } from "@/components/console/ui";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Minus, RefreshCw } from "lucide-react";
+import { PageHeader, Section, Select, Empty, Metric, MetricStrip, button, table } from "@/components/console/ui";
 import { TrendChart } from "@/components/console/TrendChart";
-import { fetchStationObservations, fetchStationOptions, pullLatest, seriesFromReadings } from "@/lib/api";
+import { fetchStationObservations, fetchStationOptions, pullLatest, seriesFromReadings, type LiveReading } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { useLiveData } from "@/lib/useLiveData";
 
 const cell = (v: number | null | undefined) => v ?? "-";
+
+const TILES = [
+  { key: "temperature_c", label: "Temperature", unit: "°C" },
+  { key: "humidity_pct", label: "Humidity", unit: "%" },
+  { key: "pressure_hpa", label: "Pressure", unit: "hPa" },
+  { key: "rainfall_mm", label: "Rainfall", unit: "mm" },
+  { key: "wind_speed_ms", label: "Wind", unit: "m/s" },
+] as const satisfies readonly { key: keyof LiveReading; label: string; unit: string }[];
+
+/** Change since the previous reading, as a small arrow + number. */
+function Delta({ now, prev }: { now: number | null | undefined; prev: number | null | undefined }) {
+  if (now == null || prev == null) return <span>No previous reading</span>;
+  const d = +(now - prev).toFixed(2);
+  const Icon = d > 0 ? ArrowUp : d < 0 ? ArrowDown : Minus;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Icon className="h-3 w-3 text-accent" />
+      <span className="font-mono tabular-nums">{d > 0 ? "+" : ""}{d}</span> since last
+    </span>
+  );
+}
+
+const ago = (iso: string | undefined) => {
+  if (!iso) return "";
+  const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+};
 
 export default function LiveMonitorPage() {
   const stations = useLiveData(fetchStationOptions, []);
@@ -22,6 +49,20 @@ export default function LiveMonitorPage() {
     [activeId]
   );
   const series = seriesFromReadings(readings);
+
+  // Rows that arrive after the first load flash once, so new data is noticeable.
+  const seen = useRef<Set<string> | null>(null);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (readings.length === 0) return;
+    const ids = new Set(readings.map((r) => r.id));
+    if (seen.current) setFresh(new Set([...ids].filter((id) => !seen.current!.has(id))));
+    seen.current = ids;
+  }, [readings]);
+  useEffect(() => {
+    seen.current = null;
+    setFresh(new Set());
+  }, [activeId]);
 
   // Manual catch-up after sleep/outage: re-pull the last 24 h for all
   // stations. Readings already stored are skipped as duplicates.
@@ -78,10 +119,23 @@ export default function LiveMonitorPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-px overflow-hidden rounded-md border border-line bg-line md:grid-cols-3">
-            <TrendChart label="Temperature" unit="°C" current={latest?.temperature_c} data={series.temperature} note="Normal 18 to 34" />
-            <TrendChart label="Humidity" unit="%" current={latest?.humidity_pct} data={series.humidity} note="Normal 40 to 80" />
-            <TrendChart label="Pressure" unit="hPa" current={latest?.pressure_hpa} data={series.pressure} note="Normal 1000 to 1015" />
+          <MetricStrip cols={6}>
+            {TILES.map((t) => (
+              <Metric
+                key={t.key}
+                label={t.label}
+                value={cell(latest?.[t.key])}
+                unit={t.unit}
+                foot={<Delta now={latest?.[t.key]} prev={readings[1]?.[t.key]} />}
+              />
+            ))}
+            <Metric label="Latest reading" value={ago(latest?.timestamp) || "-"} foot={latest?.source ?? "No data yet"} />
+          </MetricStrip>
+
+          <div className="grid gap-px overflow-hidden rounded-lg border border-line bg-line md:grid-cols-3">
+            <TrendChart live label="Temperature" unit="°C" current={latest?.temperature_c} data={series.temperature} note="Normal 18 to 34" />
+            <TrendChart live label="Humidity" unit="%" current={latest?.humidity_pct} data={series.humidity} note="Normal 40 to 80" />
+            <TrendChart live label="Pressure" unit="hPa" current={latest?.pressure_hpa} data={series.pressure} note="Normal 1000 to 1015" />
           </div>
 
           <Section title="Observations" meta={`${readings.length} rows`} flush>
@@ -107,7 +161,7 @@ export default function LiveMonitorPage() {
                     </tr>
                   )}
                   {readings.map((r) => (
-                    <tr key={r.id} className={table.row}>
+                    <tr key={r.id} className={`${table.row} ${fresh.has(r.id) ? "row-flash" : ""}`}>
                       <td className={`${table.td} font-mono text-xs text-ink whitespace-nowrap`}>
                         {new Date(r.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                       </td>

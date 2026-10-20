@@ -1,23 +1,52 @@
 "use client";
 
-import { PageHeader, Section, Badge, Empty } from "@/components/console/ui";
+import { Database, KeyRound, ShieldCheck, SlidersHorizontal, UserRound } from "lucide-react";
+import { PageHeader, Section, Badge, Empty, Meter } from "@/components/console/ui";
 import { fetchActiveCalibration, fetchDataSources, type CalibrationProfile, type DataSourceStatus } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 import { useAuth } from "@/lib/useAuth";
 
-function KeyValues({ title, values }: { title: string; values: Record<string, number | string> }) {
+const pretty = (k: string) => k.replace(/_/g, " ");
+
+/** Grid of labelled numbers. */
+function Thresholds({ values }: { values: Record<string, number | string> }) {
   return (
-    <div>
-      <h3 className="px-4 pt-4 pb-2 text-xs font-medium text-sub">{title}</h3>
-      <dl className="border-y border-line">
-        {Object.entries(values).map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between border-b border-line px-4 py-2 last:border-0">
-            <dt className="font-mono text-xs text-sub">{k}</dt>
-            <dd className="font-mono text-[13px] tabular-nums text-ink">{v}</dd>
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
+      {Object.entries(values).map(([k, v]) => (
+        <div key={k} className="bg-surface px-3.5 py-3">
+          <dt className="truncate text-[11px] text-sub capitalize">{pretty(k)}</dt>
+          <dd className="mt-1 font-mono text-lg tabular-nums text-ink">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** One gradient bar per weight, scaled to the largest. */
+function Weights({ values }: { values: Record<string, number | string> }) {
+  const nums = Object.values(values).map(Number);
+  const max = Math.max(...nums, 0) || 1;
+  return (
+    <ul className="space-y-3.5">
+      {Object.entries(values).map(([k, v]) => (
+        <li key={k}>
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="capitalize text-sub">{pretty(k)}</span>
+            <span className="font-mono tabular-nums text-ink">{v}</span>
           </div>
-        ))}
-      </dl>
-    </div>
+          <Meter pct={(Number(v) / max) * 100} tone="info" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function SubHead({ icon: Icon, children }: { icon: typeof SlidersHorizontal; children: string }) {
+  return (
+    <h3 className="mb-3 flex items-center gap-2 text-xs font-medium text-ink">
+      <Icon className="h-3.5 w-3.5 text-accent" />
+      {children}
+    </h3>
   );
 }
 
@@ -39,52 +68,86 @@ export default function SettingsPage() {
     30000,
     [isAdmin]
   );
+  const enabled = sources.filter((s) => s.is_enabled).length;
 
   return (
     <>
-      <PageHeader
-        title="Settings"
-        description="Active system configuration. Read-only here; edit through the calibration DAG or admin API."
-      />
+      <PageHeader title="Settings" description="Active configuration. Read-only here." />
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Section
-          title="Calibration profile"
-          meta={calibration ? `Updated ${new Date(calibration.updated_at).toLocaleString()}` : undefined}
-          actions={calibration && <Badge tone="ok">{calibration.name}</Badge>}
-          flush
-        >
-          {!canCalibration ? (
-            <Empty>Requires an admin or scientist account.</Empty>
-          ) : !calibration ? (
-            <Empty>No active profile. The system is running on built-in defaults.</Empty>
-          ) : (
-            <div className="pb-4 space-y-2">
-              <KeyValues title="Decision thresholds" values={calibration.decision_thresholds} />
-              <KeyValues title="Fusion weights" values={calibration.fusion_weights} />
-            </div>
-          )}
-        </Section>
+      <div className="space-y-4">
+        <section className="c-card flex flex-wrap items-center gap-4 rounded-lg border border-line p-4">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-accent/30 bg-accent/10 text-accent">
+            <UserRound className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-ink">{user?.full_name || user?.email || "Signed in"}</p>
+            {user?.full_name && <p className="truncate text-xs text-sub">{user.email}</p>}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {(user?.roles ?? []).map((r) => (
+              <Badge key={r} tone="info">
+                {r.toLowerCase()}
+              </Badge>
+            ))}
+          </div>
+        </section>
 
-        <Section title="Data sources" meta={sources.length ? `${sources.length}` : undefined} flush>
-          {!isAdmin ? (
-            <Empty>Requires an admin account.</Empty>
-          ) : sources.length === 0 ? (
-            <Empty>No data sources configured</Empty>
-          ) : (
-            <ul>
-              {sources.map((s) => (
-                <li key={s.name} className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-ink">{s.name}</p>
-                    <p className="text-xs text-sub">{s.kind}</p>
-                  </div>
-                  <Badge tone={s.is_enabled ? "ok" : "neutral"}>{s.is_enabled ? "Enabled" : "Needs credentials"}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <Section
+            title="Calibration profile"
+            meta={calibration ? `Updated ${new Date(calibration.updated_at).toLocaleString()}` : undefined}
+            actions={calibration && <Badge tone="ok">{calibration.name}</Badge>}
+            className="lg:col-span-7"
+          >
+            {!canCalibration ? (
+              <Empty>Requires an admin or scientist account.</Empty>
+            ) : !calibration ? (
+              <Empty>No active profile. Built-in defaults are in use.</Empty>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <SubHead icon={SlidersHorizontal}>Decision thresholds</SubHead>
+                  <Thresholds values={calibration.decision_thresholds} />
+                </div>
+                <div>
+                  <SubHead icon={ShieldCheck}>Fusion weights</SubHead>
+                  <Weights values={calibration.fusion_weights} />
+                </div>
+              </div>
+            )}
+          </Section>
+
+          <Section
+            title="Data sources"
+            meta={sources.length ? `${enabled} of ${sources.length} enabled` : undefined}
+            flush
+            className="lg:col-span-5 self-start"
+          >
+            {!isAdmin ? (
+              <Empty>Requires an admin account.</Empty>
+            ) : sources.length === 0 ? (
+              <Empty>No data sources configured</Empty>
+            ) : (
+              <ul>
+                {sources.map((s) => (
+                  <li
+                    key={s.name}
+                    className="flex items-center gap-3 border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-raised"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-line bg-raised text-sub">
+                      {s.is_enabled ? <Database className="h-4 w-4" /> : <KeyRound className="h-4 w-4" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium text-ink">{s.name}</p>
+                      <p className="truncate text-xs text-sub">{s.kind}</p>
+                    </div>
+                    <Badge tone={s.is_enabled ? "ok" : "neutral"}>{s.is_enabled ? "Enabled" : "Needs key"}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+        </div>
       </div>
     </>
   );

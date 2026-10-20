@@ -74,7 +74,7 @@ export default function GoogleSignInButton({ onSuccess }: { onSuccess: () => voi
           <div className="absolute inset-0 rounded-full bg-panel-2 animate-pulse" />
         )}
       </div>
-      {error && <p className="text-[11px] text-rose-400 text-center">{error}</p>}
+      {error && <p className="text-[11px] text-crit text-center">{error}</p>}
     </div>
   );
 }

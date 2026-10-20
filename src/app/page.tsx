@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion, useReducedMotion } from "framer-motion";
 import Logo from "@/components/Logo";
@@ -22,6 +23,7 @@ import {
   FileSearch,
   ClipboardCheck,
   HeartPulse,
+  Sparkles,
 } from "lucide-react";
 
 // Keep the WebGL scene and its readiness-dependent controls in one client boundary.
@@ -85,60 +87,97 @@ const FEATURES = [
 
 export default function LandingPage() {
   const reduce = useReducedMotion();
+  const wrap = "max-w-[1240px] mx-auto px-4 md:px-8";
+
+  // Grid lines exist only under the cursor: track it and hand the position to CSS.
+  const grid = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = grid.current;
+    if (!el || !window.matchMedia("(hover: hover)").matches) return;
+    const move = (e: PointerEvent) => {
+      el.style.setProperty("--mx", `${e.clientX}px`);
+      el.style.setProperty("--my", `${e.clientY}px`);
+      el.style.opacity = "1";
+    };
+    const leave = () => {
+      el.style.opacity = "0";
+    };
+    window.addEventListener("pointermove", move, { passive: true });
+    document.documentElement.addEventListener("pointerleave", leave);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      document.documentElement.removeEventListener("pointerleave", leave);
+    };
+  }, []);
 
   return (
-    <div className="relative flex-1 min-h-[100dvh]">
-      <header className="relative h-16 flex items-center justify-between px-4 md:px-8 max-w-[1300px] mx-auto">
-        <div className="flex items-center gap-2.5">
-          <Logo size={32} />
-          <span className="text-sm font-semibold tracking-wide">MeghDrishti</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/Harshil089/MeghDrishti"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden sm:flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
-          >
-            <GitFork className="h-3.5 w-3.5" />
-            Source
-          </a>
-          <ThemeToggle />
-          <Link
-            href="/login"
-            className="rounded-full border border-orange-400/30 bg-orange-400/10 px-4 py-1.5 text-xs text-orange-300 hover:bg-orange-400/15 transition-colors"
-          >
-            Sign in
-          </Link>
+    <div className="relative flex-1 min-h-[100dvh] overflow-x-clip">
+      {/* Ambient backdrop: invisible grid revealed by a spotlight that follows the cursor. */}
+      <div ref={grid} aria-hidden className="land-grid pointer-events-none fixed inset-0 -z-10 opacity-0" />
+
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
+        <div className={`${wrap} flex h-16 items-center justify-between`}>
+          <div className="flex items-center gap-2.5">
+            <Logo size={30} />
+            <span className="text-sm font-semibold tracking-wide">MeghDrishti</span>
+          </div>
+          <nav aria-label="Sections" className="hidden md:flex items-center gap-1 text-[13px] text-muted">
+            {[
+              ["Features", "#features"],
+              ["Why fusion", "#why"],
+              ["How it works", "#how"],
+            ].map(([label, href]) => (
+              <a key={href} href={href} className="rounded-full px-3.5 py-1.5 transition-colors hover:bg-panel-2 hover:text-foreground">
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/Harshil089/MeghDrishti"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
+            >
+              <GitFork className="h-3.5 w-3.5" />
+              Source
+            </a>
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className="rounded-full c-grad-brand px-4 py-2 text-xs font-medium text-white shadow-md shadow-accent/25 transition hover:brightness-110"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="max-w-[1300px] mx-auto grid items-center gap-6 lg:grid-cols-[0.9fr_1.1fr] px-4 md:px-8 pt-8 pb-10 md:pt-12">
+      {/* Hero: copy left, 3D pipeline right */}
+      <section className="relative">
+        <div className={`${wrap} grid items-center gap-4 pt-8 pb-4 md:pt-12 lg:grid-cols-[0.9fr_1.1fr]`}>
           <motion.div
             initial={reduce ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="max-w-[620px] relative z-10"
+            className="relative z-10 max-w-[620px]"
           >
-            <p className="font-mono uppercase text-[11px] tracking-wide text-orange-400 mb-4">
+            <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-panel-2/70 px-3.5 py-1.5 text-[11px] font-mono uppercase tracking-wide text-muted backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
               Open-source · Smart India Hackathon 2026
             </p>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05] mb-5">
-              Is that reading a real storm, or a{" "}
-              <GradientText as="span">broken sensor</GradientText>?
+            <h1 className="mb-4 text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight leading-[1.05]">
+              Is that reading a real storm, or a <GradientText as="span">broken sensor</GradientText>?
             </h1>
-            <p className="text-base text-muted leading-relaxed max-w-[52ch] mb-8">
-              Follow a reading through quality checks, ML and weather context.
-              MeghDrishti combines available evidence to help operators distinguish
-              unusual weather from a sensor fault—with a reason behind every flag.
+            <p className="mb-6 max-w-[52ch] text-base text-muted leading-relaxed">
+              MeghDrishti follows every reading through quality checks, ML and weather context, so operators can tell
+              unusual weather from a sensor fault, with a reason behind every flag.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <MagneticButton>
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 rounded-full bg-orange-500 text-black text-sm font-medium px-5 py-3 hover:bg-orange-400 transition-colors"
+                  className="flex items-center gap-2 rounded-full c-grad-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-accent/30 transition hover:brightness-110"
                 >
                   Sign in to the console
                   <ArrowRight className="h-4 w-4" />
@@ -149,7 +188,7 @@ export default function LandingPage() {
                   href="https://github.com/Harshil089/MeghDrishti"
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 rounded-full border border-border text-sm px-5 py-3 text-foreground hover:bg-white/[0.04] transition-colors"
+                  className="flex items-center gap-2 rounded-full border border-border bg-panel-2/60 px-6 py-3 text-sm text-foreground backdrop-blur transition-colors hover:border-accent/50"
                 >
                   <GitFork className="h-4 w-4" />
                   View source
@@ -166,14 +205,14 @@ export default function LandingPage() {
           </motion.div>
         </div>
 
-        {/* Architecture stat strip — static facts about the system, not live telemetry */}
-        <div className="max-w-[1300px] mx-auto px-4 md:px-8 pb-16 md:pb-24">
+        {/* Architecture facts: static, not live telemetry */}
+        <div className={`${wrap} pt-4 pb-2`}>
           <Reveal>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-border overflow-hidden rounded-2xl border border-border bg-panel-2/50 backdrop-blur">
               {ARCHITECTURE_STATS.map((s) => (
-                <div key={s.label} className="rounded-lg border border-border bg-panel-2/60 p-4">
-                  <Counter value={s.value} className="text-3xl font-semibold text-orange-400 font-mono" />
-                  <p className="text-[11px] text-muted mt-1 leading-snug">{s.label}</p>
+                <div key={s.label} className="p-6">
+                  <Counter value={s.value} className="gradient-text bg-clip-text text-5xl font-semibold text-transparent font-mono" />
+                  <p className="mt-2 text-xs leading-snug text-muted">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -181,25 +220,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Capabilities — asymmetric bento, single accent, no rainbow */}
-      <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
+      {/* Features */}
+      <section id="features" className={`${wrap} scroll-mt-20 py-10 md:py-14`}>
         <Reveal>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[28ch] mb-10">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-accent">Capabilities</p>
+          <h2 className="mb-7 max-w-[26ch] text-3xl md:text-4xl font-semibold tracking-tight">
             Built to be <GradientText as="span">trusted with a decision</GradientText>, not just a score
           </h2>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid gap-4 md:grid-cols-3">
           {FEATURES.map((f, i) => (
-            <Reveal
-              key={f.title}
-              delay={i * 0.05}
-              className={f.big ? "md:col-span-2" : "md:col-span-1"}
-            >
+            <Reveal key={f.title} delay={i * 0.05} className={f.big ? "md:col-span-2" : "md:col-span-1"}>
               <SpotlightCard className="h-full p-6">
-                <f.icon className="h-5 w-5 text-orange-400 mb-4" />
-                <h3 className="text-sm font-semibold text-foreground mb-2">{f.title}</h3>
-                <p className="text-sm text-muted leading-relaxed">{f.body}</p>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-accent/30 bg-accent/10">
+                    <f.icon className="h-5 w-5 text-accent" />
+                  </span>
+                  <span className="font-mono text-xs text-muted/60">{String(i + 1).padStart(2, "0")}</span>
+                </div>
+                <h3 className="mb-2 text-base font-semibold text-foreground">{f.title}</h3>
+                <p className="max-w-[56ch] text-sm leading-relaxed text-muted">{f.body}</p>
               </SpotlightCard>
             </Reveal>
           ))}
@@ -207,104 +248,120 @@ export default function LandingPage() {
       </section>
 
       {/* The core distinction */}
-      <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
+      <section id="why" className={`${wrap} scroll-mt-20 py-10 md:py-14`}>
         <Reveal>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[30ch] mb-10">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-accent">Why fusion</p>
+          <h2 className="mb-7 max-w-[26ch] text-3xl md:text-4xl font-semibold tracking-tight">
             One anomaly score is not enough to act on
           </h2>
         </Reveal>
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <Reveal delay={0.05}>
-            <SpotlightCard tone="emerald" className="h-full p-6 md:p-8">
-              <div className="flex items-center gap-2 mb-4">
-                <CloudRain className="h-4 w-4 text-emerald-400" />
-                <span className="text-sm font-medium text-emerald-400">Likely genuine extreme</span>
-              </div>
-              <p className="text-sm text-muted leading-relaxed mb-4">
-                A Pune station reports 182mm of rainfall in 15 minutes. Nearby stations, NASA GPM,
-                and the local forecast all show the same storm.
-              </p>
-              <p className="text-xs font-mono text-emerald-400/80">
-                RAINFALL_EXTREME · GPM_CONFIRMED · NEIGHBOR_CONFIRMED · FORECAST_CONFIRMED
-              </p>
-            </SpotlightCard>
-          </Reveal>
-
-          <Reveal delay={0.12}>
-            <SpotlightCard tone="rose" className="h-full p-6 md:p-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Gauge className="h-4 w-4 text-rose-400" />
-                <span className="text-sm font-medium text-rose-400">Probable sensor fault</span>
-              </div>
-              <p className="text-sm text-muted leading-relaxed mb-4">
-                A different station jumps from 31.9°C to 49.2°C in five minutes. Neighbors sit
-                near 32°C and the forecast agrees with them, not the sensor.
-              </p>
-              <p className="text-xs font-mono text-rose-400/80">
-                TEMP_SPIKE · MODEL_HIGH_ANOMALY_SCORE · NEIGHBOR_MISMATCH · FORECAST_MISMATCH
-              </p>
-            </SpotlightCard>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
-        <Reveal>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[28ch] mb-10">
-            Every reading passes through the same six checks
-          </h2>
-        </Reveal>
-
-        <div className="flex flex-wrap gap-3">
-          {pipelineStages.map((stage, i) => (
-            <Reveal key={stage.key} delay={i * 0.05}>
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg border border-border bg-panel-2/60 px-4 py-3 min-w-[160px]">
-                  <p className="text-[11px] font-mono uppercase tracking-wide text-foreground mb-1">
-                    {stage.label}
-                  </p>
-                  <p className="text-[11px] text-muted leading-snug">{stage.detail}</p>
+        <div className="relative grid gap-4 md:grid-cols-2">
+          <span
+            aria-hidden
+            className="absolute left-1/2 top-1/2 z-10 hidden h-10 w-10 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-border bg-panel font-mono text-[11px] text-muted md:grid"
+          >
+            vs
+          </span>
+          {[
+            {
+              icon: CloudRain,
+              title: "Likely genuine extreme",
+              tag: "Real weather",
+              tagClass: "border-ok/30 bg-ok/10 text-ok",
+              body: "A Pune station reports 182mm of rainfall in 15 minutes. Nearby stations, NASA GPM, and the local forecast all show the same storm.",
+              codes: ["RAINFALL_EXTREME", "GPM_CONFIRMED", "NEIGHBOR_CONFIRMED", "FORECAST_CONFIRMED"],
+            },
+            {
+              icon: Gauge,
+              title: "Probable sensor fault",
+              tag: "Bad sensor",
+              tagClass: "border-crit/30 bg-crit/10 text-crit",
+              body: "A different station jumps from 31.9°C to 49.2°C in five minutes. Neighbors sit near 32°C and the forecast agrees with them, not the sensor.",
+              codes: ["TEMP_SPIKE", "MODEL_HIGH_ANOMALY_SCORE", "NEIGHBOR_MISMATCH", "FORECAST_MISMATCH"],
+            },
+          ].map((c, i) => (
+            <Reveal key={c.title} delay={0.05 + i * 0.07}>
+              <SpotlightCard className="h-full p-6 md:p-7">
+                <div className="mb-4 flex items-center gap-2.5">
+                  <c.icon className="h-4 w-4 text-accent" />
+                  <span className="text-sm font-medium text-foreground">{c.title}</span>
+                  <span className={`ml-auto rounded-full border px-2.5 py-0.5 text-[10px] font-medium ${c.tagClass}`}>{c.tag}</span>
                 </div>
-                {i < pipelineStages.length - 1 && (
-                  <ArrowRight className="h-3.5 w-3.5 text-orange-400/50 shrink-0" />
-                )}
-              </div>
+                <p className="mb-4 text-sm leading-relaxed text-muted">{c.body}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {c.codes.map((code) => (
+                    <span key={code} className="rounded-md border border-border bg-panel-2/70 px-2 py-1 font-mono text-[10px] text-muted">
+                      {code}
+                    </span>
+                  ))}
+                </div>
+              </SpotlightCard>
             </Reveal>
           ))}
         </div>
       </section>
 
-      {/* Closing CTA */}
-      <section className="max-w-[1300px] mx-auto px-4 md:px-8 py-16 md:py-24">
+      {/* How it works */}
+      <section id="how" className={`${wrap} scroll-mt-20 py-10 md:py-14`}>
         <Reveal>
-          <div className="rounded-lg border border-border bg-panel-2/60 p-8 md:p-14 flex flex-col items-center text-center gap-6">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-orange-400" />
-              <span className="font-mono uppercase text-[11px] tracking-wide text-muted">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-accent">How it works</p>
+          <h2 className="mb-7 max-w-[26ch] text-3xl md:text-4xl font-semibold tracking-tight">
+            Every reading passes through the same six checks
+          </h2>
+        </Reveal>
+
+        <div className="rounded-3xl border border-border bg-panel-2/40 p-5 md:p-7 backdrop-blur">
+          <ol className="grid gap-8 md:grid-cols-6 md:gap-3">
+            {pipelineStages.map((stage, i) => (
+              <Reveal key={stage.key} delay={i * 0.06}>
+                <li className="land-step relative flex gap-4 md:block md:text-center">
+                  <span className="relative z-10 flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-accent/50 bg-panel font-mono text-xs text-accent md:mx-auto">
+                    {i + 1}
+                  </span>
+                  <div className="md:mt-4">
+                    <p className="mb-1 text-[13px] font-semibold text-foreground">{stage.label}</p>
+                    <p className="text-xs leading-snug text-muted">{stage.detail}</p>
+                  </div>
+                </li>
+              </Reveal>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Closing CTA */}
+      <section className={`${wrap} py-8 md:py-12`}>
+        <Reveal>
+          <div className="relative overflow-hidden rounded-3xl border border-border land-glow px-6 py-10 md:py-12 text-center">
+            <div className="relative mx-auto flex max-w-[640px] flex-col items-center gap-6">
+              <span className="inline-flex items-center gap-2 rounded-full border border-border bg-panel/70 px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-muted">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
                 Built for Smart India Hackathon 2026
               </span>
+              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
+                Sign in to see live station data and anomaly decisions
+              </h2>
+              <MagneticButton>
+                <Link
+                  href="/login"
+                  className="flex items-center gap-2 rounded-full c-grad-brand px-6 py-3 text-sm font-medium text-white shadow-lg shadow-accent/30 transition hover:brightness-110"
+                >
+                  Sign in to the console
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </MagneticButton>
             </div>
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight max-w-[26ch]">
-              Sign in to see live station data and anomaly decisions
-            </h2>
-            <MagneticButton>
-              <Link
-                href="/login"
-                className="shrink-0 flex items-center gap-2 rounded-full bg-orange-500 text-black text-sm font-medium px-5 py-3 hover:bg-orange-400 transition-colors"
-              >
-                Sign in to the console
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </MagneticButton>
           </div>
         </Reveal>
       </section>
 
-      <footer className="max-w-[1300px] mx-auto px-4 md:px-8 py-8 flex items-center justify-between text-xs text-muted border-t border-border">
-        <span>MeghDrishti</span>
-        <a href="https://github.com/Harshil089/MeghDrishti" target="_blank" rel="noreferrer" className="hover:text-orange-400 transition-colors">
+      <footer className={`${wrap} flex flex-wrap items-center justify-between gap-3 border-t border-border py-6 text-xs text-muted`}>
+        <span className="flex items-center gap-2">
+          <Logo size={20} />
+          MeghDrishti
+        </span>
+        <a href="https://github.com/Harshil089/MeghDrishti" target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
           github.com/Harshil089/MeghDrishti
         </a>
       </footer>

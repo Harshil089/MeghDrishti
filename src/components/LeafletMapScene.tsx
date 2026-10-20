@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Tooltip, Popup, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusMeta, type Alert, type Station } from "@/lib/mock-data";
@@ -9,16 +9,23 @@ import { fetchAlerts } from "@/lib/api";
 import { useLiveDataWs } from "@/lib/useLiveData";
 
 const severityStyle: Record<string, string> = {
-  critical: "text-rose-400",
-  warning: "text-amber-400",
-  info: "text-cyan-300",
+  critical: "text-crit",
+  warning: "text-warn",
+  info: "text-accent",
+};
+
+const statusText: Record<Station["status"], string> = {
+  normal: "text-accent",
+  warning: "text-warn",
+  critical: "text-crit",
+  offline: "text-sub",
 };
 
 const statusColor: Record<Station["status"], string> = {
-  normal: "#34d399",
-  warning: "#fbbf24",
-  critical: "#fb7185",
-  offline: "#64748b",
+  normal: "#5b8cff",
+  warning: "#ffc861",
+  critical: "#ff6b8b",
+  offline: "#8f98b3",
 };
 
 const OSM_TILE = {
@@ -82,10 +89,12 @@ export default function LeafletMapScene({
       minZoom={4}
       maxZoom={18}
       scrollWheelZoom
+      zoomControl={false}
       className={`h-full w-full ${light ? "" : "map-dark-tiles"}`}
       style={{ background: light ? "#eef1f8" : "#0b1220" }}
     >
       <TileLayer url={OSM_TILE.url} attribution={OSM_TILE.attribution} />
+      <ZoomControl position="topright" />
 
       {stations.map((s) => {
         const stationAlerts = alerts.filter((a) => a.station === s.id);
@@ -108,7 +117,7 @@ export default function LeafletMapScene({
                 <p className="font-semibold text-sm">
                   {s.id} · {s.name}
                 </p>
-                <p className={statusMeta[s.status].color}>
+                <p className={statusText[s.status]}>
                   {statusMeta[s.status].label}
                   {s.status !== "offline" && ` · ${s.temp}°C`}
                 </p>
@@ -121,7 +130,7 @@ export default function LeafletMapScene({
                     <ul
                       tabIndex={0}
                       aria-label={`Alerts for ${s.name}`}
-                      className="space-y-1.5 overflow-y-auto overscroll-contain pr-2 focus-visible:outline-2 focus-visible:outline-cyan-500"
+                      className="space-y-1.5 overflow-y-auto overscroll-contain pr-2 focus-visible:outline-2 focus-visible:outline-accent"
                       style={{ maxHeight: "min(240px, 35dvh)" }}
                     >
                     {stationAlerts.map((a) => (

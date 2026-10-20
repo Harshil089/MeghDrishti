@@ -73,8 +73,7 @@ class ModelRegistry:
             or not metrics.get("sensor_data_only")
         ):
             raise ValidationAppError(
-                "Retrain on sensor observations with chronological holdout evaluation before activation. "
-                "Legacy and forecast-based candidates are diagnostic only.",
+                "Not eligible. Retrain on sensor data first.",
                 code="MODEL_NOT_ELIGIBLE",
             )
 
