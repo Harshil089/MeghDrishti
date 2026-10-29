@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Minus, RefreshCw } from "lucide-react";
-import { PageHeader, Section, Select, Empty, Metric, MetricStrip, button, table } from "@/components/console/ui";
+import { StationPicker } from "@/components/console/StationPicker";
+import { PageHeader, Section, Empty, Metric, MetricStrip, button, table } from "@/components/console/ui";
 import { TrendChart } from "@/components/console/TrendChart";
 import { fetchStationObservations, fetchStationOptions, pullLatest, seriesFromReadings, type LiveReading } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
@@ -96,13 +97,7 @@ export default function LiveMonitorPage() {
               {pulling ? "Pulling" : "Pull latest"}
             </button>
           )}
-          <Select aria-label="Station" value={activeId} onChange={(e) => setStationId(e.target.value)}>
-            {stations.map((s) => (
-              <option key={s.dbId} value={s.dbId}>
-                {s.code} · {s.name}
-              </option>
-            ))}
-          </Select>
+          <StationPicker stations={stations} value={activeId} onChange={setStationId} />
           </>
         }
       />

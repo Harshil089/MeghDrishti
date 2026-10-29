@@ -3,6 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STATE="$ROOT/.local"
+export PGPORT=15432   # psql/createdb/createuser default to 5432 otherwise
+REDIS_PORT=16379
+# pyproj/libproj (pulled in by gpm-api) segfaults inside os_log when a Python process exits on macOS;
+# this skips that call, so workers and one-off scripts stop leaving crash reports.
+export OS_ACTIVITY_MODE=disable
 BACKEND="$ROOT/meghdrishti-backend"
 PG="$(brew --prefix postgresql@16)/bin"
 mkdir -p "$STATE/logs" "$STATE/redis"
@@ -20,14 +25,14 @@ from pathlib import Path
 state, name, *command = sys.argv[1:]
 if name == "frontend":
     # Reuse a Next dev server already running in this project.
-    listeners = subprocess.run(["lsof", "-tiTCP:3000", "-sTCP:LISTEN"],
+    listeners = subprocess.run(["lsof", "-tiTCP:13000", "-sTCP:LISTEN"],
                                capture_output=True, text=True).stdout.split()
     if listeners:
         pid = listeners[0]
         cwd = subprocess.check_output(["lsof", "-a", "-p", pid, "-d", "cwd", "-Fn"], text=True)
         process_name = subprocess.check_output(["ps", "-p", pid, "-o", "command="], text=True)
         if f"n{Path.cwd()}\n" not in cwd or "next" not in process_name:
-            raise SystemExit("Port 3000 belongs to another app; stop it before starting MeghDrishti.")
+            raise SystemExit("Port 13000 belongs to another app; stop it before starting MeghDrishti.")
         parent = subprocess.check_output(["ps", "-p", pid, "-o", "ppid="], text=True).strip()
         parent_name = subprocess.check_output(["ps", "-p", parent, "-o", "command="], text=True)
         if "next dev" in parent_name:
@@ -68,14 +73,14 @@ case "${1:-start}" in
       "$PG/initdb" -D "$STATE/postgres" -A trust --encoding UTF8 --locale C
       cat >> "$STATE/postgres/postgresql.conf" <<EOF
 listen_addresses = '127.0.0.1'
-port = 5432
+port = 15432
 shared_buffers = '64MB'
 max_connections = 40
 unix_socket_directories = '$STATE'
 EOF
     fi
     "$PG/pg_ctl" -D "$STATE/postgres" status >/dev/null 2>&1 || \
-      "$PG/pg_ctl" -D "$STATE/postgres" -l "$STATE/postgres.log" start
+      LC_ALL=C "$PG/pg_ctl" -D "$STATE/postgres" -l "$STATE/postgres.log" start  # cluster was initdb'd with --locale C; an invalid inherited LC_* aborts startup
     if ! "$PG/psql" -h 127.0.0.1 -d postgres -Atc "SELECT 1 FROM pg_roles WHERE rolname='meghdrishti'" | grep -q 1; then
       "$PG/createuser" -h 127.0.0.1 meghdrishti
     fi
@@ -85,7 +90,7 @@ EOF
     if [[ ! -f "$STATE/redis/redis.conf" ]]; then
       cat > "$STATE/redis/redis.conf" <<EOF
 bind 127.0.0.1
-port 6379
+port 16379
 dir $STATE/redis
 daemonize yes
 pidfile $STATE/redis/redis.pid
@@ -96,20 +101,20 @@ EOF
     if [[ ! -f "$STATE/redis/redis.pid" ]] || ! kill -0 "$(cat "$STATE/redis/redis.pid")" 2>/dev/null; then
       redis-server "$STATE/redis/redis.conf"
     fi
-    redis-cli ping
+    redis-cli -p "$REDIS_PORT" ping
     cd "$BACKEND"
     [[ -f .env ]] || cp .env.example .env
     .venv/bin/alembic upgrade head
     if [[ "$("$PG/psql" -h 127.0.0.1 -U meghdrishti -d meghdrishti -Atc 'SELECT count(*) FROM users')" == 0 ]]; then
       .venv/bin/python -m app.db.seed
     fi
-    start_process api .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 \
+    start_process api .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 18000 \
       --timeout-graceful-shutdown 15
     for ((i=0; i<30; i++)); do
-      curl -fsS http://127.0.0.1:8000/ready >/dev/null 2>&1 && break
+      curl -fsS http://127.0.0.1:18000/ready >/dev/null 2>&1 && break
       sleep 1
     done
-    curl -fsS http://127.0.0.1:8000/ready
+    curl -fsS http://127.0.0.1:18000/ready
     start_process worker env DB_POOLING=false .venv/bin/celery -A app.workers.celery_app worker \
       --pool solo --concurrency 1 -Q qc,features,ml,context,alert,health,realtime,schedule \
       -l info -n native@%h
@@ -117,16 +122,29 @@ EOF
       -l info --schedule "$STATE/celerybeat-schedule" --pidfile "$STATE/celerybeat.pid"
     cd "$ROOT"
     [[ -f .env.local ]] || cp .env.example .env.local
-    start_process frontend node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 3000
-    echo; echo 'Frontend: http://localhost:3000  API: http://localhost:8000/docs'
+    start_process frontend node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 13000
+    echo; echo 'Frontend: http://localhost:13000  API: http://localhost:18000/docs'
     ;;
   stop)
+    for f in "$STATE"/worker-*.pid; do [[ -e "$f" ]] && stop_process "$(basename "$f" .pid)"; done
     for name in beat frontend worker api; do stop_process "$name"; done
     if [[ -f "$STATE/redis/redis.pid" ]] && kill -0 "$(cat "$STATE/redis/redis.pid")" 2>/dev/null; then
-      redis-cli shutdown
+      redis-cli -p "$REDIS_PORT" shutdown
     fi
     "$PG/pg_ctl" -D "$STATE/postgres" status >/dev/null 2>&1 && \
       "$PG/pg_ctl" -D "$STATE/postgres" stop -m fast || true
+    ;;
+  backlog)
+    # Drain unprocessed readings with one worker per station (parallel, in order).
+    # Each worker is stopped by `stop`; run this only after `start`.
+    cd "$BACKEND"
+    while read -r code n; do
+      [[ -n "$code" ]] || continue
+      q="qc_$(echo "$code" | tr '[:upper:]' '[:lower:]')"
+      echo "$code: $n readings -> $q"
+      start_process "worker-$q" env DB_POOLING=false .venv/bin/celery -A app.workers.celery_app worker \
+        --pool solo --concurrency 1 -Q "$q" -l info -n "$q@%h"
+    done < <(.venv/bin/python scripts/requeue_by_station.py)
     ;;
   status)
     for name in api worker beat frontend; do
@@ -135,7 +153,7 @@ EOF
       else echo "$name stopped"; fi
     done
     "$PG/pg_ctl" -D "$STATE/postgres" status || true
-    redis-cli ping || true
+    redis-cli -p "$REDIS_PORT" ping || true
     ;;
-  *) echo 'Usage: bash scripts/local.sh {start|stop|status}' >&2; exit 1 ;;
+  *) echo 'Usage: bash scripts/local.sh {start|stop|status|backlog}' >&2; exit 1 ;;
 esac

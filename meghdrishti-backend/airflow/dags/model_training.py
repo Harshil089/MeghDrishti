@@ -24,7 +24,7 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=5),
 }
 
-API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:8000/api/v1")
+API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:18000/api/v1")
 
 
 def _admin_token() -> str:

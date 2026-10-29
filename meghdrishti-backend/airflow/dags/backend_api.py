@@ -5,7 +5,7 @@ from contextlib import contextmanager
 import requests
 from airflow.models import Variable
 
-API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:8000/api/v1")
+API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:18000/api/v1")
 
 
 @contextmanager

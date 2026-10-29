@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Pagination, pagination_params
@@ -41,6 +42,42 @@ async def list_stations(
     repo = StationRepository(db)
     stations = await repo.list(pagination.limit, pagination.offset, region, is_active)
     return {"data": [_station_out(s) for s in stations], "meta": {"limit": pagination.limit, "offset": pagination.offset}}
+
+
+@router.get("/overview")
+async def stations_overview(db: AsyncSession = Depends(get_db)):
+    """Every station with its health and latest reading, in one query.
+
+    The map and station pickers need the whole network (~3,000 stations); the paginated
+    list plus two requests per station does not scale to that.
+    """
+    rows = (await db.execute(text("""
+        SELECT s.id, s.station_code, s.name, s.source, s.region, s.latitude, s.longitude, s.is_active,
+               h.status AS health, o.temperature_c, o.timestamp AS last_seen
+        FROM stations s
+        LEFT JOIN station_health h ON h.station_id = s.id
+        LEFT JOIN LATERAL (
+            SELECT temperature_c, timestamp FROM weather_observations w
+            WHERE w.station_id = s.id ORDER BY w.timestamp DESC LIMIT 1
+        ) o ON TRUE
+        ORDER BY s.source = 'IMD_AWS', s.region, s.name
+    """))).mappings().all()
+    return {"data": [
+        {
+            "id": str(r["id"]),
+            "station_code": r["station_code"],
+            "name": r["name"],
+            "source": r["source"],
+            "region": r["region"],
+            "latitude": r["latitude"],
+            "longitude": r["longitude"],
+            "is_active": r["is_active"],
+            "health": r["health"],
+            "temperature_c": r["temperature_c"],
+            "last_seen": r["last_seen"].isoformat() if r["last_seen"] else None,
+        }
+        for r in rows
+    ]}
 
 
 @router.post("")

@@ -18,7 +18,7 @@ from app.models.calibration import CalibrationProfile
 from app.models.ingestion import RawObservation
 from app.models.observations import WeatherObservation
 from app.models.reviews import OperatorReview
-from app.models.stations import DataSource
+from app.models.stations import DataSource, Station
 from app.qc.defaults import DEFAULT_RULE_THRESHOLDS
 from app.repositories.calibration_repository import CalibrationRepository
 from app.repositories.ingestion_job_repository import IngestionJobRepository
@@ -133,6 +133,39 @@ async def trigger_ingestion(
     start = end - timedelta(minutes=window_minutes)
     result = await IngestionService(db).run_for_station(station, source, start, end)
     return {"data": result}
+
+
+@router.post("/ingest-imd")
+async def trigger_imd_ingestion(
+    window_minutes: int = Query(60, ge=1, le=1440),
+    db: AsyncSession = Depends(get_db),
+    _user=Depends(require_permission(Permission.MANAGE_REPLAY)),
+):
+    """Ingest the latest IMD AWS snapshot for every imported IMD_AWS station in one request.
+
+    One aws_data call covers all ~3,000 stations, so this replaces 3,000 per-station
+    POSTs (which the per-IP write limit would reject). Only stations present in the
+    snapshot get an ingestion job.
+    """
+    import asyncio
+
+    from app.ingestion.imd import _aws_snapshot
+
+    reporting = {f"IMD_AWS_{r['ID']}" for r in await asyncio.to_thread(_aws_snapshot) if r.get("ID")}
+    stations = (await db.execute(select(Station).where(Station.source == "IMD_AWS"))).scalars().all()
+    end = datetime.now(UTC)
+    start = end - timedelta(minutes=window_minutes)
+    service = IngestionService(db)
+    jobs, errors = [], []
+    for station in stations:
+        if station.station_code not in reporting:
+            continue
+        stats = await service.run_for_station(station, "IMD", start, end)
+        if stats.get("errors"):
+            errors.append(f"{station.station_code}: {stats['errors']}")
+        if stats.get("raw_stored"):
+            jobs.append(stats["job_id"])
+    return {"data": {"job_ids": jobs, "stations": len(reporting), "errors": errors[:20], "error_count": len(errors)}}
 
 
 @router.get("/ingestion-jobs")

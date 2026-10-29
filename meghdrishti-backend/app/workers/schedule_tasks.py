@@ -26,7 +26,7 @@ def run_scheduled_job(operation: str, window_minutes: int = 20,
         sources = ["OPEN_METEO"]
         if settings.imd_enabled and settings.imd_api_base_url and settings.imd_api_key:
             sources.append("IMD")
-    with httpx.Client(base_url=f"http://127.0.0.1:8000{settings.api_v1_prefix}",
+    with httpx.Client(base_url=f"http://127.0.0.1:18000{settings.api_v1_prefix}",
                       timeout=300) as client:
         login = client.post("/auth/login", data={
             "username": settings.demo_admin_email,
@@ -39,6 +39,13 @@ def run_scheduled_job(operation: str, window_minutes: int = 20,
             response.raise_for_status()
             return response.json()
         jobs, errors, offset = [], [], 0
+        if "IMD" in sources:
+            # All IMD_AWS stations in one request: one shared snapshot, one write for the rate limiter.
+            response = client.post("/admin/ingest-imd", params={"window_minutes": max(window_minutes, 60)})  # snapshot lags ~25 min; raw payloads dedupe by hash
+            response.raise_for_status()
+            imd = response.json()["data"]
+            jobs += imd["job_ids"]
+            errors += imd["errors"]
         while True:
             response = client.get("/stations", params={
                 "is_active": "true", "limit": 500, "offset": offset,
@@ -47,6 +54,10 @@ def run_scheduled_job(operation: str, window_minutes: int = 20,
             stations = response.json()["data"]
             for station in stations:
                 for source in sources:
+                    # IMD_AWS stations are ingested in bulk above (and never from Open-Meteo:
+                    # ~3,000 calls per run would blow its free rate limit).
+                    if station.get("source") == "IMD_AWS" or source == "IMD":
+                        continue
                     try:
                         response = client.post(f"/admin/ingest/{station['id']}", params={
                             "source": source, "window_minutes": window_minutes,

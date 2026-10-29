@@ -26,6 +26,9 @@ from app.schemas.observation import CanonicalObservation, Location, Measurements
 
 KELVIN_OFFSET = 273.15
 
+# (lat, lon, date) -> {hour: measurements}. Per process; a day is ~25 s to fetch, ~0 s after.
+_day_cache: dict[tuple, dict[int, dict]] = {}
+
 
 class ERA5Adapter(WeatherSourceAdapter):
     source_name = "ERA5"
@@ -42,6 +45,25 @@ class ERA5Adapter(WeatherSourceAdapter):
         return await asyncio.to_thread(self._retrieve_sync, station, start_time)
 
     def _retrieve_sync(self, station: Any, at: datetime) -> list[dict]:
+        key = (round(station.latitude, 3), round(station.longitude, 3), at.date())
+        if key not in _day_cache:
+            # One CDS job per station-day instead of per hour: queue wait dominates the cost.
+            if len(_day_cache) >= 64:
+                _day_cache.clear()
+            _day_cache[key] = self._retrieve_day(station, at)
+        measurements = _day_cache[key].get(at.hour)
+        if measurements is None:
+            return []
+        return [
+            {
+                "station_id": station.station_code,
+                "timestamp": at.replace(minute=0, second=0, microsecond=0).isoformat(),
+                "location": {"latitude": station.latitude, "longitude": station.longitude},
+                "measurements": measurements,
+            }
+        ]
+
+    def _retrieve_day(self, station: Any, at: datetime) -> dict[int, dict]:
         import cdsapi
 
         client = cdsapi.Client(url=self.url, key=self.key, quiet=True)
@@ -59,7 +81,7 @@ class ERA5Adapter(WeatherSourceAdapter):
             "year": [f"{at.year:04d}"],
             "month": [f"{at.month:02d}"],
             "day": [f"{at.day:02d}"],
-            "time": [f"{at.hour:02d}:00"],
+            "time": [f"{h:02d}:00" for h in range(24)],
             # small box around the station; ERA5's native grid is ~0.25deg
             "area": [lat + 0.25, lon - 0.25, lat - 0.25, lon + 0.25],
             "data_format": "netcdf",
@@ -67,47 +89,40 @@ class ERA5Adapter(WeatherSourceAdapter):
         with tempfile.TemporaryDirectory() as tmp:
             target = str(Path(tmp) / "era5.download")
             client.retrieve("reanalysis-era5-single-levels", request, target)
-            return [self._parse_netcdf(_netcdf_files(target, Path(tmp)), station, at)]
+            return self._parse_day(_netcdf_files(target, Path(tmp)), station)
 
-    def _parse_netcdf(self, paths: list[str], station: Any, at: datetime) -> dict:
+    def _parse_day(self, paths: list[str], station: Any) -> dict[int, dict]:
         # CDS splits instantaneous (t2m, u10, ...) and accumulated (tp) variables
         # into separate files, so look each variable up across all of them.
         datasets = [netCDF4.Dataset(p) for p in paths]
         try:
             ds = _Merged(datasets)
-            # nearest grid cell to the station (small area request, so index 0 is fine
-            # for single-cell boxes; fall back to nearest-match for multi-cell ones)
             lats = ds.variables.get("latitude", ds.variables.get("lat"))[:]
             lons = ds.variables.get("longitude", ds.variables.get("lon"))[:]
             i = int((abs(lats[:] - station.latitude)).argmin())
             j = int((abs(lons[:] - station.longitude)).argmin())
 
-            def val(name: str) -> float | None:
+            def val(name: str, k: int) -> float | None:
                 if name not in ds.variables:
                     return None
                 v = ds.variables[name]
-                return float(v[0, i, j] if v.ndim == 3 else v[0, 0, i, j])
+                if v.shape[0] <= k:
+                    return None
+                return float(v[k, i, j] if v.ndim == 3 else v[k, 0, i, j])
 
-            t2m = val("t2m")
-            d2m = val("d2m")
-            u10 = val("u10")
-            v10 = val("v10")
-            sp = val("sp")
-            tp = val("tp")
-
-            return {
-                "station_id": station.station_code,
-                "timestamp": at.isoformat(),
-                "location": {"latitude": station.latitude, "longitude": station.longitude},
-                "measurements": {
+            # Hours were requested 00..23 in order, so the time axis index is the hour.
+            hours: dict[int, dict] = {}
+            for k in range(24):
+                t2m, d2m, u10, v10, sp, tp = (val(n, k) for n in ("t2m", "d2m", "u10", "v10", "sp", "tp"))
+                hours[k] = {
                     "temperature_c": t2m - KELVIN_OFFSET if t2m is not None else None,
                     "humidity_pct": _relative_humidity(t2m, d2m),
                     "pressure_hpa": sp / 100.0 if sp is not None else None,
                     "rainfall_mm": tp * 1000.0 if tp is not None else None,
                     "wind_speed_ms": math.hypot(u10, v10) if u10 is not None and v10 is not None else None,
                     "wind_direction_deg": _wind_direction(u10, v10),
-                },
-            }
+                }
+            return hours
         finally:
             for d in datasets:
                 d.close()

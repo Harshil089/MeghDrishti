@@ -5,7 +5,7 @@ import os
 
 os.environ.setdefault(
     "DATABASE_URL",
-    "postgresql+asyncpg://meghdrishti:meghdrishti@localhost:5432/meghdrishti_test",
+    "postgresql+asyncpg://meghdrishti:meghdrishti@localhost:15432/meghdrishti_test",
 )
 os.environ.setdefault("JWT_SECRET", "test-secret")
 
@@ -18,6 +18,13 @@ from app.db.base import Base
 import app.models  # noqa: F401 populate metadata
 
 TEST_DB_URL = os.environ["DATABASE_URL"]
+
+# The db_engine fixture drops every table. Never let it point at a real database.
+if not TEST_DB_URL.rsplit("/", 1)[-1].split("?")[0].endswith("_test"):
+    raise RuntimeError(
+        "Refusing to run tests: DATABASE_URL must name a database ending in '_test' "
+        "because the test fixtures DROP ALL TABLES."
+    )
 
 
 @pytest.fixture(autouse=True)

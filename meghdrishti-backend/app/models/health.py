@@ -22,6 +22,6 @@ class StationHealth(Base, UUIDPKMixin, TimestampMixin):
     )
     health_score: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
-    # HEALTHY / DEGRADED / POOR / CRITICAL
+    # HEALTHY / DEGRADED / POOR / CRITICAL, or NEW while there are too few readings to score
     issues: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     components: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)

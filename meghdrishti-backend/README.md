@@ -13,7 +13,7 @@ evidence fusion, alerting and operator review.
 ![Redis](https://img.shields.io/badge/Redis-Pub%2FSub-DC382D?logo=redis&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-120%20passing-3ccf91)
 
-[← Project README](../README.md) · [API docs (local)](http://localhost:8000/docs) · [Decision evaluation](docs/decision-accuracy.md) · [Provider & ML audit](docs/provider-ml-audit.md)
+[← Project README](../README.md) · [API docs (local)](http://localhost:18000/docs) · [Decision evaluation](docs/decision-accuracy.md) · [Provider & ML audit](docs/provider-ml-audit.md)
 
 <br />
 
@@ -61,8 +61,8 @@ npm run stop
 
 From this directory, `make up`, `make down` and `make status` do the same.
 
-- **App:** http://localhost:3000
-- **API + Swagger:** http://localhost:8000/docs
+- **App:** http://localhost:13000
+- **API + Swagger:** http://localhost:18000/docs
 - **Logs:** `../.local/logs/`
 
 <details>
@@ -85,8 +85,8 @@ From this directory, `make up`, `make down` and `make status` do the same.
 ```bash
 # Use a dedicated test database, never the application database.
 "$(brew --prefix postgresql@16)/bin/createdb" -h localhost -O meghdrishti meghdrishti_test
-DATABASE_URL=postgresql+asyncpg://meghdrishti:meghdrishti@localhost:5432/meghdrishti_test \
-  REDIS_URL=redis://localhost:6379/3 .venv/bin/pytest -q
+DATABASE_URL=postgresql+asyncpg://meghdrishti:meghdrishti@localhost:15432/meghdrishti_test \
+  REDIS_URL=redis://localhost:16379/3 .venv/bin/pytest -q
 .venv/bin/ruff check app
 .venv/bin/mypy app   # non-blocking in CI
 ```
@@ -116,10 +116,21 @@ as "context unavailable", never as zero.
 | **NASA GPM** IMERG Early | `app/ingestion/gpm.py` | `NASA_GPM_STORAGE` (`PPS` or `GES_DISC`), `NASA_GPM_USERNAME`, `NASA_GPM_PASSWORD`, `NASA_GPM_DATA_DIR` | Uses [gpm-api](https://gpm-api.readthedocs.io/); about 4 h latency; rainfall only |
 | **ERA5** | `app/ingestion/era5.py` | `ERA5_CDS_URL`, `ERA5_CDS_KEY` | Accept the dataset licence on the CDS site first; about 5 days latency, so newer readings are skipped |
 | **NOAA GHCN** | `app/ingestion/ghcn.py` | `GHCN_BASE_URL`, `GHCN_API_TOKEN` | Daily summaries; recent coverage for India is sparse |
-| **IMD** | `app/ingestion/imd.py` | `IMD_ENABLED`, `IMD_API_BASE_URL`, `IMD_API_KEY` | Waiting for institutional API access |
+| **IMD AWS** | `app/ingestion/imd.py` | `IMD_ENABLED`, `IMD_API_BASE_URL`, `IMD_API_KEY`, `IMD_EMAIL`, `IMD_PASSWORD` | `aws_data` snapshot every 15 minutes for ~1,200 reporting AWS (about 25 min behind, no backfill). The key is bound to one static public IP. Rainfall is not ingested yet (the feed's value is a running total) |
 
 > A provider is never used to confirm its own data. Open-Meteo readings are not checked against the
 > Open-Meteo forecast, and so on.
+
+### IMD AWS network
+
+```bash
+.venv/bin/python scripts/import_imd_stations.py   # add every AWS from aws_data_mapping (idempotent)
+.venv/bin/python scripts/build_imd_neighbors.py   # up to 5 neighbours within 50 km per AWS
+```
+
+Imported stations have source `IMD_AWS`. They are ingested in one request per run
+(`POST /admin/ingest-imd`) and never from Open-Meteo. Their context comes from neighbouring AWS:
+per-station forecast and ERA5 lookups do not scale to ~3,000 stations.
 
 ---
 

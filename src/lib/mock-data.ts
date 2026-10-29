@@ -4,19 +4,22 @@
 // lookup (UI config, not measured data), or an operator runbook keyed to
 // the backend's real reason codes.
 
-export type StationStatus = "normal" | "warning" | "critical" | "offline";
+export type StationStatus = "normal" | "new" | "warning" | "critical" | "offline";
 
 export interface Station {
   id: string;
   name: string;
   status: StationStatus;
-  temp: number;
+  temp: number | null;
   lat: number;
   lon: number;
+  region?: string | null;
+  lastSeen?: string | null;
 }
 
 export const statusMeta: Record<StationStatus, { label: string; color: string; dot: string }> = {
   normal: { label: "Normal", color: "text-emerald-400", dot: "bg-emerald-400" },
+  new: { label: "New", color: "text-sky-400", dot: "bg-sky-400" },
   warning: { label: "Warning", color: "text-amber-400", dot: "bg-amber-400" },
   critical: { label: "Critical", color: "text-rose-500", dot: "bg-rose-500" },
   offline: { label: "Offline", color: "text-slate-500", dot: "bg-slate-500" },

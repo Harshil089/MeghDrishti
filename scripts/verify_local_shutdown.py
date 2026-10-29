@@ -28,7 +28,7 @@ async def main():
         token = create_access_token(subject="shutdown-verification", roles=["VIEWER"])
         log = ROOT / ".local/logs/api.log"
         offset = log.stat().st_size
-        async with websockets.connect(f"ws://127.0.0.1:8000/ws/alerts?token={token}") as ws:
+        async with websockets.connect(f"ws://127.0.0.1:18000/ws/alerts?token={token}") as ws:
             # An idle connection: no Redis event is needed to release shutdown.
             await asyncio.sleep(0.2)
             start = time.monotonic()
@@ -45,7 +45,7 @@ async def main():
             shutdown_log = file.read().decode()
         assert "timeout graceful shutdown exceeded" not in shutdown_log
         assert "Finished server process" in shutdown_log
-        for port in (3000, 8000, 5432, 6379):
+        for port in (13000, 18000, 15432, 16379):
             try:
                 with socket.create_connection(("127.0.0.1", port), timeout=1):
                     raise AssertionError(f"Port {port} still has a listener")

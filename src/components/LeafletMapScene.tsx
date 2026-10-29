@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Tooltip, Popup, ZoomControl, useMap } from "react-leaflet";
-import L from "leaflet";
+import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusMeta, type Alert, type Station } from "@/lib/mock-data";
 import { fetchAlerts } from "@/lib/api";
@@ -16,6 +15,7 @@ const severityStyle: Record<string, string> = {
 
 const statusText: Record<Station["status"], string> = {
   normal: "text-accent",
+  new: "text-sub",
   warning: "text-warn",
   critical: "text-crit",
   offline: "text-sub",
@@ -23,6 +23,7 @@ const statusText: Record<Station["status"], string> = {
 
 const statusColor: Record<Station["status"], string> = {
   normal: "#5b8cff",
+  new: "#7dd3fc",
   warning: "#ffc861",
   critical: "#ff6b8b",
   offline: "#8f98b3",
@@ -42,23 +43,6 @@ function useIsLight() {
     return () => window.removeEventListener("themechange", check);
   }, []);
   return light;
-}
-
-function stationIcon(color: string, ringColor: string, selected: boolean) {
-  const box = selected ? 34 : 26;
-  const dot = selected ? 7 : 5;
-  const half = box / 2;
-  return L.divIcon({
-    className: "",
-    iconSize: [box, box],
-    iconAnchor: [half, half],
-    html: `
-      <span class="station-pin" style="width:${box}px;height:${box}px;">
-        <span class="station-pin__ping" style="width:${dot}px;height:${dot}px;background:${ringColor};"></span>
-        <span class="station-pin__dot" style="width:${dot}px;height:${dot}px;background:${color};"></span>
-      </span>
-    `,
-  });
 }
 
 function FlyToSelected({ station }: { station: Station }) {
@@ -90,6 +74,8 @@ export default function LeafletMapScene({
       maxZoom={18}
       scrollWheelZoom
       zoomControl={false}
+      // ~3,000 stations: canvas circles instead of one DOM pin each.
+      preferCanvas
       className={`h-full w-full ${light ? "" : "map-dark-tiles"}`}
       style={{ background: light ? "#eef1f8" : "#0b1220" }}
     >
@@ -100,10 +86,16 @@ export default function LeafletMapScene({
         const stationAlerts = alerts.filter((a) => a.station === s.id);
         const active = s.id === selectedId;
         return (
-          <Marker
+          <CircleMarker
             key={s.id}
-            position={[s.lat, s.lon]}
-            icon={stationIcon(statusColor[s.status], statusColor[s.status], active)}
+            center={[s.lat, s.lon]}
+            radius={active ? 8 : s.status === "offline" ? 3 : 5}
+            pathOptions={{
+              color: active ? (light ? "#0b1220" : "#ffffff") : statusColor[s.status],
+              weight: active ? 2 : 1,
+              fillColor: statusColor[s.status],
+              fillOpacity: s.status === "offline" ? 0.35 : 0.85,
+            }}
             eventHandlers={{ click: () => onSelect?.(s) }}
           >
             <Tooltip direction="top" offset={[0, -6]}>
@@ -119,7 +111,7 @@ export default function LeafletMapScene({
                 </p>
                 <p className={statusText[s.status]}>
                   {statusMeta[s.status].label}
-                  {s.status !== "offline" && ` · ${s.temp}°C`}
+                  {s.status !== "offline" && s.temp != null && ` · ${s.temp}°C`}
                 </p>
 
                 {stationAlerts.length === 0 ? (
@@ -147,7 +139,7 @@ export default function LeafletMapScene({
                 )}
               </div>
             </Popup>
-          </Marker>
+          </CircleMarker>
         );
       })}
 

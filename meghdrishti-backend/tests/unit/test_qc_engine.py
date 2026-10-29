@@ -54,11 +54,18 @@ def test_gradual_drift_detected():
     assert drift.triggered
 
 
-def test_dropout_detected_when_measurement_missing():
-    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"temperature_c": None}, history=[])
+def test_dropout_detected_when_reporting_sensor_goes_missing():
+    history = [{"timestamp": BASE - timedelta(minutes=15), "temperature_c": 24.0}]
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"temperature_c": None}, history=history)
     results = QCEngine().run(ctx)
     dropout = next(r for r in results if r.rule == "DROPOUT" and r.evidence.get("measurement") == "temperature_c")
     assert dropout.triggered
+
+
+def test_never_reported_measurement_is_not_a_dropout():
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"temperature_c": 24.0, "rainfall_mm": None}, history=[])
+    results = QCEngine().run(ctx)
+    assert not any(r.rule == "DROPOUT" and r.evidence.get("measurement") == "rainfall_mm" for r in results)
 
 
 def test_telemetry_gap_detected():
@@ -88,3 +95,9 @@ def test_rainfall_extreme_flagged():
     rain = next(r for r in results if r.rule == "RAIN_ACCUMULATION")
     assert rain.triggered
     assert rain.reason_code == "RAINFALL_EXTREME"
+
+
+def test_calm_wind_without_direction_is_not_a_dropout():
+    history = [{"timestamp": BASE - timedelta(minutes=15), "wind_speed_ms": 2.0, "wind_direction_deg": 90.0}]
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"wind_speed_ms": 0.0, "wind_direction_deg": None}, history=history)
+    assert not any(r.rule == "DROPOUT" and r.triggered for r in QCEngine().run(ctx))

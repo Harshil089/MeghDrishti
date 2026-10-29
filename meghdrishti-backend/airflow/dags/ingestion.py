@@ -26,7 +26,7 @@ DEFAULT_ARGS = {
     "retry_delay": timedelta(minutes=2),
 }
 
-API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:8000/api/v1")
+API_BASE = Variable.get("meghdrishti_api_base", default_var="http://localhost:18000/api/v1")
 INGEST_SOURCES = ["OPEN_METEO", "IMD"]
 
 

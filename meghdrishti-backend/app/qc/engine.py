@@ -71,7 +71,12 @@ class QCEngine:
             history_pairs = [(h["timestamp"], h[measurement]) for h in ctx.history if h.get(measurement) is not None]
             results.append(drift.evaluate(measurement, value, ctx.timestamp, history_pairs, thresholds))
 
-            results.append(dropout.evaluate_dropout(measurement, value, thresholds))
+            # A dropout is a sensor that was reporting and stopped. A measurement this station
+            # has not reported recently (no sensor, or not in its feed, e.g. IMD rainfall) is not one.
+            # Wind direction is undefined in calm air, so a blank direction at 0 m/s is not a dropout.
+            calm = measurement == "wind_direction_deg" and ctx.measurements.get("wind_speed_ms") == 0
+            if (value is not None or history_values) and not calm:
+                results.append(dropout.evaluate_dropout(measurement, value, thresholds))
 
         results.append(dropout.evaluate_telemetry_gap(ctx.timestamp, ctx.last_observation_timestamp, thresholds))
         results.append(cross_variable.evaluate_cross_variable(ctx.measurements, thresholds))

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.health.station_health import HealthInputs, boundaries_from_dict, compute_health
 from app.models.anomalies import Anomaly
-from app.models.observations import ObservationFeatures, WeatherObservation
+from app.models.observations import WeatherObservation
 from app.models.qc import QCRuleResult
 from app.models.reviews import OperatorReview
 from app.repositories.calibration_repository import CalibrationRepository
@@ -19,6 +19,12 @@ from app.services.event_publisher import publish_station_event
 WINDOW_DAYS = 7
 STUCK_DRIFT_RULES = ("STUCK_SENSOR", "GRADUAL_DRIFT")
 TELEMETRY_RULES = ("DROPOUT", "TELEMETRY_GAP")
+# Decisions that say something is wrong with the station. WATCH, INSUFFICIENT_CONTEXT and
+# LIKELY_GENUINE_EXTREME describe the evidence or the weather, not the sensor.
+FAULT_CLASSES = ("SUSPICIOUS", "PROBABLE_SENSOR_FAULT")
+# Below this many readings in the window a score is noise (one bad reading would decide it).
+MIN_OBSERVATIONS = 8
+MEASUREMENTS = ("temperature_c", "humidity_pct", "pressure_hpa", "rainfall_mm", "wind_speed_ms", "wind_direction_deg")
 
 
 class HealthService:
@@ -29,64 +35,51 @@ class HealthService:
     async def recompute(self, station_id: uuid.UUID) -> dict:
         since = datetime.now(UTC) - timedelta(days=WINDOW_DAYS)
 
-        obs_count = (
+        observations = (
             await self.session.execute(
-                select(func.count())
-                .select_from(WeatherObservation)
+                select(WeatherObservation.id, *(getattr(WeatherObservation, m) for m in MEASUREMENTS))
                 .where(WeatherObservation.station_id == station_id, WeatherObservation.timestamp >= since)
             )
-        ).scalar_one()
+        ).all()
+        obs_count = len(observations)
+        obs_ids = [row[0] for row in observations]
 
-        obs_ids_subq = (
-            select(WeatherObservation.id)
-            .where(WeatherObservation.station_id == station_id, WeatherObservation.timestamp >= since)
-            .subquery()
-        )
-
-        stuck_drift_triggers = (
-            await self.session.execute(
-                select(func.count())
-                .select_from(QCRuleResult)
-                .where(
-                    QCRuleResult.observation_id.in_(select(obs_ids_subq.c.id)),
-                    QCRuleResult.rule.in_(STUCK_DRIFT_RULES),
-                    QCRuleResult.triggered.is_(True),
+        async def observations_with(rules: tuple[str, ...]) -> int:
+            # Rules fire per measurement; count readings, so one reading with four blank
+            # fields is one telemetry problem, not four.
+            if not obs_ids:
+                return 0
+            return (
+                await self.session.execute(
+                    select(func.count(func.distinct(QCRuleResult.observation_id))).where(
+                        QCRuleResult.observation_id.in_(obs_ids),
+                        QCRuleResult.rule.in_(rules),
+                        QCRuleResult.triggered.is_(True),
+                    )
                 )
-            )
-        ).scalar_one()
+            ).scalar_one()
 
-        telemetry_triggers = (
-            await self.session.execute(
-                select(func.count())
-                .select_from(QCRuleResult)
-                .where(
-                    QCRuleResult.observation_id.in_(select(obs_ids_subq.c.id)),
-                    QCRuleResult.rule.in_(TELEMETRY_RULES),
-                    QCRuleResult.triggered.is_(True),
-                )
-            )
-        ).scalar_one()
+        stuck_drift_triggers = await observations_with(STUCK_DRIFT_RULES)
+        telemetry_triggers = await observations_with(TELEMETRY_RULES)
 
         anomaly_count = (
             await self.session.execute(
-                select(func.count())
-                .select_from(Anomaly)
-                .where(
+                select(func.count(func.distinct(Anomaly.observation_id))).where(
                     Anomaly.station_id == station_id,
                     Anomaly.created_at >= since,
-                    Anomaly.classification != "NORMAL",
+                    Anomaly.classification.in_(FAULT_CLASSES),
                 )
             )
         ).scalar_one()
 
+        # Completeness against the sensors this station actually reports. A feed that never
+        # carries a measurement (IMD rainfall, an AWS without a barometer) is not missing data.
+        reported = [i for i in range(len(MEASUREMENTS)) if any(row[i + 1] is not None for row in observations)]
         avg_completeness = (
-            await self.session.execute(
-                select(func.avg(ObservationFeatures.completeness_pct)).where(
-                    ObservationFeatures.station_id == station_id,
-                    ObservationFeatures.observation_id.in_(select(obs_ids_subq.c.id)),
-                )
-            )
-        ).scalar_one()
+            100.0 * sum(sum(row[i + 1] is not None for i in reported) for row in observations) / (len(reported) * obs_count)
+            if reported and obs_count
+            else None
+        )
 
         confirmed_faults = (
             await self.session.execute(
@@ -107,6 +100,8 @@ class HealthService:
         anomaly_rate_pct = min(100.0, 100.0 * anomaly_count / denom)
 
         issues = []
+        if obs_count < MIN_OBSERVATIONS:
+            issues.append(f"Only {obs_count} readings in {WINDOW_DAYS} days; health is scored from {MIN_OBSERVATIONS}")
         if telemetry_triggers > 0:
             issues.append(f"{telemetry_triggers} telemetry dropouts/gaps in {WINDOW_DAYS} days")
         if stuck_drift_triggers > 0:
@@ -130,6 +125,8 @@ class HealthService:
             weights=health_weights,
             boundaries=health_boundaries,
         )
+        if obs_count < MIN_OBSERVATIONS:
+            result["status"] = "NEW"
 
         await self.repo.upsert(
             station_id, result["health_score"], result["status"], result["issues"], result["components"]

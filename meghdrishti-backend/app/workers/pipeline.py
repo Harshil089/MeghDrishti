@@ -184,8 +184,11 @@ async def run_context_validation(session: AsyncSession, observation_id: uuid.UUI
 
         # A provider agreeing with its own output is not independent evidence
         # that an unusual reading is genuine weather rather than a fault.
-        forecast_value = await fetch_forecast_value(station, measurement, obs.timestamp) if obs.source != "OPEN_METEO" else None
-        era5_value = await fetch_era5_value(station, measurement, obs.timestamp) if obs.source != "ERA5" else None
+        # Per-station Open-Meteo and ERA5 lookups cannot scale to the ~3,000 bulk-imported IMD
+        # AWS stations (rate limit / one CDS job per station-day); those rely on neighbours and GPM.
+        bulk = station.source == "IMD_AWS"
+        forecast_value = await fetch_forecast_value(station, measurement, obs.timestamp) if obs.source != "OPEN_METEO" and not bulk else None
+        era5_value = await fetch_era5_value(station, measurement, obs.timestamp) if obs.source != "ERA5" and not bulk else None
         gpm_value = await fetch_gpm_rainfall(station, obs.timestamp) if measurement == "rainfall_mm" and obs.source != "NASA_GPM" else None
 
         data = engine.evaluate(

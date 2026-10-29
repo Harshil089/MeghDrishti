@@ -18,17 +18,17 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     api_v1_prefix: str = "/api/v1"
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:13000"]
 
     # Database
-    database_url: str = "postgresql+asyncpg://meghdrishti:meghdrishti@localhost:5432/meghdrishti"
-    database_url_sync: str = "postgresql+psycopg://meghdrishti:meghdrishti@localhost:5432/meghdrishti"
+    database_url: str = "postgresql+asyncpg://meghdrishti:meghdrishti@localhost:15432/meghdrishti"
+    database_url_sync: str = "postgresql+psycopg://meghdrishti:meghdrishti@localhost:15432/meghdrishti"
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_pooling: bool = True
 
     # Redis
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://localhost:16379/0"
 
     # Auth
     jwt_secret: str = "insecure-dev-secret-change-me"
@@ -47,6 +47,8 @@ class Settings(BaseSettings):
 
     imd_api_base_url: str = ""
     imd_api_key: str = ""
+    imd_email: str = ""
+    imd_password: str = ""
     imd_enabled: bool = False
 
     ghcn_base_url: str = "https://www.ncei.noaa.gov/access/services/data/v1"
@@ -60,11 +62,12 @@ class Settings(BaseSettings):
     nasa_gpm_storage: str = "PPS"
     nasa_gpm_username: str = ""
     nasa_gpm_password: str = ""
+    nasa_gpm_token: str = ""
     nasa_gpm_data_dir: str = "var/GPM"
 
     # Celery
-    celery_broker_url: str = "redis://localhost:6379/1"
-    celery_result_backend: str = "redis://localhost:6379/2"
+    celery_broker_url: str = "redis://localhost:16379/1"
+    celery_result_backend: str = "redis://localhost:16379/2"
 
     # Observability
     prometheus_enabled: bool = True

@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Bell, MapPin, Search, Thermometer } from "lucide-react";
 import StationMap from "@/components/StationMap";
-import { PageHeader, Badge, Empty, field, type Tone } from "@/components/console/ui";
+import { PageHeader, Badge, Empty, Select, field, type Tone } from "@/components/console/ui";
 import { statusMeta, type Alert, type Station, type StationStatus } from "@/lib/mock-data";
-import { fetchAlerts, fetchStations } from "@/lib/api";
+import { fetchAlerts, fetchStations, regionLabel } from "@/lib/api";
 import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
 
-const statusTone: Record<StationStatus, Tone> = { normal: "ok", warning: "warn", critical: "crit", offline: "neutral" };
-const order: StationStatus[] = ["normal", "warning", "critical", "offline"];
+const statusTone: Record<StationStatus, Tone> = { normal: "ok", new: "neutral", warning: "warn", critical: "crit", offline: "neutral" };
+const order: StationStatus[] = ["normal", "new", "warning", "critical", "offline"];
 
 export default function NetworkPage() {
   const stations = useLiveData(fetchStations, [] as Station[]);
@@ -19,17 +19,26 @@ export default function NetworkPage() {
   const [selectedId, setSelectedId] = useState<string>(searchParams.get("station") ?? "");
   const [filter, setFilter] = useState<StationStatus | "all">("all");
   const [query, setQuery] = useState("");
-  const selected = stations.find((s) => s.id === selectedId) ?? stations[0];
+  const [region, setRegion] = useState("");
+
+  const regions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of stations) counts.set(s.region ?? "", (counts.get(s.region ?? "") ?? 0) + 1);
+    return [...counts].sort(([a], [b]) => regionLabel(a).localeCompare(regionLabel(b)));
+  }, [stations]);
+  const inRegion = useMemo(() => stations.filter((s) => !region || (s.region ?? "") === region), [stations, region]);
+  const selected = stations.find((s) => s.id === selectedId) ?? inRegion.find((s) => s.status !== "offline") ?? inRegion[0];
 
   const counts = useMemo(
-    () => stations.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {}),
-    [stations]
+    () => inRegion.reduce<Record<string, number>>((acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }), {}),
+    [inRegion]
   );
-  const online = stations.filter((s) => s.status !== "offline");
-  const avgTemp = online.length ? (online.reduce((a, s) => a + s.temp, 0) / online.length).toFixed(1) : "-";
+  const online = inRegion.filter((s) => s.status !== "offline");
+  const temps = online.flatMap((s) => (s.temp == null ? [] : [s.temp]));
+  const avgTemp = temps.length ? (temps.reduce((a, t) => a + t, 0) / temps.length).toFixed(1) : "-";
   const attention = (counts.warning ?? 0) + (counts.critical ?? 0);
 
-  const visible = stations.filter(
+  const visible = inRegion.filter(
     (s) =>
       (filter === "all" || s.status === filter) &&
       `${s.name} ${s.id}`.toLowerCase().includes(query.trim().toLowerCase())
@@ -43,11 +52,11 @@ export default function NetworkPage() {
     <>
       <PageHeader
         title="Network"
-        description="Station locations and live status."
+        description="Station locations and live status. IMD stations report every 15 minutes, about 25 minutes behind."
         actions={
           <>
             <span className={chip}>
-              <b className="font-mono font-medium text-ink">{stations.length || "-"}</b> stations
+              <b className="font-mono font-medium text-ink">{inRegion.length || "-"}</b> stations
             </span>
             <span className={chip}>
               <b className="font-mono font-medium text-ink">{online.length}</b> reporting
@@ -66,12 +75,28 @@ export default function NetworkPage() {
         {stations.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-sub">Loading station network</div>
         ) : (
-          <StationMap stations={stations} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
+          <StationMap stations={inRegion} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
         )}
 
         {/* Station list floats over the map */}
         <aside className="absolute left-3 top-3 z-[900] flex max-h-[calc(100%-1.5rem)] w-[min(18rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface/90 shadow-xl shadow-black/20 backdrop-blur-md">
           <div className="space-y-2.5 border-b border-line p-3">
+            <Select
+              aria-label="State"
+              value={region}
+              onChange={(e) => {
+                setRegion(e.target.value);
+                setSelectedId("");
+              }}
+              className="w-full"
+            >
+              <option value="">All states ({stations.length})</option>
+              {regions.map(([r, n]) => (
+                <option key={r} value={r}>
+                  {regionLabel(r)} ({n})
+                </option>
+              ))}
+            </Select>
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sub" />
               <input
@@ -85,7 +110,7 @@ export default function NetworkPage() {
             <div className="flex flex-wrap gap-1.5">
               {(["all", ...order] as const).map((k) => {
                 const on = filter === k;
-                const n = k === "all" ? stations.length : counts[k] ?? 0;
+                const n = k === "all" ? inRegion.length : counts[k] ?? 0;
                 return (
                   <button
                     key={k}
@@ -123,7 +148,7 @@ export default function NetworkPage() {
                       />
                       <span className="truncate text-[13px] font-medium text-ink">{s.name}</span>
                       <span className="text-right font-mono text-xs tabular-nums text-ink">
-                        {s.status === "offline" ? "-" : `${s.temp}°C`}
+                        {s.status === "offline" || s.temp == null ? "-" : `${s.temp}°C`}
                       </span>
                       <span className="truncate font-mono text-[11px] text-sub">{s.id}</span>
                       <span className="justify-self-end">
@@ -143,14 +168,14 @@ export default function NetworkPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-ink">{selected.name}</p>
-                <p className="truncate font-mono text-[11px] text-sub">{selected.id}</p>
+                <p className="truncate font-mono text-[11px] text-sub">{selected.id} · {regionLabel(selected.region)}</p>
               </div>
               <Badge tone={statusTone[selected.status]}>{statusMeta[selected.status].label}</Badge>
             </div>
             <dl className="mt-3 grid grid-cols-3 gap-3 border-t border-line pt-3 text-xs">
               <div>
                 <dt className="flex items-center gap-1 text-sub"><Thermometer className="h-3 w-3" />Temp</dt>
-                <dd className="mt-0.5 font-mono text-sm tabular-nums text-ink">{selected.status === "offline" ? "-" : `${selected.temp}°C`}</dd>
+                <dd className="mt-0.5 font-mono text-sm tabular-nums text-ink">{selected.status === "offline" || selected.temp == null ? "-" : `${selected.temp}°C`}</dd>
               </div>
               <div>
                 <dt className="flex items-center gap-1 text-sub"><Bell className="h-3 w-3" />Alerts</dt>

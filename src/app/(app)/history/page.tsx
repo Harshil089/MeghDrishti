@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Flag, X } from "lucide-react";
-import { Badge, Empty, Metric, MetricStrip, PageHeader, Section, Select, button, field, severityTone, table, type Tone } from "@/components/console/ui";
+import { StationPicker } from "@/components/console/StationPicker";
+import { Badge, Empty, Metric, MetricStrip, PageHeader, Section, button, field, severityTone, table, type Tone } from "@/components/console/ui";
 import { fetchHistory, fetchReviews, fetchStationOptions, type HistoryReading, type OperatorReviewRow } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 
@@ -187,14 +188,7 @@ function Readings() {
     </MetricStrip>
     <Section title="Readings" meta="Select a row for details" flush>
       <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
-        <Select className="min-w-[200px]" aria-label="Station" value={stationId} onChange={(e) => reset(setStationId)(e.target.value)}>
-          <option value="">All stations</option>
-          {stations.map((s) => (
-            <option key={s.dbId} value={s.dbId}>
-              {s.code} · {s.name}
-            </option>
-          ))}
-        </Select>
+        <StationPicker stations={stations} value={stationId} onChange={reset(setStationId)} allowAll />
         <div className="flex gap-1.5" role="group" aria-label="Source">
           {sources.map(([v, label]) => (
             <button

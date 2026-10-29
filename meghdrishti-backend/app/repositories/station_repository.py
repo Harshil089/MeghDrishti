@@ -21,7 +21,9 @@ class StationRepository:
         return result.scalar_one_or_none()
 
     async def list(self, limit: int, offset: int, region: str | None = None, is_active: bool | None = None) -> list[Station]:
-        stmt = select(Station).order_by(Station.station_code).limit(limit).offset(offset)
+        # Bulk-imported IMD AWS stations sort after the curated ones, so pages that read the
+        # first 100 stations keep showing the stations that actually have data.
+        stmt = select(Station).order_by(Station.source == "IMD_AWS", Station.station_code).limit(limit).offset(offset)
         if region:
             stmt = stmt.where(Station.region == region)
         if is_active is not None:

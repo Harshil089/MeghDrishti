@@ -27,6 +27,8 @@ function healthToStatus(healthStatus: string | undefined, isActive: boolean): St
   switch (healthStatus) {
     case "HEALTHY":
       return "normal";
+    case "NEW": // too few readings to score yet
+      return "new";
     case "DEGRADED":
       return "warning";
     case "POOR":
@@ -37,29 +39,57 @@ function healthToStatus(healthStatus: string | undefined, isActive: boolean): St
   }
 }
 
-export async function fetchStations(): Promise<Station[]> {
-  const rows = await getJSON<
-    { id: string; station_code: string; name: string; latitude: number; longitude: number; is_active: boolean }[]
-  >("/stations?limit=100");
+interface StationOverviewRow {
+  id: string;
+  station_code: string;
+  name: string;
+  source: string;
+  region: string | null;
+  latitude: number;
+  longitude: number;
+  is_active: boolean;
+  health: string | null;
+  temperature_c: number | null;
+  last_seen: string | null;
+}
 
-  return Promise.all(
-    rows.map(async (s) => {
-      const [health, obs] = await Promise.all([
-        getJSON<{ status: string } | null>(`/stations/${s.id}/health`).catch(() => null),
-        getJSON<{ measurements: { temperature_c: number | null } }[]>(
-          `/stations/${s.id}/observations?limit=1`
-        ).catch(() => []),
-      ]);
-      return {
-        id: s.station_code,
-        name: s.name,
-        status: healthToStatus(health?.status, s.is_active),
-        temp: obs[0]?.measurements.temperature_c ?? 0,
-        lat: s.latitude,
-        lon: s.longitude,
-      };
-    })
-  );
+/** A station with no reading in this long is shown as offline, whatever its last health score. */
+const OFFLINE_AFTER_MS = 2 * 60 * 60 * 1000;
+
+// One request for the whole network (~3,000 stations), shared by the map, the
+// header search and every station picker that refreshes at the same time.
+let overviewCache: { at: number; rows: Promise<StationOverviewRow[]> } | null = null;
+function fetchOverview(): Promise<StationOverviewRow[]> {
+  if (!overviewCache || Date.now() - overviewCache.at > 10_000) {
+    const rows = getJSON<StationOverviewRow[]>("/stations/overview");
+    overviewCache = { at: Date.now(), rows };
+    rows.catch(() => (overviewCache = null));
+  }
+  return overviewCache.rows;
+}
+
+export async function fetchStations(): Promise<Station[]> {
+  const rows = await fetchOverview();
+  const now = Date.now();
+  return rows.map((s) => {
+    const fresh = !!s.last_seen && now - Date.parse(s.last_seen) < OFFLINE_AFTER_MS;
+    return {
+      id: s.station_code,
+      name: s.name,
+      status: fresh ? healthToStatus(s.health ?? undefined, s.is_active) : "offline",
+      temp: s.temperature_c,
+      lat: s.latitude,
+      lon: s.longitude,
+      region: s.region,
+      lastSeen: s.last_seen,
+    };
+  });
+}
+
+/** "TAMIL_NADU" -> "Tamil Nadu". */
+export function regionLabel(region: string | null | undefined): string {
+  if (!region) return "Unassigned";
+  return region.toLowerCase().split("_").map((w) => (w === "and" ? w : w[0].toUpperCase() + w.slice(1))).join(" ");
 }
 
 const PRIORITY_TO_SEVERITY: Record<string, Alert["severity"]> = {
@@ -175,11 +205,13 @@ export interface StationOption {
   dbId: string;
   code: string;
   name: string;
+  region: string | null;
+  source: string;
 }
 
 export async function fetchStationOptions(): Promise<StationOption[]> {
-  const rows = await getJSON<{ id: string; station_code: string; name: string }[]>("/stations?limit=100");
-  return rows.map((s) => ({ dbId: s.id, code: s.station_code, name: s.name }));
+  const rows = await fetchOverview();
+  return rows.map((s) => ({ dbId: s.id, code: s.station_code, name: s.name, region: s.region, source: s.source }));
 }
 
 export interface LiveReading {
@@ -449,10 +481,17 @@ export async function fetchDataSources(): Promise<DataSourceStatus[]> {
 /** Manually pull Open-Meteo for every station over the last `windowMinutes`
  * and queue the new readings for QC. Same calls the scheduler makes. */
 export async function pullLatest(windowMinutes: number): Promise<{ stored: number; failed: number }> {
-  const stations = await fetchStationOptions();
+  // Bulk-imported IMD AWS stations come from one IMD snapshot, never per-station Open-Meteo.
+  const stations = (await fetchStationOptions()).filter((s) => s.source !== "IMD_AWS");
   const jobIds: string[] = [];
   let stored = 0;
   let failed = 0;
+  try {
+    const imd = await authedJSON<{ job_ids: string[] }>(`/admin/ingest-imd?window_minutes=${Math.max(windowMinutes, 60)}`, "POST");
+    jobIds.push(...imd.job_ids);
+  } catch {
+    failed += 1;
+  }
   for (const s of stations) {
     try {
       const r = await authedJSON<{ job_id: string; normalized: number }>(

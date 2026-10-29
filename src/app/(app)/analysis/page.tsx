@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PageHeader, Section, Metric, MetricStrip, Select, Badge, Meter, Empty, table, severityTone, type Tone } from "@/components/console/ui";
+import { StationPicker } from "@/components/console/StationPicker";
+import { PageHeader, Section, Metric, MetricStrip, Badge, Meter, Empty, table, severityTone, type Tone } from "@/components/console/ui";
 import { CountBars } from "@/components/console/TrendChart";
 import { fetchAnomaliesInRange, fetchAnomalyAnalytics, fetchStationAnomalies, fetchStationOptions } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
@@ -92,14 +93,7 @@ export default function AnalysisPage() {
         title="Analysis"
         description={`Anomaly classification and rule activity over the last ${analytics.window_hours} hours.`}
         actions={
-          <Select aria-label="Station" value={stationId} onChange={(e) => setStationId(e.target.value)}>
-            <option value="">All stations</option>
-            {stations.map((s) => (
-              <option key={s.dbId} value={s.dbId}>
-                {s.code} · {s.name}
-              </option>
-            ))}
-          </Select>
+          <StationPicker stations={stations} value={stationId} onChange={setStationId} allowAll />
         }
       />
 

@@ -67,21 +67,23 @@ async def test_historical_baseline_excludes_future_observations(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_health_completeness_uses_same_window(monkeypatch):
+    # Completeness is computed from the same windowed observation rows as every other component.
     from app.services import health_service
 
     session = AsyncMock()
-    session.execute.side_effect = [Mock(scalar_one=Mock(return_value=value)) for value in [1, 0, 0, 0, 100.0, 0]]
+    rows = Mock(all=Mock(return_value=[]))
+    session.execute.side_effect = [rows, Mock(scalar_one=Mock(return_value=0)), Mock(scalar_one=Mock(return_value=0))]
     monkeypatch.setattr(health_service, "CalibrationRepository", lambda _: SimpleNamespace(get_active=AsyncMock(return_value=None)))
     monkeypatch.setattr(health_service, "publish_station_event", AsyncMock())
     service = health_service.HealthService(session)
     service.repo = SimpleNamespace(upsert=AsyncMock())
 
-    await service.recompute(uuid.uuid4())
+    result = await service.recompute(uuid.uuid4())
 
-    statement = session.execute.call_args_list[4].args[0]
+    statement = session.execute.call_args_list[0].args[0]
     sql = str(statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
-    assert "observation_features.observation_id IN" in sql
     assert "weather_observations.timestamp >=" in sql
+    assert result["components"]["completeness_pct"] == 100.0
 
 
 @pytest.mark.asyncio
