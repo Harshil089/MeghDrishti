@@ -1,4 +1,4 @@
-"""model_training DAG: weekly trigger for the backend's isolation-forest
+"""model_training DAG: daily trigger for the backend's isolation-forest
 candidate training.
 
 The actual training logic lives in the backend (POST /models/train) — same
@@ -42,7 +42,7 @@ def _admin_token() -> str:
 
 @dag(
     dag_id="model_training",
-    schedule="0 3 * * 0",  # weekly, Sunday 03:00
+    schedule="30 3 * * *",  # daily, 03:30 UTC
     start_date=datetime(2026, 1, 1),
     catchup=False,
     default_args=DEFAULT_ARGS,

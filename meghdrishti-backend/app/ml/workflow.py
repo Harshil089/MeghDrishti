@@ -27,6 +27,13 @@ from app.models.reviews import OperatorReview
 TRAIN_MEASUREMENTS = ["temperature_c", "humidity_pct", "pressure_hpa", "wind_speed_ms"]
 TRAIN_FEATURE_NAMES = ["value", "delta_1h", "rolling_std", "rate_of_change"]
 SENSOR_SOURCES = {"IMD", "GHCN"}
+# Sensor readings and forecast-model output never share a model: forecast output is smooth
+# and would teach the forest that real sensor noise is anomalous.
+SOURCE_GROUPS = {"sensor": SENSOR_SOURCES, "forecast": {"OPEN_METEO"}}
+
+
+def source_group(source: str) -> str:
+    return "sensor" if source in SENSOR_SOURCES else "forecast"
 MIN_TRAIN_ROWS = 20
 MIN_HOLDOUT_ROWS = 10
 
@@ -92,15 +99,16 @@ async def train_candidates(db: AsyncSession) -> dict:
         for measurement in TRAIN_MEASUREMENTS:
             row = features[measurement]
             if len(build_feature_matrix([row], TRAIN_FEATURE_NAMES)):
-                samples[measurement].append((obs, row))
+                samples[(source_group(obs.source), measurement)].append((obs, row))
 
     candidates, skipped = [], {}
     registry = ModelRegistry(db)
-    for measurement in TRAIN_MEASUREMENTS:
-        rows = samples[measurement]
+    for group, measurement in [(g, m) for g in SOURCE_GROUPS for m in TRAIN_MEASUREMENTS]:
+        rows = samples[(group, measurement)]
+        key = f"{group}/{measurement}"
         timestamps = sorted({obs.timestamp for obs, _ in rows})
         if len(timestamps) < 2:
-            skipped[measurement] = (
+            skipped[key] = (
                 "Not enough distinct observation times for a chronological holdout"
             )
             continue
@@ -111,7 +119,7 @@ async def train_candidates(db: AsyncSession) -> dict:
         ]
         holdout = [(obs, row) for obs, row in rows if obs.timestamp >= boundary]
         if len(training) < MIN_TRAIN_ROWS or len(holdout) < MIN_HOLDOUT_ROWS:
-            skipped[measurement] = (
+            skipped[key] = (
                 f"Usable train/holdout rows {len(training)}/{len(holdout)}; "
                 f"need {MIN_TRAIN_ROWS}/{MIN_HOLDOUT_ROWS}"
             )
@@ -145,6 +153,7 @@ async def train_candidates(db: AsyncSession) -> dict:
                 "training_samples": len(training),
                 "training_distinct_timestamps": len({obs.timestamp for obs, _ in training}),
                 "holdout_distinct_timestamps": len({obs.timestamp for obs, _ in holdout}),
+                "source_group": group,
                 "training_sources": sources,
                 "holdout_sources": dict(Counter(obs.source for obs, _ in holdout)),
                 "holdout_start": boundary.isoformat(),
@@ -166,6 +175,7 @@ async def train_candidates(db: AsyncSession) -> dict:
         model = await registry.register_candidate(
             measurement,
             trained,
+            source_group=group,
             training_start=training[0][0].timestamp,
             training_end=training[-1][0].timestamp,
             metrics=metrics,

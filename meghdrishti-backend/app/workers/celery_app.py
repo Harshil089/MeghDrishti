@@ -42,7 +42,8 @@ celery_app.conf.update(
         }
         for name, operation, schedule in [
             ("weather-ingestion", "ingest", crontab(minute="*/15")),
-            ("model-training", "train", crontab(minute=0, hour=3, day_of_week=0)),
+            # Daily while IMD sensor history builds up (each run sees one more day-night cycle).
+            ("model-training", "train", crontab(minute=30, hour=3)),
             ("calibration", "calibrate", crontab(minute=0, hour=4, day_of_week=1)),
             ("station-roster", "roster", crontab(minute=0, hour=3)),
         ]

@@ -132,11 +132,16 @@ async def run_ml_inference(session: AsyncSession, observation_id: uuid.UUID, sta
     if feature_row is None:
         return {}
 
+    source = (await session.execute(select(WeatherObservation.source).where(WeatherObservation.id == observation_id))).scalar_one()
     registry = ModelRegistry(session)
     ml_results: dict[str, object] = {}
     for measurement, feats in feature_row.features.items():
         model = await registry.get_active(measurement, station_region, None)
         if model is None:
+            continue
+        # A model only scores readings from the kind of source it learned from.
+        trained_on = (model.metrics or {}).get("training_sources")
+        if trained_on and source not in trained_on:
             continue
         inference = run_inference(model, feats)
         if inference is None:

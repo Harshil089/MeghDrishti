@@ -36,8 +36,12 @@ class ModelRegistry:
         training_start: datetime | None = None,
         training_end: datetime | None = None,
         metrics: dict | None = None,
+        source_group: str | None = None,
     ) -> ModelVersion:
         model_id = f"iforest__{measurement}__{region or 'global'}__{season or 'all'}"
+        if source_group:
+            # Separate lineage per source group, so activating one never retires the other.
+            model_id += f"__{source_group}"
         version = datetime.now(UTC).strftime("%Y%m%d%H%M%S%f")
         artifact_path = self._artifact_path(model_id, version)
         joblib.dump(trained.estimator, artifact_path)

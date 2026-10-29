@@ -3,6 +3,17 @@ from __future__ import annotations
 
 from app.schemas.qc import RuleResult
 
+# Air at saturation (dew, fog, night drizzle) holds humidity flat at 98-100 % for hours, so a
+# flat run there must last SATURATION_FACTOR times longer before it counts. A wetted RH sensor
+# stuck at 100 % for a day still trips the rule.
+SATURATION_PCT = 98.0
+SATURATION_FACTOR = 4
+
+
+def _min_run(measurement: str, value: float, base: int) -> int:
+    return base * SATURATION_FACTOR if measurement == "humidity_pct" and value >= SATURATION_PCT else base
+
+
 REASON_CODES = {
     "temperature_c": "TEMP_STUCK",
     "humidity_pct": "HUMIDITY_STUCK",
@@ -25,7 +36,7 @@ def evaluate_persistence(measurement: str, value: float, history: list[float], t
         return RuleResult(rule="PERSISTENCE", triggered=False, score=0.0, severity="LOW")
 
     count = _consecutive_identical(value, history, tolerance=1e-9)
-    min_consecutive = cfg.get("min_consecutive", 6)
+    min_consecutive = _min_run(measurement, value, cfg.get("min_consecutive", 6))
     if count < min_consecutive:
         return RuleResult(rule="PERSISTENCE", triggered=False, score=0.0, severity="LOW", evidence={"consecutive_identical_count": count})
 
@@ -47,7 +58,7 @@ def evaluate_stuck_sensor(measurement: str, value: float, history: list[float], 
 
     tolerance = cfg.get("tolerance", 0.01)
     count = _consecutive_identical(value, history, tolerance)
-    min_consecutive = cfg.get("min_consecutive", 12)
+    min_consecutive = _min_run(measurement, value, cfg.get("min_consecutive", 12))
     if count < min_consecutive:
         return RuleResult(rule="STUCK_SENSOR", triggered=False, score=0.0, severity="LOW", evidence={"consecutive_identical_count": count})
 

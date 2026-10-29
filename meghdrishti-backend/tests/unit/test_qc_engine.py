@@ -101,3 +101,14 @@ def test_calm_wind_without_direction_is_not_a_dropout():
     history = [{"timestamp": BASE - timedelta(minutes=15), "wind_speed_ms": 2.0, "wind_direction_deg": 90.0}]
     ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"wind_speed_ms": 0.0, "wind_direction_deg": None}, history=history)
     assert not any(r.rule == "DROPOUT" and r.triggered for r in QCEngine().run(ctx))
+
+
+def test_saturated_humidity_needs_a_much_longer_flat_run():
+    from app.qc import persistence
+    from app.qc.defaults import DEFAULT_RULE_THRESHOLDS as T
+
+    night = [100.0] * 13  # ~3 h of fog at 15-minute readings
+    assert not persistence.evaluate_stuck_sensor("humidity_pct", 100.0, night, T).triggered
+    assert not persistence.evaluate_persistence("humidity_pct", 100.0, night, T).triggered
+    assert persistence.evaluate_stuck_sensor("humidity_pct", 100.0, [100.0] * 60, T).triggered  # 15 h
+    assert persistence.evaluate_stuck_sensor("humidity_pct", 60.0, [60.0] * 13, T).triggered

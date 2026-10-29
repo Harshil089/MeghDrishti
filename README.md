@@ -194,7 +194,7 @@ Ports 15432, 16379, 18000 and 13000 must be free.
 <summary><b>More on local operation</b></summary>
 
 - Celery Beat schedules ingestion every 15 minutes, the station roster refresh daily at 03:00 UTC,
-  model candidate training Sunday 03:00 UTC, and calibration proposals Monday 04:00 UTC.
+  model candidate training daily 03:30 UTC, and calibration proposals Monday 04:00 UTC.
   Run only one Beat instance.
 - The single worker processes jobs sequentially, so slow ingestion or training can delay QC.
   It is meant for laptop development, not as a throughput claim.

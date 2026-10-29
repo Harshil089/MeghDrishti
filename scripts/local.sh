@@ -118,6 +118,11 @@ EOF
     start_process worker env DB_POOLING=false .venv/bin/celery -A app.workers.celery_app worker \
       --pool solo --concurrency 1 -Q qc,features,ml,context,alert,health,realtime,schedule \
       -l info -n native@%h
+    # Second consumer: one slow ERA5 job (CDS queues can take 20+ minutes) must not stall
+    # every live reading behind it in the solo pool.
+    start_process worker-2 env DB_POOLING=false .venv/bin/celery -A app.workers.celery_app worker \
+      --pool solo --concurrency 1 -Q qc,features,ml,context,alert,health,realtime \
+      -l info -n native2@%h
     start_process beat .venv/bin/celery -A app.workers.celery_app beat \
       -l info --schedule "$STATE/celerybeat-schedule" --pidfile "$STATE/celerybeat.pid"
     cd "$ROOT"
