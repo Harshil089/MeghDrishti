@@ -20,12 +20,15 @@ export default function AlertDetailModal({
   alert,
   onClose,
   onActionComplete,
+  inline = false,
 }: {
   alert: Alert | null;
   onClose: () => void;
   onActionComplete?: () => void;
+  /** Render as an in-page panel (Triage inspector) instead of a drawer. */
+  inline?: boolean;
 }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const reduce = useReducedMotion();
   const [busy, setBusy] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -82,31 +85,8 @@ export default function AlertDetailModal({
     }
   }
 
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    <AnimatePresence>
-      {alert && (
-        <motion.div
-          className="fixed inset-0 z-50 flex justify-end"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          onKeyDown={(e) => e.key === "Escape" && onClose()}
-        >
-          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-          <motion.aside
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="alert-drawer-title"
-            className="relative flex h-full w-full max-w-md flex-col border-l border-line bg-surface text-ink shadow-2xl shadow-black/30"
-            initial={reduce ? false : { x: 32 }}
-            animate={{ x: 0 }}
-            exit={reduce ? undefined : { x: 32 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          >
+  const inner = alert ? (
+    <>
             <div className="flex items-start gap-3 border-b border-line px-5 py-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -118,14 +98,14 @@ export default function AlertDetailModal({
                 </h2>
                 <p className="mt-1 text-[13px] leading-relaxed text-sub">{alert.message}</p>
               </div>
-              <button
+              {!inline && <button
                 onClick={onClose}
                 autoFocus
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-sub hover:bg-raised hover:text-ink"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </button>}
             </div>
 
             <dl className="grid grid-cols-3 border-b border-line text-xs">
@@ -213,7 +193,7 @@ export default function AlertDetailModal({
             </div>
 
             <div className="border-t border-line bg-raised px-5 py-4">
-              {!user ? (
+              {loading ? null : !user ? (
                 <p className="text-[13px] text-sub">
                   <Link href="/login" className="text-accent hover:underline" onClick={onClose}>
                     Sign in
@@ -243,7 +223,7 @@ export default function AlertDetailModal({
                   <button
                     onClick={acknowledge}
                     disabled={busy !== null}
-                    className="mt-2 inline-flex h-8 w-full items-center justify-center rounded-md bg-accent text-[13px] font-medium text-white transition-opacity hover:opacity-90 active:translate-y-px disabled:opacity-40"
+                    className="mt-2 inline-flex h-9 w-full items-center justify-center rounded-lg bg-accent text-[13px] font-medium text-on-accent transition-opacity hover:opacity-90 active:translate-y-px disabled:opacity-40"
                   >
                     {busy === "ack" ? "Acknowledging" : "Acknowledge"}
                   </button>
@@ -251,6 +231,43 @@ export default function AlertDetailModal({
                 </>
               )}
             </div>
+    </>
+  ) : null;
+
+  if (inline) {
+    return (
+      <section aria-label="Alert review" className="c-card flex min-h-[420px] min-w-0 flex-col overflow-hidden rounded-2xl text-ink">
+        {inner ?? <p className="m-auto px-6 text-center text-sm text-sub">Select an alert from the queue to review it.</p>}
+      </section>
+    );
+  }
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {alert && (
+        <motion.div
+          className="fixed inset-0 z-50 flex justify-end"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          onKeyDown={(e) => e.key === "Escape" && onClose()}
+        >
+          <div className="absolute inset-0 bg-ink/30" onClick={onClose} />
+
+          <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="alert-drawer-title"
+            className="relative flex h-full w-full max-w-md flex-col border-l border-line bg-surface text-ink shadow-2xl shadow-ink/20"
+            initial={reduce ? false : { x: 32 }}
+            animate={{ x: 0 }}
+            exit={reduce ? undefined : { x: 32 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {inner}
           </motion.aside>
         </motion.div>
       )}

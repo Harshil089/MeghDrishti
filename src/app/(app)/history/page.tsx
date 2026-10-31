@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Flag, X } from "lucide-react";
 import { StationPicker } from "@/components/console/StationPicker";
-import { Badge, Empty, Metric, MetricStrip, PageHeader, Section, button, field, severityTone, table, type Tone } from "@/components/console/ui";
+import { Badge, Empty, Eyebrow, PageHeader, button, card, chip, field, severityTone, table, type Tone } from "@/components/console/ui";
 import { fetchHistory, fetchReviews, fetchStationOptions, type HistoryReading, type OperatorReviewRow } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 
@@ -28,9 +28,9 @@ function Pager({ page, setPage, total }: { page: number; setPage: (n: number) =>
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const first = total === 0 ? 0 : page * PAGE + 1;
   const last = Math.min(total, (page + 1) * PAGE);
-  const arrow = "grid h-8 w-8 place-items-center rounded-md border border-line bg-surface text-sub transition-colors hover:bg-raised hover:text-ink disabled:pointer-events-none disabled:opacity-40";
+  const arrow = "grid h-8 w-8 place-items-center rounded-lg border border-line bg-surface text-sub transition-colors hover:bg-raised hover:text-ink disabled:pointer-events-none disabled:opacity-40";
   return (
-    <div className="flex items-center justify-between border-t border-line px-4 py-2.5 text-xs text-sub">
+    <div className="flex items-center justify-between border-t border-line px-5 py-3 text-xs text-sub">
       <span>
         <span className="font-mono tabular-nums text-ink">
           {first}-{last}
@@ -70,12 +70,12 @@ function ReadingDrawer({ reading, station, onClose }: { reading: HistoryReading;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/30" onClick={onClose} />
       <aside
         role="dialog"
         aria-modal="true"
         aria-labelledby="reading-title"
-        className="page-fade relative flex h-full w-full max-w-md flex-col border-l border-line bg-surface text-ink shadow-2xl shadow-black/30"
+        className="page-fade relative flex h-full w-full max-w-md flex-col border-l border-line bg-surface text-ink shadow-2xl shadow-ink/20"
       >
         <div className="flex items-start gap-3 border-b border-line px-5 py-4">
           <div className="min-w-0 flex-1">
@@ -179,48 +179,51 @@ function Readings() {
   ] as const;
 
   return (
-    <div className="space-y-4">
-    <MetricStrip>
-      <Metric label="Records" value={total.toLocaleString()} foot={active ? `${active} filter${active > 1 ? "s" : ""} on` : "All stored readings"} />
-      <Metric label="Flagged on this page" value={flagged} tone={flagged ? "warn" : "ok"} foot={`of ${rows.length} shown`} />
-      <Metric label="Latest on page" value={latest} foot={stationId ? station(stationId) : "All stations"} />
-      <Metric label="Source" value={source ? sources.find(([v]) => v === source)![1] : "All"} foot="Stored as received" />
-    </MetricStrip>
-    <Section title="Readings" meta="Select a row for details" flush>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
-        <StationPicker stations={stations} value={stationId} onChange={reset(setStationId)} allowAll />
-        <div className="flex gap-1.5" role="group" aria-label="Source">
+    <div className="grid items-start gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <aside className={`${card} space-y-5 p-5`}>
+      <div className="space-y-2">
+        <Eyebrow>Station</Eyebrow>
+        <StationPicker stations={stations} value={stationId} onChange={reset(setStationId)} allowAll className="flex-col items-stretch [&>*]:w-full" />
+      </div>
+      <div className="space-y-2">
+        <Eyebrow>Source</Eyebrow>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Source">
           {sources.map(([v, label]) => (
-            <button
-              key={v}
-              type="button"
-              aria-pressed={source === v}
-              onClick={() => reset(setSource)(v)}
-              className={`h-8 rounded-full border px-3 text-xs font-medium transition-colors ${
-                source === v ? "border-accent bg-accent/15 text-ink" : "border-line text-sub hover:bg-raised hover:text-ink"
-              }`}
-            >
+            <button key={v} type="button" aria-pressed={source === v} onClick={() => reset(setSource)(v)} className={chip(source === v)}>
               {label}
             </button>
           ))}
         </div>
-        <input type="date" aria-label="From date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={`${field} w-auto`} />
-        <span className="text-xs text-sub">to</span>
-        <input type="date" aria-label="To date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={`${field} w-auto`} />
-        {active > 0 && (
-          <button
-            className={`${button} ml-auto`}
-            onClick={() => {
-              setStationId("");
-              setSource("");
-              setFrom("");
-              setTo("");
-              setPage(0);
-            }}
-          >
-            Clear
-          </button>
-        )}
+      </div>
+      <div className="space-y-2">
+        <Eyebrow>Dates</Eyebrow>
+        <input type="date" aria-label="From date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} className={field} />
+        <input type="date" aria-label="To date" value={to} onChange={(e) => reset(setTo)(e.target.value)} className={field} />
+      </div>
+      <dl className="space-y-1.5 border-t border-line pt-4 text-xs">
+        <div className="flex justify-between"><dt className="text-sub">Records</dt><dd className="font-mono text-ink">{total.toLocaleString()}</dd></div>
+        <div className="flex justify-between"><dt className="text-sub">Flagged on page</dt><dd className="font-mono text-ink">{flagged} / {rows.length}</dd></div>
+        <div className="flex justify-between"><dt className="text-sub">Latest on page</dt><dd className="font-mono text-ink">{latest}</dd></div>
+      </dl>
+      {active > 0 && (
+        <button
+          className={`${button} w-full justify-center`}
+          onClick={() => {
+            setStationId("");
+            setSource("");
+            setFrom("");
+            setTo("");
+            setPage(0);
+          }}
+        >
+          Clear filters
+        </button>
+      )}
+    </aside>
+    <section className={`${card} min-w-0 overflow-hidden`}>
+      <div className="flex items-baseline gap-3 px-5 pb-2 pt-5">
+        <h2 className="text-[15px] font-semibold text-ink">Readings</h2>
+        <span className="text-xs text-sub">stored exactly as received · select a row for details</span>
       </div>
       <div className={table.wrap}>
         <table className={table.table}>
@@ -254,7 +257,7 @@ function Readings() {
                 className={`${table.row} cursor-pointer focus-visible:outline-2 focus-visible:outline-accent`}
               >
                 <td className={`${table.td} relative whitespace-nowrap font-mono text-xs text-ink`}>
-                  {r.flags.length > 0 && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
+                  {r.flags.length > 0 && <span aria-hidden className="absolute inset-y-1 left-1 w-0.5 rounded bg-warn" />}
                   {new Date(r.timestamp).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </td>
                 <td className={`${table.td} whitespace-nowrap text-ink`}>{station(r.station_id)}</td>
@@ -284,7 +287,7 @@ function Readings() {
       </div>
       <Pager page={page} setPage={setPage} total={total} />
       {open && <ReadingDrawer reading={open} station={station(open.station_id)} onClose={() => setOpen(null)} />}
-    </Section>
+    </section>
     </div>
   );
 }
@@ -292,39 +295,56 @@ function Readings() {
 function Reviews() {
   const [page, setPage] = useState(0);
   const { rows, total } = useLiveData(() => fetchReviews(PAGE, page * PAGE), { rows: [] as OperatorReviewRow[], total: 0 }, 60000, [page]);
+  const days = new Map<string, OperatorReviewRow[]>();
+  for (const r of rows) {
+    const d = new Date(r.created_at).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
+    days.set(d, [...(days.get(d) ?? []), r]);
+  }
   return (
-    <Section title="Operator reviews" meta={`${total.toLocaleString()} recorded`} flush>
+    <section className={`${card} overflow-hidden`}>
+      <div className="flex items-baseline gap-3 px-6 pb-2 pt-5">
+        <h2 className="text-[15px] font-semibold text-ink">Operator decisions</h2>
+        <span className="text-xs text-sub">{total.toLocaleString()} recorded · nothing is ever overwritten</span>
+      </div>
       {rows.length === 0 ? (
         <Empty>No operator reviews yet. They appear when an alert is marked as a fault, real weather or a false positive.</Empty>
       ) : (
-        <ul>
-          {rows.map((r) => (
-            <li key={r.id} className="flex items-start gap-3 border-b border-line px-4 py-3.5 transition-colors last:border-0 hover:bg-raised">
-              <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full border border-line bg-raised text-sub">
-                <Flag className="h-3.5 w-3.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
-                  <span className="font-medium text-ink">{r.station}</span>
-                  {r.measurement && <span className="font-mono text-xs text-sub">{r.measurement}</span>}
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-sub">
-                  <span>{pretty(r.previous_classification)}</span>
-                  <ChevronRight className="h-3 w-3" aria-hidden />
-                  <Badge tone={verdictTone[r.operator_classification] ?? "neutral"}>{pretty(r.operator_classification)}</Badge>
-                </div>
-                {r.comment && <p className="mt-1.5 text-xs text-sub">&ldquo;{r.comment}&rdquo;</p>}
-              </div>
-              <div className="shrink-0 text-right text-[11px] text-sub">
-                <p className="font-mono">{new Date(r.created_at).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
-                <p className="mt-0.5">{r.reviewer ?? "-"}</p>
-              </div>
-            </li>
+        <div className="px-6 pb-4">
+          {[...days].map(([day, list]) => (
+            <div key={day} className="pt-4">
+              <Eyebrow>{day}</Eyebrow>
+              <ol className="mt-3">
+                {list.map((r, i) => (
+                  <li key={r.id} className="grid grid-cols-[48px_28px_1fr] gap-3">
+                    <span className="pt-1 font-mono text-xs text-sub">{new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    <span className="flex flex-col items-center">
+                      <span className="grid h-7 w-7 place-items-center rounded-full border border-line bg-raised text-accent">
+                        <Flag className="h-3.5 w-3.5" />
+                      </span>
+                      {i < list.length - 1 && <span className="w-px flex-1 bg-line" />}
+                    </span>
+                    <div className="min-w-0 pb-5">
+                      <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                        <span className="font-medium text-ink">{r.station}</span>
+                        {r.measurement && <span className="font-mono text-xs text-sub">{r.measurement}</span>}
+                        <span className="text-xs text-sub">by {r.reviewer ?? "unknown"}</span>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-sub">
+                        <span>System: {pretty(r.previous_classification)}</span>
+                        <ChevronRight className="h-3 w-3" aria-hidden />
+                        <Badge tone={verdictTone[r.operator_classification] ?? "neutral"}>{pretty(r.operator_classification)}</Badge>
+                      </div>
+                      {r.comment && <p className="mt-1.5 text-xs text-sub">&ldquo;{r.comment}&rdquo;</p>}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
       <Pager page={page} setPage={setPage} total={total} />
-    </Section>
+    </section>
   );
 }
 
@@ -334,12 +354,12 @@ export default function HistoryPage() {
     <>
       <PageHeader
         title="History"
-        description="Stored readings and operator decisions."
+        description="The audit log: every stored reading and every operator decision."
         actions={
           <div role="tablist" className="relative grid grid-cols-2 rounded-full border border-line bg-surface p-0.5 text-[13px]">
             <span
               aria-hidden
-              className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-full bg-accent/15 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--c-accent)_35%,transparent)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              className="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-full bg-accent-soft transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
               style={{ transform: tab === "readings" ? "none" : "translateX(100%)" }}
             />
             {(["readings", "reviews"] as const).map((t) => (
@@ -350,7 +370,7 @@ export default function HistoryPage() {
                 onClick={() => setTab(t)}
                 className={`relative z-10 rounded-full px-4 py-1.5 transition-colors ${tab === t ? "font-medium text-ink" : "text-sub hover:text-ink"}`}
               >
-                {t === "readings" ? "Readings" : "Reviews"}
+                {t === "readings" ? "Readings" : "Decisions"}
               </button>
             ))}
           </div>

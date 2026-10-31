@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { StationPicker } from "@/components/console/StationPicker";
-import { PageHeader, Section, Metric, MetricStrip, Badge, Meter, Empty, table, severityTone, type Tone } from "@/components/console/ui";
-import { CountBars } from "@/components/console/TrendChart";
+import { PageHeader, Section, Badge, Empty, card, table, severityTone, type Tone } from "@/components/console/ui";
+import { CountBars, chartColors } from "@/components/console/TrendChart";
 import { fetchAnomaliesInRange, fetchAnomalyAnalytics, fetchStationAnomalies, fetchStationOptions } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 
@@ -22,19 +22,57 @@ const reasonList = (codes: string[]) => codes.filter((c) => c !== "INSUFFICIENT_
 
 const pretty = (key: string) => key.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 
-function Breakdown({ counts }: { counts: Record<string, number> }) {
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+const toneHex: Record<Tone, string> = { ok: chartColors.ok, warn: chartColors.warn, crit: chartColors.crit, info: chartColors.accent, neutral: "#9aa6bd" };
+
+/** Donut of classification counts, coloured by what each class means. */
+function Donut({ counts }: { counts: Record<string, number> }) {
+  const entries = Object.entries(counts).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((n, [, v]) => n + v, 0);
-  if (entries.length === 0) return <Empty>No data in this window</Empty>;
+  if (!total) return <Empty>No anomalies in this window</Empty>;
+  const r = 60, c = 2 * Math.PI * r;
+  // Running start of each segment along the circle.
+  const starts = entries.map((_, i) => entries.slice(0, i).reduce((n, [, v]) => n + (v / total) * c, 0));
   return (
-    <ul>
-      {entries.map(([key, value]) => (
-        <li key={key} className="grid grid-cols-[minmax(0,12rem)_1fr_4rem] items-center gap-4 border-b border-line px-4 py-2.5 last:border-0">
-          <span className="truncate text-[13px] text-ink" title={key}>
-            {pretty(key)}
+    <div className="flex flex-wrap items-center gap-8">
+      <div className="relative h-40 w-40 shrink-0">
+        <svg viewBox="0 0 160 160" className="h-full w-full -rotate-90" aria-hidden>
+          <circle cx="80" cy="80" r={r} fill="none" stroke="var(--c-raised)" strokeWidth="18" />
+          {entries.map(([k, v], i) => (
+            <circle key={k} cx="80" cy="80" r={r} fill="none" stroke={toneHex[classificationTone[k] ?? "info"]} strokeWidth="18" strokeDasharray={`${Math.max(0, (v / total) * c - 2)} ${c}`} strokeDashoffset={-starts[i]} />
+          ))}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-light tracking-tight text-ink">{total.toLocaleString()}</span>
+          <span className="text-[11px] text-sub">anomalies</span>
+        </div>
+      </div>
+      <ul className="min-w-0 flex-1 space-y-2.5">
+        {entries.map(([k, v]) => (
+          <li key={k} className="flex items-center gap-2.5 text-[13px]">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: toneHex[classificationTone[k] ?? "info"] }} />
+            <span className="min-w-0 flex-1 truncate text-ink">{pretty(k)}</span>
+            <span className="font-mono text-xs text-sub">{Math.round((100 * v) / total)}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Horizontal leaderboard of rule trigger counts. */
+function Leaderboard({ counts }: { counts: Record<string, number> }) {
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const max = Math.max(1, ...entries.map(([, v]) => v));
+  if (!entries.length) return <Empty>No rule checks fired in this window</Empty>;
+  return (
+    <ul className="space-y-3">
+      {entries.map(([k, v]) => (
+        <li key={k} className="grid grid-cols-[minmax(0,180px)_1fr_3.5rem] items-center gap-3">
+          <span className="truncate font-mono text-xs text-ink" title={k}>{k}</span>
+          <span className="h-4 overflow-hidden rounded-md bg-raised">
+            <span className="meter-fill block h-full rounded-md bg-accent" style={{ width: `${(100 * v) / max}%` }} />
           </span>
-          <Meter pct={(100 * value) / Math.max(1, total)} tone={classificationTone[key] ?? "info"} />
-          <span className="text-right font-mono text-[13px] tabular-nums text-ink">{value}</span>
+          <span className="text-right font-mono text-xs text-sub">{v.toLocaleString()}</span>
         </li>
       ))}
     </ul>
@@ -85,7 +123,6 @@ export default function AnalysisPage() {
   const hourLabel = (h: string) =>
     new Date(h).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-  const total = Object.values(analytics.classification_counts).reduce((n, v) => n + v, 0);
 
   return (
     <>
@@ -97,23 +134,26 @@ export default function AnalysisPage() {
         }
       />
 
-      <div className="space-y-4">
-        <MetricStrip cols={3}>
-          <Metric label="Readings scored" value={total} />
-          <Metric
-            label="Average fault score"
-            value={analytics.average_fault_score !== null ? analytics.average_fault_score.toFixed(2) : "-"}
-            foot="0 clean, 1 certain fault"
-          />
-          <Metric
-            label="Average confidence"
-            value={analytics.average_confidence !== null ? analytics.average_confidence.toFixed(2) : "-"}
-            foot="Heuristic, not calibrated"
-          />
-        </MetricStrip>
+      <div className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+          <section className={`${card} p-6`}>
+            <h2 className="mb-5 text-[15px] font-semibold text-ink">What anomalies turned out to be</h2>
+            <Donut counts={analytics.classification_counts} />
+            <p className="mt-5 text-xs text-sub">
+              Average fault score {analytics.average_fault_score?.toFixed(2) ?? "–"} · confidence {analytics.average_confidence?.toFixed(2) ?? "–"} (heuristic, not calibrated)
+            </p>
+          </section>
+          <section className={`${card} p-6`}>
+            <div className="mb-5 flex items-baseline gap-3">
+              <h2 className="text-[15px] font-semibold text-ink">Which checks fire most</h2>
+              <span className="ml-auto text-xs text-sub">triggers · {analytics.window_hours} h</span>
+            </div>
+            <Leaderboard counts={analytics.rule_trigger_counts} />
+          </section>
+        </div>
 
         <Section
-          title="Anomalies per hour"
+          title="When anomalies happen"
           meta={hour ? `Showing ${hourLabel(hour)}` : "Click a bar to list its anomalies"}
           actions={
             hour && (
@@ -176,14 +216,6 @@ export default function AnalysisPage() {
           )}
         </Section>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Classification" flush>
-            <Breakdown counts={analytics.classification_counts} />
-          </Section>
-          <Section title="Rule checks triggered" flush>
-            <Breakdown counts={analytics.rule_trigger_counts} />
-          </Section>
-        </div>
 
         <Section title="Station anomalies" meta={stationId ? "Latest 15. Readings without nearby-station, forecast, ERA5 or GPM context are not marked per row." : "Pick a station to list anomalies"} flush>
           {!stationId ? (

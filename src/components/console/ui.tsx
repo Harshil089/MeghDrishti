@@ -13,11 +13,11 @@ const toneText: Record<Tone, string> = {
 };
 
 const toneFill: Record<Tone, string> = {
-  ok: "c-grad-ok",
-  warn: "c-grad-warn",
-  crit: "c-grad-crit",
-  info: "c-grad-info",
-  neutral: "c-grad-neutral",
+  ok: "bg-ok",
+  warn: "bg-warn",
+  crit: "bg-crit",
+  info: "bg-accent",
+  neutral: "bg-sub/50",
 };
 
 /** Page heading row: title, one-line description, optional controls. */
@@ -31,9 +31,9 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="relative z-20 flex flex-wrap items-end justify-between gap-4 pb-5">
+    <header className="relative z-20 flex flex-wrap items-end justify-between gap-4 pb-6">
       <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1 className="text-[28px] font-semibold tracking-tight text-ink">{title}</h1>
         {description && <p className="mt-1 text-sm text-sub max-w-[70ch]">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -58,15 +58,15 @@ export function Section({
   children: ReactNode;
 }) {
   return (
-    <section className={`rounded-lg border border-line c-card flex flex-col min-w-0 ${className}`}>
+    <section className={`rounded-2xl c-card flex flex-col min-w-0 ${className}`}>
       {title && (
-        <div className="flex items-center gap-3 border-b border-line px-4 h-11 shrink-0">
-          <h2 className="text-[13px] font-semibold text-ink truncate">{title}</h2>
+        <div className="flex items-center gap-3 px-5 h-14 shrink-0">
+          <h2 className="text-[15px] font-semibold text-ink truncate">{title}</h2>
           {meta && <span className="text-xs text-sub truncate">{meta}</span>}
           {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className={flush ? "flex-1 min-h-0" : "flex-1 p-4"}>{children}</div>
+      <div className={flush ? "flex-1 min-h-0" : "flex-1 px-5 pb-5"}>{children}</div>
     </section>
   );
 }
@@ -86,11 +86,10 @@ export function Metric({
   tone?: Tone;
 }) {
   return (
-    <div className="relative bg-surface px-4 py-3.5 min-w-0 overflow-hidden">
-      <span aria-hidden className={`absolute inset-x-0 top-0 h-0.5 c-grad-brand opacity-70`} />
+    <div className="bg-surface px-5 py-4 min-w-0">
       <p className="text-xs text-sub truncate">{label}</p>
       <p className="mt-1.5 flex items-baseline gap-1">
-        <span className={`font-mono text-2xl font-medium tabular-nums ${tone === "neutral" ? "c-text-grad" : toneText[tone]}`}>
+        <span className={`font-mono text-2xl font-medium tabular-nums ${tone === "neutral" ? "text-ink" : toneText[tone]}`}>
           {value}
         </span>
         {unit && <span className="text-xs text-sub">{unit}</span>}
@@ -109,15 +108,15 @@ export function MetricStrip({ children, cols = 4 }: { children: ReactNode; cols?
     6: "grid-cols-2 md:grid-cols-3 xl:grid-cols-6",
   }[cols];
   return (
-    <div className={`grid ${grid} gap-px overflow-hidden rounded-lg border border-line bg-line`}>{children}</div>
+    <div className={`grid ${grid} gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[0_1px_2px_rgb(15_26_46/0.04)]`}>{children}</div>
   );
 }
 
 const toneDot: Record<Tone, string> = {
-  ok: "bg-ok shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-ok)_22%,transparent)]",
-  warn: "bg-warn shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-warn)_22%,transparent)]",
-  crit: "bg-crit shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-crit)_22%,transparent)]",
-  info: "bg-accent shadow-[0_0_0_2px_color-mix(in_srgb,var(--c-accent)_22%,transparent)]",
+  ok: "bg-ok",
+  warn: "bg-warn",
+  crit: "bg-crit",
+  info: "bg-accent",
   neutral: "bg-sub/70",
 };
 
@@ -147,16 +146,34 @@ export function Empty({ children }: { children: ReactNode }) {
 export { Select } from "@/components/console/Select";
 
 export const field =
-  "h-8 w-full rounded-md border border-line bg-canvas px-2.5 text-[13px] text-ink placeholder:text-sub focus-visible:outline-2 focus-visible:outline-accent";
+  "h-9 w-full rounded-lg border border-line bg-surface px-3 text-[13px] text-ink placeholder:text-sub focus-visible:outline-2 focus-visible:outline-accent";
 
 export const button =
-  "inline-flex h-8 items-center gap-1.5 rounded-md border border-line bg-surface px-3 text-[13px] font-medium text-ink transition-colors hover:bg-raised active:translate-y-px disabled:opacity-40 disabled:pointer-events-none";
+  "inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 text-[13px] font-medium text-ink transition-colors hover:bg-raised active:translate-y-px disabled:opacity-40 disabled:pointer-events-none";
+
+export const buttonPrimary =
+  "inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-4 text-[13px] font-medium text-on-accent transition-colors hover:bg-accent/90 active:translate-y-px disabled:opacity-40 disabled:pointer-events-none";
+
+/** Flat card shell used by the redesigned pages. */
+export const card = "c-card rounded-2xl";
+
+/** Filter chip. */
+export function chip(on: boolean) {
+  return `inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors ${
+    on ? "border-accent/40 bg-accent-soft text-accent" : "border-line bg-surface text-sub hover:text-ink"
+  }`;
+}
+
+/** Small uppercase mono label above a block. */
+export function Eyebrow({ children }: { children: ReactNode }) {
+  return <p className="font-mono text-[11px] uppercase tracking-wider text-sub">{children}</p>;
+}
 
 /** Table classes. Tables stay native <table>; these keep every one identical. */
 export const table = {
   wrap: "overflow-x-auto",
   table: "w-full text-[13px]",
-  head: "text-left text-xs text-sub bg-raised",
+  head: "text-left text-xs text-sub",
   th: "px-4 h-9 font-medium whitespace-nowrap border-b border-line",
   row: "border-b border-line last:border-0 transition-colors hover:bg-raised",
   td: "px-4 py-2.5",

@@ -1,34 +1,16 @@
-"use client";
-
-import { useId } from "react";
-
+/** MeghDrishti mark: a flat accent tile with a reading trace breaking into one spike. */
 export default function Logo({ size = 36 }: { size?: number }) {
-  const uid = useId().replace(/:/g, "");
-  const bg = `bg-${uid}`;
-
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" role="img" aria-label="MeghDrishti logo">
-      <defs>
-        <linearGradient id={bg} x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#9bb8ff" />
-          <stop offset="55%" stopColor="#5b8cff" />
-          <stop offset="100%" stopColor="#2a43b8" />
-        </linearGradient>
-      </defs>
-
-      <rect width="64" height="64" rx="16" fill={`url(#${bg})`} />
-
-      {/* signal spike — flat reading breaking into one anomaly */}
+    <svg width={size} height={size} viewBox="0 0 28 28" role="img" aria-label="MeghDrishti logo">
+      <rect width="28" height="28" rx="8" fill="var(--c-accent)" />
       <path
-        d="M12,40 L20,38 L27,42 L34,36 L40,18 L46,32 L52,28"
+        d="M6 17.5L9.5 16.5L12.5 18.5L15.5 15.5L18 8.5L20.5 14.5L23 13"
         fill="none"
-        stroke="#ffffff"
-        strokeWidth={4.2}
+        stroke="#fff"
+        strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={40} cy={18} r={8} fill="#ffffff" opacity={0.28} />
-      <circle cx={40} cy={18} r={3.6} fill="#2a43b8" stroke="#ffffff" strokeWidth={2} />
     </svg>
   );
 }

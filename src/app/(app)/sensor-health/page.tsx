@@ -1,54 +1,32 @@
 "use client";
 
-import { useId } from "react";
-import { PageHeader, Badge, Empty, Metric, MetricStrip, healthTone, type Tone } from "@/components/console/ui";
+import { Droplets, Gauge, Thermometer, CloudRain, Wind, Compass, type LucideIcon } from "lucide-react";
+import { PageHeader, Badge, Empty, Eyebrow, card, healthTone, type Tone } from "@/components/console/ui";
 import { fetchSensorHealth, type SensorHealth } from "@/lib/api";
 import { useLiveData } from "@/lib/useLiveData";
 
 const statusLabel = { ok: "Healthy", warn: "Degraded", crit: "Unreliable", info: "", neutral: "No data" } as const;
-const ringStops: Record<Tone, [string, string]> = {
-  ok: ["var(--c-accent-2)", "var(--c-accent-3)"],
-  info: ["var(--c-accent-2)", "var(--c-accent-3)"],
-  warn: ["#c27a12", "var(--c-warn)"],
-  crit: ["#b3243f", "var(--c-crit)"],
-  neutral: ["var(--c-sub)", "var(--c-line)"],
+const barColor: Record<Tone, string> = { ok: "bg-ok", warn: "bg-warn", crit: "bg-crit", info: "bg-accent", neutral: "bg-sub/40" };
+const tileTint: Record<Tone, string> = { ok: "", warn: "border-warn/40 bg-warn/5", crit: "border-crit/40 bg-crit/5", info: "", neutral: "" };
+const icons: Record<string, LucideIcon> = {
+  temperature_c: Thermometer,
+  humidity_pct: Droplets,
+  pressure_hpa: Gauge,
+  rainfall_mm: CloudRain,
+  wind_speed_ms: Wind,
+  wind_direction_deg: Compass,
 };
 
-/** Circular gauge; the arc sweeps in from empty on mount. */
-function Ring({ pct, tone }: { pct: number | null; tone: Tone }) {
-  const id = useId().replace(/:/g, "");
+function Ring({ pct }: { pct: number | null }) {
+  const stroke = { ok: "var(--c-accent)", warn: "var(--c-warn)", crit: "var(--c-crit)", info: "var(--c-accent)", neutral: "var(--c-sub)" }[healthTone(pct)];
   const r = 42;
   const c = 2 * Math.PI * r;
   const v = Math.max(0, Math.min(100, pct ?? 0));
-  const [a, b] = ringStops[tone];
   return (
-    <div className="relative h-28 w-28 shrink-0">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
-        <defs>
-          <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor={a} />
-            <stop offset="100%" stopColor={b} />
-          </linearGradient>
-        </defs>
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c-line)" strokeWidth="7" />
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke={`url(#${id})`}
-          strokeWidth="7"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - v / 100)}
-          style={{ transition: "stroke-dashoffset 1100ms cubic-bezier(0.22, 1, 0.36, 1)" }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-baseline justify-center pt-[38px]">
-        <span className="font-mono text-2xl font-medium tabular-nums text-ink">{pct ?? "-"}</span>
-        {pct !== null && <span className="text-xs text-sub">%</span>}
-      </div>
-    </div>
+    <svg viewBox="0 0 100 100" className="h-28 w-28 shrink-0 -rotate-90" aria-hidden>
+      <circle cx="50" cy="50" r={r} fill="none" stroke="var(--c-raised)" strokeWidth="9" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={stroke} strokeWidth="9" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - v / 100)} style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.22,1,0.36,1)" }} />
+    </svg>
   );
 }
 
@@ -56,56 +34,83 @@ export default function SensorHealthPage() {
   const sensors = useLiveData(fetchSensorHealth, [] as SensorHealth[]);
 
   const rated = sensors.filter((s) => s.reliability_pct !== null);
-  const avg = rated.length ? Math.round(rated.reduce((n, s) => n + (s.reliability_pct ?? 0), 0) / rated.length) : null;
   const weakest = [...rated].sort((x, y) => (x.reliability_pct ?? 0) - (y.reliability_pct ?? 0))[0];
   const readings = sensors.reduce((n, s) => n + s.readings, 0);
   const flagged = sensors.reduce((n, s) => n + s.rule_triggers, 0);
-  const attention = rated.filter((s) => healthTone(s.reliability_pct) !== "ok").length;
+  // Fleet reliability: per-sensor reliability weighted by readings, so a barely-used sensor does not skew it.
+  const ratedReadings = rated.reduce((n, s) => n + s.readings, 0);
+  const fleet = ratedReadings ? Math.round((10 * rated.reduce((n, s) => n + (s.reliability_pct ?? 0) * s.readings, 0)) / ratedReadings) / 10 : null;
 
   return (
     <>
-      <PageHeader title="Sensors" description="Reliability per measurement over the last 7 days." />
+      <PageHeader title="Sensors" description="Reliability per sensor type over the last 7 days, from QC rule trigger rates." />
 
       {sensors.length === 0 ? (
-        <div className="rounded-lg border border-line c-card">
+        <div className={card}>
           <Empty>Waiting for sensor data</Empty>
         </div>
       ) : (
-        <div className="space-y-4">
-          <MetricStrip>
-            <Metric label="Fleet reliability" value={avg ?? "-"} unit={avg === null ? undefined : "%"} tone={avg === null ? "neutral" : healthTone(avg)} foot={`${sensors.length} measurements`} />
-            <Metric label="Needs attention" value={attention} tone={attention ? "warn" : "ok"} foot="Below 90%" />
-            <Metric label="Weakest" value={weakest?.label ?? "-"} foot={weakest ? `${weakest.reliability_pct}% reliable` : undefined} />
-            <Metric label="Flagged readings" value={flagged.toLocaleString()} foot={`of ${readings.toLocaleString()}`} />
-          </MetricStrip>
+        <div className="space-y-5">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <section className={`${card} flex flex-wrap items-center gap-7 p-7`}>
+              <Ring pct={weakest?.reliability_pct ?? null} />
+              <div className="min-w-0 flex-1">
+                <Eyebrow>Weakest sensor type</Eyebrow>
+                <p className="mt-1 text-[40px] font-light leading-tight tracking-tight text-ink">
+                  {weakest ? `${weakest.label} · ${weakest.reliability_pct}%` : "–"}
+                </p>
+                {weakest && (
+                  <p className="mt-2 max-w-[60ch] text-sm text-sub">
+                    {weakest.rule_triggers.toLocaleString()} of {weakest.readings.toLocaleString()} {weakest.label.toLowerCase()} readings tripped a quality check
+                    this week. Start probe inspections here.
+                  </p>
+                )}
+              </div>
+            </section>
+            <section className={`${card} p-6`}>
+              <Eyebrow>Fleet reliability</Eyebrow>
+              <p className="mt-1 text-[44px] font-light tracking-tight text-ink">{fleet === null ? "–" : `${fleet}%`}</p>
+              <p className="text-xs text-sub">
+                {flagged.toLocaleString()} flagged of {readings.toLocaleString()} readings
+              </p>
+            </section>
+          </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {sensors.map((s) => {
               const tone = healthTone(s.reliability_pct);
+              const Icon = icons[s.measurement] ?? Gauge;
               const rate = s.readings ? ((s.rule_triggers / s.readings) * 100).toFixed(1) : "0.0";
               return (
-                <article key={s.measurement} className="c-card rounded-lg border border-line p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className="truncate text-[13px] font-semibold text-ink">{s.label}</h2>
+                <article key={s.measurement} className={`${card} ${tileTint[tone]} p-5`}>
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent-soft text-accent">
+                      <Icon className="h-[18px] w-[18px]" />
+                    </span>
+                    <h2 className="flex-1 truncate text-[15px] font-semibold text-ink">{s.label}</h2>
                     <Badge tone={tone}>{statusLabel[tone]}</Badge>
                   </div>
-                  <div className="mt-3 flex items-center gap-5">
-                    <Ring pct={s.reliability_pct} tone={tone} />
-                    <dl className="min-w-0 flex-1 space-y-2.5 text-xs">
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-sub">Readings</dt>
-                        <dd className="font-mono tabular-nums text-ink">{s.readings.toLocaleString()}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="text-sub">Flagged</dt>
-                        <dd className="font-mono tabular-nums text-ink">{s.rule_triggers.toLocaleString()}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2 border-t border-line pt-2.5">
-                        <dt className="text-sub">Flag rate</dt>
-                        <dd className="font-mono tabular-nums text-ink">{rate}%</dd>
-                      </div>
-                    </dl>
+                  <p className="mt-4 font-mono text-[34px] font-medium tracking-tight text-ink">
+                    {s.reliability_pct ?? "–"}
+                    <span className="text-base text-sub">%</span>
+                  </p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-raised">
+                    <div className={`meter-fill h-full rounded-full ${barColor[tone]}`} style={{ width: `${s.reliability_pct ?? 0}%` }} />
                   </div>
+                  <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <dt className="text-sub">Readings</dt>
+                      <dd className="mt-0.5 font-mono text-ink">{s.readings.toLocaleString()}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sub">Flagged</dt>
+                      <dd className="mt-0.5 font-mono text-ink">{s.rule_triggers.toLocaleString()}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-sub">Flag rate</dt>
+                      <dd className="mt-0.5 font-mono text-ink">{rate}%</dd>
+                    </div>
+                  </dl>
                 </article>
               );
             })}

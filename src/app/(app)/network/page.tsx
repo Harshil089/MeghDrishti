@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Bell, MapPin, Search, Thermometer } from "lucide-react";
 import StationMap from "@/components/StationMap";
-import { PageHeader, Badge, Empty, Select, field, type Tone } from "@/components/console/ui";
+import { PageHeader, Badge, Empty, Select, card, chip as chipCls, field, type Tone } from "@/components/console/ui";
 import { statusMeta, type Alert, type Station, type StationStatus } from "@/lib/mock-data";
 import { fetchAlerts, fetchStations, regionLabel } from "@/lib/api";
 import { useLiveData, useLiveDataWs } from "@/lib/useLiveData";
@@ -46,7 +46,9 @@ export default function NetworkPage() {
 
   const stationAlerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts").filter((a) => a.station === selected?.id).length;
 
-  const chip = "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs text-sub";
+  const chip = "inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-sub";
+  const rank = { critical: 0, warning: 1, new: 2, normal: 3, offline: 4 } as const;
+  const dock = [...inRegion].sort((a, b) => rank[a.status] - rank[b.status]).slice(0, 5);
 
   return (
     <>
@@ -71,7 +73,7 @@ export default function NetworkPage() {
         }
       />
 
-      <div className="relative h-[calc(100dvh-210px)] min-h-[560px] overflow-hidden rounded-xl border border-line bg-surface">
+      <div className={`${card} relative h-[calc(100dvh-330px)] min-h-[520px] overflow-hidden`}>
         {stations.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-sub">Loading station network</div>
         ) : (
@@ -79,7 +81,7 @@ export default function NetworkPage() {
         )}
 
         {/* Station list floats over the map */}
-        <aside className="absolute left-3 top-3 z-[900] flex max-h-[calc(100%-1.5rem)] w-[min(18rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-xl border border-line bg-surface/90 shadow-xl shadow-black/20 backdrop-blur-md">
+        <aside className="absolute left-3 top-3 z-[900] flex max-h-[calc(100%-1.5rem)] w-[min(19rem,calc(100%-1.5rem))] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-lg shadow-ink/10">
           <div className="space-y-2.5 border-b border-line p-3">
             <Select
               aria-label="State"
@@ -116,9 +118,7 @@ export default function NetworkPage() {
                     key={k}
                     onClick={() => setFilter(k)}
                     aria-pressed={on}
-                    className={`h-6 rounded-full border px-2.5 text-xs font-medium transition-colors ${
-                      on ? "border-accent bg-accent/15 text-ink" : "border-line text-sub hover:bg-raised hover:text-ink"
-                    }`}
+                    className={`${chipCls(on)} h-7 px-2.5`}
                   >
                     {k === "all" ? "All" : statusMeta[k].label}
                     <span className="ml-1.5 font-mono tabular-nums text-sub">{n}</span>
@@ -139,7 +139,7 @@ export default function NetworkPage() {
                       onClick={() => setSelectedId(s.id)}
                       aria-pressed={active}
                       className={`relative grid w-full grid-cols-[1fr_auto] items-center gap-x-3 border-b border-line px-3.5 py-2.5 text-left transition-colors last:border-0 ${
-                        active ? "bg-accent/10" : "hover:bg-raised"
+                        active ? "bg-accent-soft" : "hover:bg-raised"
                       }`}
                     >
                       <span
@@ -164,7 +164,7 @@ export default function NetworkPage() {
 
         {/* Selected station */}
         {selected && (
-          <div key={selected.id} className="page-fade absolute bottom-3 right-3 z-[900] w-[min(20rem,calc(100%-1.5rem))] rounded-xl border border-line bg-surface/90 p-4 shadow-xl shadow-black/20 backdrop-blur-md">
+          <div key={selected.id} className="absolute bottom-3 right-3 z-[900] w-[min(20rem,calc(100%-1.5rem))] rounded-2xl border border-line bg-surface p-4 shadow-lg shadow-ink/10">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-ink">{selected.name}</p>
@@ -193,6 +193,27 @@ export default function NetworkPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Dock: worst stations in view, one click to focus them on the map */}
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+        {dock.map((s) => {
+          const on = s.id === selected?.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => setSelectedId(s.id)}
+              className={`${card} flex min-w-0 items-center gap-3 px-4 py-3 text-left transition-colors hover:border-accent/40 ${on ? "border-accent ring-1 ring-accent" : ""}`}
+            >
+              <span className={`h-9 w-1 shrink-0 rounded-full ${s.status === "critical" ? "bg-crit" : s.status === "warning" ? "bg-warn" : s.status === "offline" ? "bg-sub/40" : "bg-ok"}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium text-ink">{s.name}</span>
+                <span className="block truncate text-[11px] text-sub">{statusMeta[s.status].label} · {regionLabel(s.region)}</span>
+              </span>
+              <span className="text-xl font-light tracking-tight text-ink">{s.temp == null || s.status === "offline" ? "–" : `${s.temp.toFixed(1)}°`}</span>
+            </button>
+          );
+        })}
       </div>
     </>
   );

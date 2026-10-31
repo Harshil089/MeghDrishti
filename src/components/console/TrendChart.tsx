@@ -1,29 +1,18 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AreaChart, Area, ResponsiveContainer, Customized, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Cell } from "recharts";
 import type { SeriesPoint } from "@/lib/mock-data";
 
-// SVG presentation attributes can't resolve CSS variables, so read the
-// console tokens once and again whenever the theme flips.
-function useTokens() {
-  const [t, setT] = useState({ accent: "#5b8cff", accent2: "#3556d8", accent3: "#9bb8ff", line: "#232a42", sub: "#8f98b3", surface: "#0f1320", ink: "#eaecf5" });
-  useEffect(() => {
-    const read = () => {
-      const s = getComputedStyle(document.documentElement);
-      const v = (n: string) => s.getPropertyValue(n).trim();
-      setT({ accent: v("--c-accent"), accent2: v("--c-accent-2"), accent3: v("--c-accent-3"), line: v("--c-line"), sub: v("--c-sub"), surface: v("--c-surface"), ink: v("--c-ink") });
-    };
-    read();
-    window.addEventListener("themechange", read);
-    return () => window.removeEventListener("themechange", read);
-  }, []);
-  return t;
-}
+// SVG presentation attributes can't resolve CSS variables; these mirror the
+// light tokens in globals.css (the console has one theme).
+const TOKENS = { accent: "#2f5fd0", line: "#dce3ee", sub: "#5a6782", surface: "#ffffff", ink: "#0f1a2e", ok: "#1f8a5b", warn: "#b7791f", crit: "#c2344d" };
+export const chartColors = TOKENS;
+const useTokens = () => TOKENS;
 
 function tooltipStyle(t: ReturnType<typeof useTokens>) {
   return {
-    contentStyle: { background: t.surface, border: `1px solid ${t.line}`, borderRadius: 8, fontSize: 12, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.5)", color: t.ink },
+    contentStyle: { background: t.surface, border: `1px solid ${t.line}`, borderRadius: 8, fontSize: 12, boxShadow: "0 4px 16px rgba(15,26,46,0.08)", color: t.ink },
     labelStyle: { color: t.sub },
     itemStyle: { color: t.ink },
     cursor: { stroke: t.line },
@@ -93,6 +82,8 @@ export function TrendChart({
   data,
   note,
   live,
+  color,
+  bare,
 }: {
   label: string;
   unit: string;
@@ -101,10 +92,35 @@ export function TrendChart({
   note?: string;
   /** Pulsing latest point, sweeping scan line and eased redraws. */
   live?: boolean;
+  /** Line colour; defaults to the accent. */
+  color?: string;
+  /** Chart only, no label/readout (for lane layouts). */
+  bare?: boolean;
 }) {
   const t = useTokens();
-  const gid = useId().replace(/:/g, "");
+  const c = color ?? t.accent;
   const wrap = useRef<HTMLDivElement>(null);
+  const chart = (
+      <div ref={wrap} className={`relative ${bare ? "h-full" : "mt-3 h-28"}`}>
+        {data.length === 0 ? (
+          <div className="flex h-full items-center justify-center rounded border border-dashed border-line text-xs text-sub">
+            No readings yet
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke={t.line} strokeDasharray="3 4" />
+              <XAxis dataKey="t" hide />
+              <YAxis width={36} domain={["auto", "auto"]} tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} tickCount={3} />
+              <Tooltip {...tooltipStyle(t)} formatter={(v) => [`${v} ${unit}`, label]} />
+              <Area type="monotone" dataKey="value" stroke={c} strokeWidth={2} fill={c} fillOpacity={0.08} dot={false} activeDot={{ r: 3.5, fill: c, stroke: t.surface, strokeWidth: 2 }} isAnimationActive={false} />
+              {live && <Customized component={<TravelingDot wrap={wrap} fill={c} ring={c} />} />}
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+  );
+  if (bare) return chart;
   return (
     <div className="bg-surface p-4 min-w-0">
       <div className="flex items-baseline justify-between gap-3">
@@ -116,51 +132,7 @@ export function TrendChart({
         <span className="font-mono text-2xl font-medium tabular-nums text-ink">{current ?? "-"}</span>
         <span className="text-xs text-sub">{unit}</span>
       </p>
-      <div ref={wrap} className="relative mt-3 h-28">
-        {data.length === 0 ? (
-          <div className="flex h-full items-center justify-center rounded border border-dashed border-line text-xs text-sub">
-            No readings yet
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`${gid}-fill`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={t.accent} stopOpacity={0.45} />
-                  <stop offset="60%" stopColor={t.accent2} stopOpacity={0.16} />
-                  <stop offset="100%" stopColor={t.accent2} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id={`${gid}-stroke`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={t.accent} />
-                  <stop offset="100%" stopColor={t.accent3} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} stroke={t.line} strokeDasharray="3 4" />
-              <XAxis dataKey="t" hide />
-              <YAxis
-                width={36}
-                domain={["auto", "auto"]}
-                tick={{ fontSize: 10, fill: t.sub }}
-                axisLine={false}
-                tickLine={false}
-                tickCount={3}
-              />
-              <Tooltip {...tooltipStyle(t)} formatter={(v) => [`${v} ${unit}`, label]} />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke={`url(#${gid}-stroke)`}
-                strokeWidth={2}
-                fill={`url(#${gid}-fill)`}
-                dot={false}
-                activeDot={{ r: 3.5, fill: t.accent, stroke: t.surface, strokeWidth: 2 }}
-                isAnimationActive={false}
-              />
-              {live && <Customized component={<TravelingDot wrap={wrap} fill={t.accent3} ring={t.accent} />} />}
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      {chart}
     </div>
   );
 }
@@ -180,20 +152,12 @@ export function CountBars({
   onSelect?: (x: string) => void;
 }) {
   const t = useTokens();
-  const gid = useId().replace(/:/g, "");
   if (data.length === 0) {
     return <div className="flex h-full items-center justify-center text-xs text-sub">No data in this window</div>;
   }
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id={`${gid}-bar`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={t.accent3} />
-            <stop offset="50%" stopColor={t.accent} />
-            <stop offset="100%" stopColor={t.accent2} />
-          </linearGradient>
-        </defs>
         <CartesianGrid vertical={false} stroke={t.line} strokeDasharray="3 4" />
         <XAxis
           dataKey={xKey}
@@ -203,7 +167,7 @@ export function CountBars({
           tickFormatter={(v) => new Date(v as string).toLocaleTimeString([], { hour: "2-digit" })}
           minTickGap={24}
         />
-        <YAxis width={28} allowDecimals={false} tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} />
+        <YAxis width={44} allowDecimals={false} tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} />
         <Tooltip
           {...tooltipStyle(t)}
           cursor={{ fill: t.line, fillOpacity: 0.5 }}
@@ -212,7 +176,7 @@ export function CountBars({
         <Bar
           dataKey={yKey}
           name="Anomalies"
-          fill={`url(#${gid}-bar)`}
+          fill={t.accent}
           radius={[4, 4, 0, 0]}
           isAnimationActive
           animationDuration={800}
@@ -233,57 +197,49 @@ export function CountBars({
   );
 }
 
-/** Wide gradient line chart of one series over time, with axes. */
+/** Wide line chart of one series over time, with axes. */
 export function TimelineChart({ data, label }: { data: { t: string; value: number }[]; label: string }) {
   const t = useTokens();
-  const gid = useId().replace(/:/g, "");
   if (data.length < 2) {
     return <div className="flex h-full items-center justify-center text-xs text-sub">Not enough history</div>;
   }
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id={`${gid}-f`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={t.accent} stopOpacity={0.4} />
-            <stop offset="65%" stopColor={t.accent2} stopOpacity={0.12} />
-            <stop offset="100%" stopColor={t.accent2} stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id={`${gid}-s`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={t.accent} />
-            <stop offset="100%" stopColor={t.accent3} />
-          </linearGradient>
-        </defs>
         <CartesianGrid vertical={false} stroke={t.line} strokeDasharray="3 4" />
         <XAxis dataKey="t" tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} minTickGap={48} />
         <YAxis width={28} allowDecimals={false} tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} />
         <Tooltip {...tooltipStyle(t)} formatter={(v) => [v, label]} />
-        <Area type="monotone" dataKey="value" stroke={`url(#${gid}-s)`} strokeWidth={2} fill={`url(#${gid}-f)`} dot={false} activeDot={{ r: 3.5, fill: t.accent3, stroke: t.surface, strokeWidth: 2 }} isAnimationActive />
+        <Area type="monotone" dataKey="value" stroke={t.accent} strokeWidth={2} fill={t.accent} fillOpacity={0.08} dot={false} activeDot={{ r: 3.5, fill: t.accent, stroke: t.surface, strokeWidth: 2 }} isAnimationActive />
       </AreaChart>
     </ResponsiveContainer>
   );
 }
 
-/** Horizontal gradient bars, one per row, 0-100 scale. */
+/** Horizontal bars, one per row, 0-100 scale. */
 export function RankBars({ data }: { data: { name: string; value: number }[] }) {
   const t = useTokens();
-  const gid = useId().replace(/:/g, "");
   return (
     <ResponsiveContainer width="100%" height={Math.max(120, data.length * 36 + 8)}>
       <BarChart data={data} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }} barCategoryGap={10}>
-        <defs>
-          <linearGradient id={`${gid}-h`} x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor={t.accent2} />
-            <stop offset="55%" stopColor={t.accent} />
-            <stop offset="100%" stopColor={t.accent3} />
-          </linearGradient>
-        </defs>
         <CartesianGrid horizontal={false} stroke={t.line} strokeDasharray="3 4" />
         <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: t.sub }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
         <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: t.ink }} axisLine={false} tickLine={false} />
         <Tooltip {...tooltipStyle(t)} cursor={{ fill: t.line, fillOpacity: 0.4 }} formatter={(v) => [`${v}%`, "Need"]} />
-        <Bar dataKey="value" fill={`url(#${gid}-h)`} radius={[0, 4, 4, 0]} isAnimationActive animationDuration={900} animationEasing="ease-out" />
+        <Bar dataKey="value" fill={t.accent} radius={[0, 4, 4, 0]} isAnimationActive animationDuration={900} animationEasing="ease-out" />
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+/** Tiny axis-free trend line for cards. */
+export function Sparkline({ values, color = TOKENS.accent, height = 40 }: { values: number[]; color?: string; height?: number }) {
+  if (values.length < 2) return <div style={{ height }} className="flex items-center text-[11px] text-sub">No trend yet</div>;
+  const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * 100},${(1 - (v - min) / span) * 90 + 5}`).join(" ");
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ height }} className="w-full" aria-hidden>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

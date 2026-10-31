@@ -29,3 +29,6 @@ graphify-out/
 .DS_Store
 .vscode/
 .idea/
+
+# October desktop — local canvas state
+.october/

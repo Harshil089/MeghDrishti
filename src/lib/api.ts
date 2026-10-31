@@ -118,7 +118,8 @@ export async function fetchAlerts(): Promise<Alert[]> {
         detected_at: string;
       }[]
     >("/alerts?limit=50"),
-    getJSON<{ id: string; station_code: string }[]>("/stations?limit=100"),
+    // The overview covers every station; /stations pages at 100 and missed most codes.
+    fetchOverview(),
   ]);
   const codeById = new Map(stations.map((s) => [s.id, s.station_code]));
 
@@ -159,13 +160,19 @@ export interface DashboardStat {
   tone: "emerald" | "rose" | "cyan" | "amber";
 }
 
+export interface DashboardSummary {
+  stations: { total: number; active: number };
+  alerts: { open: number; critical: number };
+  anomalies_24h: number;
+  average_station_health: number | null;
+}
+
+export function fetchDashboardSummary(): Promise<DashboardSummary> {
+  return getJSON<DashboardSummary>("/dashboard/summary");
+}
+
 export async function fetchDashboardStats(): Promise<DashboardStat[]> {
-  const summary = await getJSON<{
-    stations: { total: number; active: number };
-    alerts: { open: number; critical: number };
-    anomalies_24h: number;
-    average_station_health: number | null;
-  }>("/dashboard/summary");
+  const summary = await fetchDashboardSummary();
 
   const healthy = summary.average_station_health ?? 100;
 
@@ -539,6 +546,9 @@ export interface ModelVersion {
   metrics: Record<string, unknown>;
   status: string;
   created_at: string;
+  /** Only sensor-trained candidates under the current policy may be activated. */
+  eligible: boolean;
+  ineligible_reason: string | null;
 }
 
 export async function fetchModels(): Promise<ModelVersion[]> {

@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>MeghDrishti Wireframes</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  :root {
+    --blue: #1565c0;
+    --blue-soft: #e8f1fb;
+    --ink: #1b2430;
+    --muted: #4f5b69;
+    --line: #d5dde7;
+    --panel: #f6f8fb;
+    --red: #e53935;
+    --amber: #f9a825;
+    --green: #2e7d32;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; color: var(--ink);
+    font-family: "Helvetica Neue", Arial, sans-serif; font-size: 11px; }
+  .page { width: 297mm; height: 210mm; padding: 14mm 16mm; page-break-after: always;
+    position: relative; overflow: hidden; background: #fff; }
+  .page:last-child { page-break-after: auto; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -0.3px; }
+  h2 { font-size: 15px; margin: 0 0 8px; color: var(--blue); }
+  .kicker { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--blue); font-weight: 700; }
+  .sub { color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+  .footer { position: absolute; left: 16mm; right: 16mm; bottom: 8mm; display: flex;
+    justify-content: space-between; color: var(--muted); font-size: 9px; border-top: 1px solid var(--line); padding-top: 4px; }
+
+  /* Cover */
+  .cover { background: linear-gradient(135deg, #0d47a1 0%, #1565c0 55%, #42a5f5 100%); color: #fff; }
+  .cover .kicker { color: #bbdefb; }
+  .cover h1 { font-size: 46px; margin-top: 18px; }
+  .cover .tag { font-size: 16px; color: #e3f2fd; margin-top: 6px; }
+  .cover .meta { position: absolute; bottom: 16mm; left: 16mm; font-size: 11px; color: #e3f2fd; line-height: 1.7; }
+  .cover .chips { margin-top: 26px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35); border-radius: 999px; padding: 4px 12px; font-size: 10px; }
+
+  /* Flow */
+  .flow { display: flex; align-items: stretch; gap: 0; margin-top: 18px; }
+  .node { flex: 1; background: var(--blue-soft); border: 1.5px solid var(--blue); border-radius: 10px; padding: 12px 8px; text-align: center; }
+  .node b { display: block; font-size: 11px; color: var(--blue); margin-bottom: 4px; }
+  .node span { font-size: 9.5px; color: var(--ink); }
+  .arrow { width: 26px; display: flex; align-items: center; justify-content: center; color: var(--blue); font-size: 16px; }
+  .decision { background: #fff8e1; border-color: var(--amber); }
+  .decision b { color: #8d6e00; }
+
+  /* App shell */
+  .shell { display: grid; grid-template-columns: 150px 1fr; gap: 12px; height: 100%; padding-bottom: 14mm; }
+  .side { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 10px; }
+  .side .logo { font-weight: 800; color: var(--blue); font-size: 13px; margin-bottom: 14px; }
+  .side .item { padding: 6px 8px; border-radius: 6px; color: var(--ink); margin-bottom: 3px; font-size: 10.5px; }
+  .side .item.active { background: var(--blue); color: #fff; }
+  .main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .top { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+  .top .title { font-weight: 700; font-size: 13px; }
+  .search { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; width: 180px; color: var(--muted); font-size: 10px; }
+  .row { display: grid; gap: 10px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #fff; min-width: 0; }
+  .card .label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .card .big { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .card .hint { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+  .chart { background: repeating-linear-gradient(to top, transparent 0 22px, #eef2f7 22px 23px); border-radius: 6px; position: relative; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 100%; padding: 8px; }
+  .bars div { flex: 1; background: linear-gradient(to top, #1565c0, #64b5f6); border-radius: 4px 4px 0 0; }
+  .table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .table th { text-align: left; color: var(--muted); font-weight: 600; font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid var(--line); padding: 5px 6px; }
+  .table td { border-bottom: 1px solid #edf1f6; padding: 6px; }
+  .pill { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 9px; font-weight: 600; }
+  .p-red { background: #ffebee; color: var(--red); }
+  .p-amber { background: #fff8e1; color: #8d6e00; }
+  .p-green { background: #e8f5e9; color: var(--green); }
+  .p-blue { background: var(--blue-soft); color: var(--blue); }
+  .map { background: linear-gradient(135deg, #e3f2fd, #f1f8e9); border-radius: 8px; position: relative; overflow: hidden; }
+  .dot { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--blue); }
+  .dot.r { background: var(--red); box-shadow: 0 0 0 1px var(--red); }
+  .dot.a { background: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+  .note { position: absolute; background: #fffde7; border: 1px solid #f0e68c; border-radius: 6px; padding: 5px 8px; font-size: 9px; color: #5d4a00; max-width: 160px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+  .drawer { border-left: 3px solid var(--blue); background: #fff; border-radius: 8px; border: 1px solid var(--line); padding: 10px; }
+  .btn { display: inline-block; background: var(--blue); color: #fff; border-radius: 6px; padding: 5px 10px; font-size: 10px; font-weight: 600; }
+  .btn.ghost { background: #fff; color: var(--blue); border: 1px solid var(--blue); }
+  .line-ph { height: 7px; background: #e8edf3; border-radius: 4px; margin: 6px 0; }
+  .gauge { width: 90px; height: 45px; border-radius: 90px 90px 0 0; border: 9px solid #e3e9f1; border-bottom: none; position: relative; margin: 6px auto 0; }
+  .gauge::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 9px; height: 40px; margin-left: -4.5px; background: var(--blue); transform-origin: bottom center; transform: rotate(35deg); border-radius: 4px; }
+
+  /* Login */
+  .login { display: grid; grid-template-columns: 1fr 1fr; height: 100%; gap: 14px; }
+  .login .hero { background: linear-gradient(160deg, #0d47a1, #42a5f5); color: #fff; border-radius: 14px; padding: 22px; display: flex; flex-direction: column; justify-content: flex-end; }
+  .login .hero h2 { color: #fff; font-size: 22px; }
+  .login .form { border: 1px solid var(--line); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+  .field { border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; color: var(--muted); font-size: 10.5px; }
+  .field.label { border: none; padding: 0; font-weight: 600; color: var(--ink); font-size: 10.5px; margin-top: 6px; }
+  .or { text-align: center; color: var(--muted); font-size: 9.5px; }
+
+  /* Spec page */
+  .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .spec { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .spec ul { margin: 6px 0 0 16px; padding: 0; line-height: 1.6; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 10px; }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; background: var(--c); }
+</style>
+</head>
+<body>
+
+<!-- 1. COVER -->
+<section class="page cover">
+  <div class="kicker">Smart India Hackathon 2026 &middot; Wireframe Pack</div>
+  <h1>MeghDrishti</h1>
+  <div class="tag">Tell a real storm from a broken sensor.</div>
+  <div class="chips">
+    <span class="chip">Dashboard</span><span class="chip">Live monitor</span><span class="chip">Alerts</span>
+    <span class="chip">Network map</span><span class="chip">Sensor health</span><span class="chip">Maintenance</span>
+    <span class="chip">Analysis</span><span class="chip">History</span><span class="chip">Admin</span><span class="chip">Settings</span>
+  </div>
+  <div class="meta">
+    Version 1.0 &middot; Low-fidelity layout with high-fidelity styling<br />
+    Screens: login, dashboard, live monitor, alerts, network, sensor health, maintenance, analysis, history, admin, settings
+  </div>
+</section>
+
+<!-- 2. USER FLOW -->
+<section class="page">
+  <div class="kicker">Overview</div>
+  <h1>User flow</h1>
+  <div class="sub">From sign-in to operator verdict. Each screen is its own route in the app.</div>
+
+  <div class="flow">
+    <div class="node"><b>Sign in</b><span>Google or email</span></div>
+    <div class="arrow">&#8594;</div>
+    <div class="node"><b>Dashboard</b><span>Fleet health and open alerts</span></div>
+    <div class="arrow">&#8594;</div>
+    <div class="node"><b>Live monitor</b><span>Latest values and charts</span></div>
+    <div class="arrow">&#8594;</div>
+    <div class="node decision"><b>Flagged?</b><span>Classification from rules, ML and context</span></div>
+    <div class="arrow">&#8594;</div>
+    <div class="node"><b>Alert review</b><span>Reasons, readings, verdict</span></div>
+    <div class="arrow">&#8594;</div>
+    <div class="node"><b>Label store</b><span>Verdict feeds calibration</span></div>
+  </div>
+
+  <div class="spec-grid" style="margin-top:26px">
+    <div class="spec">
+      <h2>Classification states</h2>
+      <ul>
+        <li><b>NORMAL</b>: nothing unusual</li>
+        <li><b>WATCH</b>: mildly unusual</li>
+        <li><b>SUSPICIOUS</b>: unusual and unexplained</li>
+        <li><b>PROBABLE_SENSOR_FAULT</b>: rules or model point at the instrument</li>
+        <li><b>LIKELY_GENUINE_EXTREME</b>: context agrees it is real weather</li>
+        <li><b>INSUFFICIENT_CONTEXT</b>: no evidence either way</li>
+      </ul>
+    </div>
+    <div class="spec">
+      <h2>Design rules</h2>
+      <ul>
+        <li>One screen, one route, one node on the canvas</li>
+        <li>Raw observations shown as received, never edited</li>
+        <li>Every alert shows its reason codes</li>
+        <li>Operator verdict is one click from the alert drawer</li>
+        <li>Red = fault, amber = watch, green = genuine or normal</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>2</span></div>
+</section>
+
+<!-- 3. LOGIN -->
+<section class="page">
+  <div class="kicker">Screen 01 &middot; /login</div>
+  <h1>Sign in</h1>
+  <div class="sub">Google or email sign-in. Entry point for all operator screens.</div>
+  <div class="login" style="height:132mm">
+    <div class="hero">
+      <div class="kicker" style="color:#e3f2fd">Weather station quality</div>
+      <h2>Tell a real storm from a broken sensor.</h2>
+      <div class="line-ph" style="background:rgba(255,255,255,0.35);width:70%"></div>
+      <div class="line-ph" style="background:rgba(255,255,255,0.35);width:50%"></div>
+    </div>
+    <div class="form">
+      <div class="field" style="text-align:center;font-weight:600;color:var(--ink)">Continue with Google</div>
+      <div class="or">or</div>
+      <div class="field label">Email</div>
+      <div class="field">operator@example.org</div>
+      <div class="field label">Password</div>
+      <div class="field">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+      <div class="btn" style="text-align:center;margin-top:8px">Sign in</div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>3</span></div>
+</section>
+
+<!-- 4. DASHBOARD -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item active">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top"><div class="title">Overview</div><div class="search">Search stations</div></div>
+      <div class="row" style="grid-template-columns:repeat(4,1fr)">
+        <div class="card"><div class="label">Stations online</div><div class="big">128</div><div class="hint">of 134</div></div>
+        <div class="card"><div class="label">Open alerts</div><div class="big">17</div><div class="hint">3 high severity</div></div>
+        <div class="card"><div class="label">Avg temp</div><div class="big">31.4 &deg;C</div><div class="hint">last 15 min</div></div>
+        <div class="card"><div class="label">Fleet health</div><div class="big">92%</div><div class="hint">reliability</div></div>
+      </div>
+      <div class="row" style="grid-template-columns:2fr 1fr;flex:1">
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="label">Alerts over time</div>
+          <div class="chart" style="flex:1;margin-top:8px"><div class="bars">
+            <div style="height:30%"></div><div style="height:45%"></div><div style="height:38%"></div><div style="height:62%"></div><div style="height:55%"></div><div style="height:72%"></div><div style="height:48%"></div><div style="height:66%"></div><div style="height:40%"></div><div style="height:58%"></div>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="label">Recent alerts</div>
+          <div class="line-ph" style="margin-top:10px"></div>
+          <div class="line-ph"></div>
+          <div class="line-ph"></div>
+          <div class="line-ph"></div>
+          <div style="margin-top:8px"><span class="pill p-red">High</span> <span class="pill p-amber">Watch</span></div>
+          <div class="btn ghost" style="margin-top:10px">View all alerts</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>4</span></div>
+</section>
+
+<!-- 5. LIVE MONITOR -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item active">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top">
+        <div class="title">Live monitor</div>
+        <div><span class="btn ghost">Pull latest</span> &nbsp;<span class="btn">Refresh</span></div>
+      </div>
+      <div class="row" style="grid-template-columns:repeat(4,1fr)">
+        <div class="card"><div class="label">Temperature</div><div class="big">31.4 &deg;C</div><div class="hint">&uarr; 0.3 since last reading</div></div>
+        <div class="card"><div class="label">Humidity</div><div class="big">64 %</div><div class="hint">&darr; 2 since last reading</div></div>
+        <div class="card"><div class="label">Rainfall</div><div class="big">0.0 mm</div><div class="hint">no change</div></div>
+        <div class="card"><div class="label">Wind speed</div><div class="big">12 km/h</div><div class="hint">&uarr; 1 since last reading</div></div>
+      </div>
+      <div class="row" style="grid-template-columns:1fr 1fr;flex:1">
+        <div class="card" style="display:flex;flex-direction:column"><div class="label">Temperature, live</div><div class="chart" style="flex:1;margin-top:8px"><div class="bars"><div style="height:40%"></div><div style="height:44%"></div><div style="height:42%"></div><div style="height:50%"></div><div style="height:56%"></div><div style="height:52%"></div><div style="height:60%"></div><div style="height:58%"></div><div style="height:63%"></div><div style="height:61%"></div></div></div></div>
+        <div class="card" style="display:flex;flex-direction:column"><div class="label">Station readings</div>
+          <table class="table" style="margin-top:6px"><tr><th>Station</th><th>Value</th><th>Status</th></tr>
+          <tr><td>Station A</td><td>31.4 &deg;C</td><td><span class="pill p-green">Normal</span></td></tr>
+          <tr><td>Station B</td><td>48.0 &deg;C</td><td><span class="pill p-amber">Watch</span></td></tr>
+          <tr><td>Station C</td><td>-</td><td><span class="pill p-red">Gap</span></td></tr></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note" style="right:22mm;bottom:22mm">Pull latest runs a catch-up pull for missed readings.</div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>5</span></div>
+</section>
+
+<!-- 6. ALERTS -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item active">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top">
+        <div class="title">Alerts</div>
+        <div><span class="search" style="display:inline-block;width:150px">Search</span> <span class="pill p-blue">Severity: all</span> <span class="pill p-blue">Confidence: all</span></div>
+      </div>
+      <div class="row" style="grid-template-columns:1.6fr 1fr;flex:1;min-height:0">
+        <div class="card" style="overflow:hidden">
+          <table class="table">
+            <tr><th>Time</th><th>Station</th><th>Classification</th><th>Severity</th><th>Confidence</th></tr>
+            <tr><td>14:20</td><td>Station B</td><td>PROBABLE_SENSOR_FAULT</td><td><span class="pill p-red">High</span></td><td>0.91</td></tr>
+            <tr><td>14:05</td><td>Station D</td><td>LIKELY_GENUINE_EXTREME</td><td><span class="pill p-amber">Medium</span></td><td>0.78</td></tr>
+            <tr><td>13:40</td><td>Station F</td><td>SUSPICIOUS</td><td><span class="pill p-amber">Medium</span></td><td>0.62</td></tr>
+            <tr><td>13:12</td><td>Station H</td><td>INSUFFICIENT_CONTEXT</td><td><span class="pill p-blue">Low</span></td><td>0.44</td></tr>
+            <tr><td>12:58</td><td>Station K</td><td>WATCH</td><td><span class="pill p-blue">Low</span></td><td>0.31</td></tr>
+          </table>
+        </div>
+        <div class="drawer">
+          <div class="kicker">Alert review</div>
+          <h2 style="margin-top:4px">Station B &middot; 48.0 &deg;C</h2>
+          <div class="label" style="font-size:9px;color:var(--muted)">Reason codes</div>
+          <div style="margin:6px 0"><span class="pill p-red">STUCK_VALUE</span> <span class="pill p-amber">SPIKE</span></div>
+          <div class="line-ph"></div><div class="line-ph"></div><div class="line-ph" style="width:70%"></div>
+          <div class="label" style="font-size:9px;color:var(--muted);margin-top:10px">Operator verdict</div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <span class="btn">Confirm fault</span><span class="btn ghost">Genuine</span><span class="btn ghost">Unsure</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>6</span></div>
+</section>
+
+<!-- 7. NETWORK + SENSOR HEALTH -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item active">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top"><div class="title">Network</div><div class="search">Search station status</div></div>
+      <div class="row" style="grid-template-columns:1.7fr 1fr;flex:1;min-height:0">
+        <div class="card" style="position:relative;padding:0;overflow:hidden">
+          <div class="map" style="position:absolute;inset:0;border-radius:10px">
+            <div class="dot" style="left:18%;top:30%"></div>
+            <div class="dot a" style="left:44%;top:55%"></div>
+            <div class="dot r" style="left:62%;top:28%"></div>
+            <div class="dot" style="left:74%;top:66%"></div>
+            <div class="dot" style="left:30%;top:72%"></div>
+            <div class="dot a" style="left:55%;top:44%"></div>
+          </div>
+          <div class="note" style="left:16px;bottom:14px">Map: each marker is a station. Colour shows status.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card">
+            <div class="label">Station detail</div>
+            <h2 style="margin-top:4px">Station B</h2>
+            <div class="line-ph"></div><div class="line-ph" style="width:80%"></div>
+            <div class="btn ghost" style="margin-top:6px">Open live monitor</div>
+          </div>
+          <div class="card" style="flex:1">
+            <div class="label">Sensor health</div>
+            <div class="gauge"></div>
+            <div class="hint" style="text-align:center">Temperature reliability 92%</div>
+            <div class="line-ph" style="margin-top:12px"></div>
+            <div class="line-ph" style="width:60%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>7</span></div>
+</section>
+
+<!-- 8. MAINTENANCE + ANALYSIS -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item active">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top"><div class="title">Maintenance</div><div class="btn">Export action queue</div></div>
+      <div class="row" style="grid-template-columns:1fr 1fr;flex:1;min-height:0">
+        <div class="card" style="overflow:hidden">
+          <div class="label">Stations ranked by maintenance need</div>
+          <table class="table" style="margin-top:6px">
+            <tr><th>Rank</th><th>Station</th><th>Trigger rate</th><th>Action</th></tr>
+            <tr><td>1</td><td>Station B</td><td>18%</td><td><span class="pill p-red">Inspect</span></td></tr>
+            <tr><td>2</td><td>Station F</td><td>11%</td><td><span class="pill p-amber">Calibrate</span></td></tr>
+            <tr><td>3</td><td>Station K</td><td>7%</td><td><span class="pill p-blue">Monitor</span></td></tr>
+          </table>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column">
+          <div class="label">Classification mix</div>
+          <div class="chart" style="flex:1;margin-top:8px"><div class="bars"><div style="height:80%"></div><div style="height:35%"></div><div style="height:22%"></div><div style="height:50%"></div><div style="height:15%"></div></div></div>
+          <div class="hint" style="margin-top:6px">NORMAL &middot; WATCH &middot; SUSPICIOUS &middot; FAULT &middot; GENUINE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>8</span></div>
+</section>
+
+<!-- 9. HISTORY + ADMIN -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item active">History</div>
+      <div class="item">Admin</div>
+      <div class="item">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top"><div class="title">History</div><div class="search">Filter by station and date</div></div>
+      <div class="row" style="grid-template-columns:1.4fr 1fr;flex:1;min-height:0">
+        <div class="card" style="overflow:hidden">
+          <div class="label">Stored readings, as received</div>
+          <table class="table" style="margin-top:6px">
+            <tr><th>Time</th><th>Station</th><th>Raw value</th><th>Flag</th></tr>
+            <tr><td>14:20</td><td>Station B</td><td>48.0</td><td><span class="pill p-red">Fault</span></td></tr>
+            <tr><td>14:15</td><td>Station B</td><td>47.6</td><td><span class="pill p-amber">Watch</span></td></tr>
+            <tr><td>14:10</td><td>Station A</td><td>31.2</td><td><span class="pill p-green">Normal</span></td></tr>
+          </table>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><div class="label">Operator review log</div><div class="line-ph"></div><div class="line-ph"></div><div class="line-ph" style="width:60%"></div></div>
+          <div class="card" style="flex:1"><div class="label">Admin</div>
+            <div class="hint" style="margin:6px 0 10px">Replay failed ingestion jobs. Activate candidate models.</div>
+            <div class="btn">Replay failed jobs</div> <div class="btn ghost" style="margin-top:6px">Activate model</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>9</span></div>
+</section>
+
+<!-- 10. SETTINGS -->
+<section class="page">
+  <div class="shell" style="height:182mm">
+    <aside class="side">
+      <div class="logo">MeghDrishti</div>
+      <div class="item">Overview</div>
+      <div class="item">Live monitor</div>
+      <div class="item">Alerts</div>
+      <div class="item">Network</div>
+      <div class="item">Sensor health</div>
+      <div class="item">Maintenance</div>
+      <div class="item">Analysis</div>
+      <div class="item">History</div>
+      <div class="item">Admin</div>
+      <div class="item active">Settings</div>
+    </aside>
+    <div class="main">
+      <div class="top"><div class="title">Settings</div><div class="btn">Save</div></div>
+      <div class="row" style="grid-template-columns:1fr 1fr;flex:1;min-height:0">
+        <div class="card">
+          <div class="label">Active calibration profile</div>
+          <div class="line-ph" style="margin-top:10px"></div><div class="line-ph" style="width:70%"></div>
+          <div class="label" style="margin-top:14px">Decision thresholds</div>
+          <div class="line-ph" style="margin-top:10px"></div><div class="line-ph"></div>
+        </div>
+        <div class="card">
+          <div class="label">Data sources</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+            <div class="field">Open-Meteo &middot; <span class="pill p-green">Connected</span></div>
+            <div class="field">IMD &middot; <span class="pill p-amber">Credentials needed</span></div>
+            <div class="field">ERA5 &middot; <span class="pill p-green">Connected</span></div>
+            <div class="field">NASA GPM &middot; <span class="pill p-green">Connected</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>MeghDrishti &middot; Wireframes</span><span>10</span></div>
+</section>
+
+</body>
+</html>

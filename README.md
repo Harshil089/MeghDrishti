@@ -24,7 +24,7 @@ from sensor faults, drift, spikes and telemetry gaps. It never decides on statis
 
 <br />
 
-<img src="docs/screenshots/landing.png" alt="MeghDrishti landing page with the interactive 3D weather pipeline" width="100%" />
+<img src="docs/screenshots/landing.png" alt="MeghDrishti landing page with its live ASCII station map" width="100%" />
 
 </div>
 
@@ -47,16 +47,16 @@ MeghDrishti treats every unusual reading as a question and answers it with evide
 ## A look inside
 
 ### Overview
-Fleet health, live averages, open alerts and sensor reliability on one screen.
+Tonight across the network: current conditions, data trust score, station cards with sparklines, and the latest decisions.
 
 <img src="docs/screenshots/overview.png" alt="Overview dashboard" width="100%" />
 
 <table>
   <tr>
     <td width="50%">
-      <b>Alert review</b><br />
-      Why it was flagged, the readings behind it, and one-click operator verdicts.<br /><br />
-      <img src="docs/screenshots/alert-drawer.png" alt="Alert review drawer" />
+      <b>Triage</b><br />
+      Alert queue on the left; why it was flagged, the readings behind it and one-click verdicts on the right.<br /><br />
+      <img src="docs/screenshots/alerts.png" alt="Alert triage" />
     </td>
     <td width="50%">
       <b>Network</b><br />
@@ -78,9 +78,9 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
   </tr>
   <tr>
     <td width="50%">
-      <b>Alerts</b><br />
-      Alert volume over time, a severity summary, and search with severity and confidence filters.<br /><br />
-      <img src="docs/screenshots/alerts.png" alt="Alerts table" />
+      <b>History</b><br />
+      Every stored reading as received, plus the operator review log.<br /><br />
+      <img src="docs/screenshots/history.png" alt="History" />
     </td>
     <td width="50%">
       <b>Sensors</b><br />
@@ -96,12 +96,7 @@ Fleet health, live averages, open alerts and sensor reliability on one screen.
     </td>
   </tr>
   <tr>
-    <td width="50%">
-      <b>History</b><br />
-      Every stored reading as received, plus the operator review log.<br /><br />
-      <img src="docs/screenshots/history.png" alt="History" />
-    </td>
-    <td width="50%">
+    <td colspan="2">
       <b>Admin</b><br />
       Replay failed ingestion jobs and activate candidate models.<br /><br />
       <img src="docs/screenshots/admin.png" alt="Admin" />
@@ -239,7 +234,7 @@ Ports 15432, 16379, 18000 and 13000 must be free.
 
 | Layer | Tools |
 |---|---|
-| Frontend | Next.js 16 (App Router, Turbopack), React 19, Tailwind 4, Recharts, Leaflet, Three.js, Framer Motion |
+| Frontend | Next.js 16 (App Router, Turbopack), React 19, Tailwind 4, Recharts, Leaflet, WebGL2 (ASCII backdrop), Framer Motion |
 | API | FastAPI, Pydantic, SQLAlchemy (async), Alembic, JWT + Argon2, RBAC with 5 roles |
 | Pipeline | Celery + Beat, Redis Pub/Sub, WebSockets |
 | ML | scikit-learn Isolation Forest with a candidate registry and explicit activation |
@@ -254,15 +249,16 @@ Ports 15432, 16379, 18000 and 13000 must be free.
 MeghDrishti/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx              # public landing page with the 3D pipeline hero
+│   │   ├── page.tsx              # public landing page
 │   │   ├── login/                # Google Sign-In + email/password
 │   │   └── (app)/                # signed-in console (overview, live, alerts, ...)
 │   ├── components/
 │   │   ├── console/              # console design system: header, panels, charts
-│   │   └── ui/agentic-factory-3d.tsx
+│   │   └── ascii/                # WebGL ASCII backdrop + generated art
 │   └── lib/                      # API client, auth, live-data hooks
 ├── meghdrishti-backend/          # FastAPI + Celery backend  → see its README
 ├── scripts/local.sh              # native start / stop / status
+├── scripts/ascii-art/            # regenerates the ASCII art from live station data
 ├── docs/screenshots/             # images used in this README
 └── queue/                        # items blocked on external processes
 ```
@@ -309,13 +305,16 @@ MeghDrishti/
 </details>
 
 <details>
-<summary><b>3D pipeline hero (landing page)</b></summary>
+<summary><b>ASCII backdrop (landing page and console)</b></summary>
 
-- Component: `src/components/ui/agentic-factory-3d.tsx`, used by `src/components/WeatherPipelineHero.tsx`.
-- Five selectable modules: ingestion, QC, ML, context and decision fusion.
-- Rendering is capped at 2× pixel density and 30 fps to bound GPU work.
-- Reduced motion pauses the simulation. Pause, reset and module controls are keyboard accessible.
-- Labels describe the architecture, not live telemetry.
+- Renderer: `src/components/ascii/AsciiBackdrop.tsx`, one WebGL2 full-screen pass with a bold monospace glyph atlas.
+- Art in `src/components/ascii/art.ts` is generated, not drawn by hand: `scripts/ascii-art/make_sources.py` plots
+  MeghDrishti data (station positions, a temperature field, a 48 h Delhi Safdarjung trace) and
+  [ASCII-generator](https://github.com/vietnh1009/ASCII-generator) converts the images to text. The radar is illustrative.
+- Each piece scrolls at its own depth for parallax and has a subtle effect: stations twinkle, isotherms drift,
+  the trace draws itself, the radar sweeps.
+- Device pixel ratio is capped at 2, rendering pauses when the tab is hidden, and reduced motion renders one still frame.
+- The console uses the same backdrop, quieter, behind the side rail and pages.
 
 </details>
 

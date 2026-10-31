@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusMeta, type Alert, type Station } from "@/lib/mock-data";
@@ -22,28 +22,17 @@ const statusText: Record<Station["status"], string> = {
 };
 
 const statusColor: Record<Station["status"], string> = {
-  normal: "#5b8cff",
-  new: "#7dd3fc",
-  warning: "#ffc861",
-  critical: "#ff6b8b",
-  offline: "#8f98b3",
+  normal: "#2f5fd0",
+  new: "#8fa9e8",
+  warning: "#b7791f",
+  critical: "#c2344d",
+  offline: "#9aa6bd",
 };
 
 const OSM_TILE = {
   url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
-
-function useIsLight() {
-  const [light, setLight] = useState(false);
-  useEffect(() => {
-    const check = () => setLight(document.documentElement.classList.contains("light"));
-    check();
-    window.addEventListener("themechange", check);
-    return () => window.removeEventListener("themechange", check);
-  }, []);
-  return light;
-}
 
 function FlyToSelected({ station }: { station: Station }) {
   const map = useMap();
@@ -62,7 +51,6 @@ export default function LeafletMapScene({
   selectedId?: string;
   onSelect?: (s: Station) => void;
 }) {
-  const light = useIsLight();
   const alerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
   const selected = stations.find((s) => s.id === selectedId);
 
@@ -76,8 +64,8 @@ export default function LeafletMapScene({
       zoomControl={false}
       // ~3,000 stations: canvas circles instead of one DOM pin each.
       preferCanvas
-      className={`h-full w-full ${light ? "" : "map-dark-tiles"}`}
-      style={{ background: light ? "#eef1f8" : "#0b1220" }}
+      className="h-full w-full"
+      style={{ background: "#eef2f8" }}
     >
       <TileLayer url={OSM_TILE.url} attribution={OSM_TILE.attribution} />
       <ZoomControl position="topright" />
@@ -91,7 +79,7 @@ export default function LeafletMapScene({
             center={[s.lat, s.lon]}
             radius={active ? 8 : s.status === "offline" ? 3 : 5}
             pathOptions={{
-              color: active ? (light ? "#0b1220" : "#ffffff") : statusColor[s.status],
+              color: active ? "#0f1a2e" : statusColor[s.status],
               weight: active ? 2 : 1,
               fillColor: statusColor[s.status],
               fillOpacity: s.status === "offline" ? 0.35 : 0.85,
