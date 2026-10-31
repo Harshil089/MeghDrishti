@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { MapContainer, TileLayer, CircleMarker, Tooltip, Popup, ZoomControl, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusMeta, type Alert, type Station } from "@/lib/mock-data";
@@ -34,11 +34,75 @@ const OSM_TILE = {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 };
 
-function FlyToSelected({ station }: { station: Station }) {
+function MapViewportController({
+  stations,
+  selectedStation,
+}: {
+  stations: Station[];
+  selectedStation?: Station;
+}) {
   const map = useMap();
+  const prevSelectedIdRef = useRef<string | undefined>(undefined);
+  const prevStationsSigRef = useRef<string>("");
+
   useEffect(() => {
-    map.flyTo([station.lat, station.lon], Math.max(map.getZoom(), 6), { duration: 0.8 });
-  }, [station, map]);
+    // 1. If a specific station was selected/changed by the user
+    if (selectedStation && selectedStation.id !== prevSelectedIdRef.current) {
+      prevSelectedIdRef.current = selectedStation.id;
+      map.flyTo([selectedStation.lat, selectedStation.lon], Math.max(map.getZoom(), 8), {
+        duration: 0.8,
+      });
+      return;
+    }
+    prevSelectedIdRef.current = selectedStation?.id;
+
+    // 2. If the station collection changed (e.g., state selected, switched, or cleared)
+    const sig = `${stations.length}:${stations[0]?.id ?? ""}:${stations[stations.length - 1]?.id ?? ""}`;
+    if (sig !== prevStationsSigRef.current) {
+      prevStationsSigRef.current = sig;
+
+      if (stations.length === 0) {
+        // Return to pan-India overview
+        map.setView([22.5, 80], 5, { animate: true });
+        return;
+      }
+
+      if (selectedStation) return;
+
+      const valid = stations.filter(
+        (s) => typeof s.lat === "number" && typeof s.lon === "number" && !isNaN(s.lat) && !isNaN(s.lon)
+      );
+      if (valid.length === 0) return;
+
+      if (valid.length === 1) {
+        map.flyTo([valid[0].lat, valid[0].lon], 9, { duration: 0.8 });
+      } else {
+        const lats = valid.map((s) => s.lat);
+        const lons = valid.map((s) => s.lon);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLon = Math.min(...lons);
+        const maxLon = Math.max(...lons);
+
+        if (minLat === maxLat && minLon === maxLon) {
+          map.flyTo([minLat, minLon], 9, { duration: 0.8 });
+        } else {
+          map.fitBounds(
+            [
+              [minLat, minLon],
+              [maxLat, maxLon],
+            ],
+            {
+              padding: [48, 48],
+              maxZoom: 10,
+              duration: 0.8,
+            }
+          );
+        }
+      }
+    }
+  }, [stations, selectedStation, map]);
+
   return null;
 }
 
@@ -131,7 +195,7 @@ export default function LeafletMapScene({
         );
       })}
 
-      {selected && <FlyToSelected station={selected} />}
+      <MapViewportController stations={stations} selectedStation={selected} />
     </MapContainer>
   );
 }
