@@ -2,7 +2,7 @@
 
 import { Children, isValidElement, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 
 type Opt = { value: string; label: ReactNode; text: string };
 
@@ -38,75 +38,43 @@ function extractOptions(children: ReactNode): Opt[] {
   return result;
 }
 
-function HighlightMatch({ text, query }: { text: string; query: string }) {
-  if (!query.trim()) return <>{text}</>;
-  const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`(${escaped})`, "gi");
-  const parts = text.split(regex);
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === query.trim().toLowerCase() ? (
-          <mark key={i} className="rounded bg-accent/20 px-0.5 font-semibold text-accent">
-            {part}
-          </mark>
-        ) : (
-          part
-        )
-      )}
-    </>
-  );
-}
-
 /**
- * Universal Typeahead Select component.
- * Provides instant live filtering, keyboard-driven navigation,
- * matching text highlights, and accessible ARIA combobox patterns.
+ * Universal Native-Style Typeahead Select component (No Search Box).
+ *
+ * Implements W3C Combobox Typeahead:
+ * - As the operator types keys (e.g., "m", "mah", "del"), it instantly jumps to and
+ *   highlights the matching option and scrolls it into view.
+ * - Repeated single-character keypresses (e.g., "m", "m", "m") cycle through all options
+ *   starting with that character.
+ * - Clean, distraction-free popover with no input box.
+ * - Works whether the dropdown is closed or open.
  */
 export function Select({
   value,
   onChange,
   children,
   className = "",
-  placeholder,
-  searchable,
   "aria-label": ariaLabel,
 }: {
   value: string;
   onChange: (e: { target: { value: string } }) => void;
   children: ReactNode;
   className?: string;
-  placeholder?: string;
-  searchable?: boolean;
   "aria-label"?: string;
 }) {
   const options = useMemo(() => extractOptions(children), [children]);
   const selected = options.find((o) => o.value === value) ?? options[0];
 
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
   const [active, setActive] = useState(0);
   const [alignRight, setAlignRight] = useState(false);
 
   const root = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const typeaheadBufferRef = useRef<string>("");
   const typeaheadTimerRef = useRef<NodeJS.Timeout | null>(null);
   const id = useId();
-
-  // Show search filter input if options >= 4 or explicitly requested
-  const showSearch = searchable ?? options.length >= 4;
-
-  // Filter options based on typeahead search query
-  const filtered = useMemo(() => {
-    if (!search.trim()) return options;
-    const q = search.trim().toLowerCase();
-    return options.filter(
-      (o) => o.text.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)
-    );
-  }, [options, search]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -114,45 +82,40 @@ export function Select({
     const onDown = (e: MouseEvent) => {
       if (!root.current?.contains(e.target as Node)) {
         setOpen(false);
-        setSearch("");
+        typeaheadBufferRef.current = "";
       }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  // Ensure active option is scrolled into view
+  // Ensure active option is scrolled into view whenever active changes
   useEffect(() => {
     if (open) {
       listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
     }
   }, [open, active]);
 
-  // Focus search input when popover opens
+  // Clean up timer on unmount
   useEffect(() => {
-    if (open && showSearch) {
-      // Delay slightly for render stability
-      const t = setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 30);
-      return () => clearTimeout(t);
-    }
-  }, [open, showSearch]);
+    return () => {
+      if (typeaheadTimerRef.current) clearTimeout(typeaheadTimerRef.current);
+    };
+  }, []);
 
-  function openDropdown(initialQuery = "") {
+  function openDropdown() {
     const r = root.current?.getBoundingClientRect();
     setAlignRight(!!r && r.left + 260 > window.innerWidth);
 
-    setSearch(initialQuery);
     const initialIndex = options.findIndex((o) => o.value === value);
     setActive(Math.max(0, initialIndex));
+    typeaheadBufferRef.current = "";
     setOpen(true);
   }
 
   function closeDropdown() {
     setOpen(false);
-    setSearch("");
+    typeaheadBufferRef.current = "";
     buttonRef.current?.focus();
   }
 
@@ -161,7 +124,69 @@ export function Select({
     closeDropdown();
   }
 
-  // Keyboard navigation
+  // Typeahead search logic across options
+  function handleTypeaheadKey(char: string) {
+    if (typeaheadTimerRef.current) {
+      clearTimeout(typeaheadTimerRef.current);
+    }
+
+    const prevBuffer = typeaheadBufferRef.current;
+    const isSingleRepeat =
+      char.toLowerCase() === prevBuffer.toLowerCase() && prevBuffer.length === 1;
+
+    let newBuffer = isSingleRepeat ? char.toLowerCase() : prevBuffer + char.toLowerCase();
+    typeaheadBufferRef.current = newBuffer;
+
+    // Reset buffer after 800ms of inactivity
+    typeaheadTimerRef.current = setTimeout(() => {
+      typeaheadBufferRef.current = "";
+    }, 800);
+
+    let matchIndex = -1;
+
+    if (isSingleRepeat) {
+      // Cycle through options starting with that character from current active + 1
+      const c = char.toLowerCase();
+      const startFrom = (active + 1) % options.length;
+      for (let offset = 0; offset < options.length; offset++) {
+        const idx = (startFrom + offset) % options.length;
+        if (options[idx].text.trim().toLowerCase().startsWith(c)) {
+          matchIndex = idx;
+          break;
+        }
+      }
+    } else {
+      // 1. Prefix match
+      matchIndex = options.findIndex((o) =>
+        o.text.trim().toLowerCase().startsWith(newBuffer)
+      );
+
+      // 2. Word prefix match (e.g., "Pradesh" in "Andhra Pradesh")
+      if (matchIndex === -1) {
+        matchIndex = options.findIndex((o) => {
+          const words = o.text.trim().toLowerCase().split(/\s+/);
+          return words.some((w) => w.startsWith(newBuffer));
+        });
+      }
+
+      // 3. Substring match
+      if (matchIndex === -1) {
+        matchIndex = options.findIndex((o) =>
+          o.text.trim().toLowerCase().includes(newBuffer)
+        );
+      }
+    }
+
+    if (matchIndex !== -1) {
+      setActive(matchIndex);
+      if (!open) {
+        // If closed, typing directly updates selection (native OS behavior)
+        onChange({ target: { value: options[matchIndex].value } });
+      }
+    }
+  }
+
+  // Keyboard navigation & typeahead key handler
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -169,37 +194,114 @@ export function Select({
       return;
     }
 
+    if (e.key === "Tab") {
+      if (open) {
+        setOpen(false);
+        typeaheadBufferRef.current = "";
+      }
+      return;
+    }
+
+    // When dropdown is closed
     if (!open) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        openDropdown();
+        return;
+      }
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         openDropdown();
         return;
       }
 
-      // If user presses any alphanumeric key while focused on closed button, open & search
+      // Typeahead while closed
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && /[a-zA-Z0-9]/.test(e.key)) {
         e.preventDefault();
-        openDropdown(e.key);
+        handleTypeaheadKey(e.key);
         return;
       }
       return;
     }
 
-    // Dropdown is open
+    // When dropdown is open
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActive((a) => Math.min(filtered.length - 1, a + 1));
-    } else if (e.key === "ArrowUp") {
+      setActive((a) => Math.min(options.length - 1, a + 1));
+      typeaheadBufferRef.current = "";
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(0, a - 1));
-    } else if (e.key === "Enter") {
+      typeaheadBufferRef.current = "";
+      return;
+    }
+
+    if (e.key === "PageDown") {
       e.preventDefault();
-      if (filtered[active]) {
-        pick(filtered[active].value);
+      setActive((a) => Math.min(options.length - 1, a + 8));
+      return;
+    }
+
+    if (e.key === "PageUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(0, a - 8));
+      return;
+    }
+
+    if (e.key === "Home") {
+      e.preventDefault();
+      setActive(0);
+      return;
+    }
+
+    if (e.key === "End") {
+      e.preventDefault();
+      setActive(options.length - 1);
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (options[active]) {
+        pick(options[active].value);
       }
-    } else if (e.key === "Tab") {
-      setOpen(false);
-      setSearch("");
+      return;
+    }
+
+    if (e.key === " ") {
+      // If typing buffer has characters, space is part of the query (e.g., "New Delhi")
+      if (typeaheadBufferRef.current.length > 0) {
+        e.preventDefault();
+        handleTypeaheadKey(" ");
+        return;
+      }
+      // Otherwise, Space selects active and closes
+      e.preventDefault();
+      if (options[active]) {
+        pick(options[active].value);
+      }
+      return;
+    }
+
+    if (e.key === "Backspace") {
+      if (typeaheadBufferRef.current.length > 0) {
+        e.preventDefault();
+        typeaheadBufferRef.current = typeaheadBufferRef.current.slice(0, -1);
+        if (typeaheadBufferRef.current.length > 0) {
+          handleTypeaheadKey("");
+        }
+        return;
+      }
+    }
+
+    // Alphanumeric typeahead while dropdown is open
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && /[a-zA-Z0-9]/.test(e.key)) {
+      e.preventDefault();
+      handleTypeaheadKey(e.key);
+      return;
     }
   }
 
@@ -227,88 +329,38 @@ export function Select({
       {open && (
         <div
           id={id}
-          className={`absolute top-full z-[1000] mt-1 max-h-80 min-w-full w-max max-w-[24rem] overflow-hidden rounded-md border border-line bg-surface shadow-xl shadow-ink/15 animate-in fade-in-50 zoom-in-95 duration-100 ${
+          className={`absolute top-full z-[1000] mt-1 max-h-72 min-w-full w-max max-w-[24rem] overflow-hidden rounded-md border border-line bg-surface shadow-xl shadow-ink/15 animate-in fade-in-50 zoom-in-95 duration-100 ${
             alignRight ? "right-0" : "left-0"
           }`}
         >
-          {showSearch && (
-            <div className="border-b border-line bg-raised/50 p-1.5">
-              <div className="relative flex items-center">
-                <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-sub" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setActive(0);
-                  }}
-                  placeholder={placeholder ?? `Type to filter ${ariaLabel ? ariaLabel.toLowerCase() : "options"}…`}
-                  aria-label={`Typeahead search for ${ariaLabel || "options"}`}
-                  className="h-7 w-full rounded border border-line bg-surface pl-8 pr-7 font-sans text-xs text-ink placeholder:text-sub focus:border-accent focus:outline-none"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => {
-                      setSearch("");
-                      inputRef.current?.focus();
-                      setActive(0);
-                    }}
-                    className="absolute right-2 flex h-4 w-4 items-center justify-center rounded text-sub hover:text-ink cursor-pointer"
-                    aria-label="Clear filter"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-              {search.trim() && (
-                <div className="mt-1 px-1 flex items-center justify-between text-[10px] font-mono text-sub">
-                  <span>{filtered.length} match{filtered.length === 1 ? "" : "es"}</span>
-                  <span className="text-[9px] uppercase tracking-wider">↑↓ navigate · ↵ select</span>
-                </div>
-              )}
-            </div>
-          )}
-
           <ul
             ref={listRef}
             role="listbox"
+            tabIndex={-1}
             aria-label={ariaLabel}
-            className="max-h-60 overflow-y-auto divide-y divide-line/40 py-1 overscroll-contain"
+            className="max-h-72 overflow-y-auto divide-y divide-line/40 py-1 overscroll-contain focus:outline-none"
           >
-            {filtered.length === 0 ? (
-              <li className="px-3 py-4 text-center text-xs text-sub">
-                No matching options for &ldquo;<span className="text-ink font-semibold">{search}</span>&rdquo;
-              </li>
-            ) : (
-              filtered.map((o, i) => {
-                const isSel = o.value === value;
-                const isAct = i === active;
-                return (
-                  <li
-                    key={o.value}
-                    role="option"
-                    aria-selected={isSel}
-                    onMouseEnter={() => setActive(i)}
-                    onClick={() => pick(o.value)}
-                    className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-[13px] transition-colors ${
-                      isAct ? "bg-accent-soft/80 text-ink font-medium" : "text-ink hover:bg-raised/70"
-                    } ${isSel ? "bg-accent-soft/30 font-semibold" : ""}`}
-                  >
-                    <span className="truncate">
-                      {typeof o.label === "string" ? (
-                        <HighlightMatch text={o.label} query={search} />
-                      ) : (
-                        o.label
-                      )}
-                    </span>
-                    {isSel && <Check className="h-3.5 w-3.5 shrink-0 text-accent" />}
-                  </li>
-                );
-              })
-            )}
+            {options.map((o, i) => {
+              const isSel = o.value === value;
+              const isAct = i === active;
+              return (
+                <li
+                  key={o.value}
+                  role="option"
+                  aria-selected={isSel}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => pick(o.value)}
+                  className={`flex cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-[13px] transition-colors ${
+                    isAct
+                      ? "bg-accent-soft/80 text-ink font-semibold"
+                      : "text-ink hover:bg-raised/70"
+                  } ${isSel && !isAct ? "bg-accent-soft/30 font-medium" : ""}`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isSel && <Check className="h-3.5 w-3.5 shrink-0 text-accent" />}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
