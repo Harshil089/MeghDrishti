@@ -24,7 +24,7 @@ from sensor faults, drift, spikes and telemetry gaps. It never decides on statis
 
 <br />
 
-<img src="docs/screenshots/landing.png" alt="MeghDrishti landing page with its live ASCII station map" width="100%" />
+<img src="docs/screenshots/landing.png" alt="MeghDrishti National AWS Quality Control Landing Page" width="100%" />
 
 </div>
 
@@ -36,82 +36,83 @@ A weather station reports 48 °C. Is it a heatwave or a sensor sitting in the su
 Classic QC either throws away real extremes or lets faulty sensors through.
 MeghDrishti treats every unusual reading as a question and answers it with evidence:
 
-- **11 rule checks** for stuck values, spikes, drift, dropouts, physical impossibilities and gaps
-- **Isolation Forest** scoring on engineered features, never raw values
-- **Independent context** from nearby stations, forecasts, ERA5 reanalysis and NASA GPM satellite rain
-- **Evidence fusion** with a guard that refuses to call an extreme "fake" when the context backs it up
-- **Operator review loop**: every decision is explainable, and every review becomes a label
+- **3,111+ National Stations**: Full-scale pan-India coverage across all IMD AWS and ARG locations
+- **11 WMO Rule Checks**: Physical range, step changes, spikes, persistence, drift and telemetry dropouts
+- **Isolation Forest ML**: Scoring on engineered anomaly features, never raw values
+- **Multi-Source Spatial Consensus**: Independent verification against neighboring AWS, NASA GPM satellite rain, ECMWF ERA5, and NWP forecasts
+- **Extreme Event Protection Guard**: Refuses to call a real extreme weather event "fake" when spatial context confirms it
+- **Cryptographic Operator Ledger**: Explainable evidence dossiers with binding operator dispositions logged for audit compliance
 
 ---
 
 ## A look inside
 
-### Overview
-Tonight across the network: current conditions, data trust score, station cards with sparklines, and the latest decisions.
+### Command Overview
+Real-time national AWS network command overview: 4-parameter fleet KPIs, priority station telemetry spotlight with 5-parameter readings, fleet integrity breakdown, and 24-hour spatial-temporal anomaly matrix.
 
-<img src="docs/screenshots/overview.png" alt="Overview dashboard" width="100%" />
+<img src="docs/screenshots/overview.png" alt="National AWS Network Command Overview" width="100%" />
 
 <table>
   <tr>
     <td width="50%">
-      <b>Triage</b><br />
-      Alert queue on the left; why it was flagged, the readings behind it and one-click verdicts on the right.<br /><br />
-      <img src="docs/screenshots/alerts.png" alt="Alert triage" />
+      <b>Anomaly Triage Workbench</b><br />
+      Flagged observation queue on the left; multi-source spatial consensus, WMO runbooks, and binding operator dispositions on the right.<br /><br />
+      <img src="docs/screenshots/alerts.png" alt="Anomaly Triage Workbench" />
     </td>
     <td width="50%">
-      <b>Network</b><br />
-      Every station on the map with a searchable status list and a detail card.<br /><br />
-      <img src="docs/screenshots/network.png" alt="Network map" />
+      <b>National AWS Spatial Grid</b><br />
+      Interactive GIS network map with state/district directory, live station status, and quick-jump priority dock.<br /><br />
+      <img src="docs/screenshots/network.png" alt="National AWS Spatial Grid Map" />
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <b>Analysis</b><br />
-      Classification mix, rule activity, and click-through anomalies per hour.<br /><br />
-      <img src="docs/screenshots/analysis.png" alt="Analysis page" />
+      <b>QC & Rule Analytics</b><br />
+      Ensemble classification breakdown, deterministic rule trigger leaderboard, and interactive hourly anomaly histogram.<br /><br />
+      <img src="docs/screenshots/analysis.png" alt="QC and Rule Analytics" />
     </td>
     <td width="50%">
-      <b>Live</b><br />
-      Latest values with change since the last reading, live charts, and a one-click <i>Pull latest</i> catch-up.<br /><br />
-      <img src="docs/screenshots/live.png" alt="Live monitor" />
+      <b>Live Telemetry Stream</b><br />
+      Real-time 10-second polling of station waveforms, multi-parameter traces, packet-to-packet deltas, and WMO dials.<br /><br />
+      <img src="docs/screenshots/live.png" alt="Live Telemetry Stream" />
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <b>History</b><br />
-      Every stored reading as received, plus the operator review log.<br /><br />
-      <img src="docs/screenshots/history.png" alt="History" />
+      <b>Telemetry & Audit Ledger</b><br />
+      Immutable archive of raw ingested observations (stored without interpolation) alongside the operator classification ledger.<br /><br />
+      <img src="docs/screenshots/history.png" alt="Telemetry and Operator Audit Ledger" />
     </td>
     <td width="50%">
-      <b>Sensors</b><br />
-      Reliability gauge per measurement from QC trigger rates.<br /><br />
-      <img src="docs/screenshots/sensors.png" alt="Sensor health" />
-    </td>
-  </tr>
-  <tr>
-    <td colspan="2">
-      <b>Maintenance</b><br />
-      Stations ranked by maintenance need, with an action queue.<br /><br />
-      <img src="docs/screenshots/maintenance.png" alt="Maintenance" />
+      <b>Sensor Fleet Reliability</b><br />
+      7-day probe reliability index across all 6 WMO meteorological instruments derived from quality check trigger rates.<br /><br />
+      <img src="docs/screenshots/sensors.png" alt="Sensor Fleet Reliability" />
     </td>
   </tr>
   <tr>
     <td colspan="2">
-      <b>Admin</b><br />
-      Replay failed ingestion jobs and activate candidate models.<br /><br />
-      <img src="docs/screenshots/admin.png" alt="Admin" />
+      <b>Field Maintenance & Calibration Dispatch</b><br />
+      Predictive 4-tier dispatch matrix prioritizing stations for regional instrument division dispatch and automated work orders.<br /><br />
+      <img src="docs/screenshots/maintenance.png" alt="Field Maintenance and Calibration Dispatch" />
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <b>Pipeline Operations & ML Admin</b><br />
+      4-stage telemetry ingestion DAG health, source uptime matrix, job replay queue, and Isolation Forest model registry.<br /><br />
+      <img src="docs/screenshots/admin.png" alt="Pipeline Operations and Model Registry Admin" />
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <b>Settings</b><br />
-      Active calibration profile, decision thresholds and data sources.<br /><br />
-      <img src="docs/screenshots/settings.png" alt="Settings" />
+      <b>System Calibration & Feeds</b><br />
+      Active WMO decision thresholds, ensemble evidence fusion weights, and external context feed connectors.<br /><br />
+      <img src="docs/screenshots/settings.png" alt="System Calibration and Feeds" />
     </td>
     <td width="50%">
-      <b>Sign in</b><br />
-      Google or email sign-in.<br /><br />
-      <img src="docs/screenshots/login.png" alt="Sign in" />
+      <b>Operator Clearance Gateway</b><br />
+      Institutional clearance portal with role-based meteorological personnel authentication.<br /><br />
+      <img src="docs/screenshots/login.png" alt="Operator Clearance Gateway" />
     </td>
   </tr>
 </table>
