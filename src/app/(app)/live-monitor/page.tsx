@@ -1,46 +1,75 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Minus, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, RefreshCw, Radio } from "lucide-react";
 import { StationPicker } from "@/components/console/StationPicker";
-import { PageHeader, Empty, button, card, table } from "@/components/console/ui";
+import { PageHeader, Section, Metric, MetricStrip, Empty, button, card, table } from "@/components/console/ui";
 import { TrendChart } from "@/components/console/TrendChart";
-import { fetchStationObservations, fetchStationOptions, pullLatest, seriesFromReadings, type LiveReading } from "@/lib/api";
+import { fetchStationObservations, fetchStationOptions, pullLatest, seriesFromReadings } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
 import { useLiveData } from "@/lib/useLiveData";
 
 const cell = (v: number | null | undefined) => v ?? "-";
 
-/** Change since the previous reading, as a small arrow + number. */
-function Delta({ now, prev }: { now: number | null | undefined; prev: number | null | undefined }) {
-  if (now == null || prev == null) return <span>No previous reading</span>;
+function Delta({ now, prev, unit = "" }: { now: number | null | undefined; prev: number | null | undefined; unit?: string }) {
+  if (now == null || prev == null) return <span>Awaiting prior packet</span>;
   const d = +(now - prev).toFixed(2);
   const Icon = d > 0 ? ArrowUp : d < 0 ? ArrowDown : Minus;
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-1 font-mono text-[11px]">
       <Icon className="h-3 w-3 text-accent" />
-      <span className="font-mono tabular-nums">{d > 0 ? "+" : ""}{d}</span> since last
+      <span className="tabular-nums font-semibold text-ink">
+        {d > 0 ? "+" : ""}
+        {d}
+        {unit}
+      </span>{" "}
+      <span className="text-sub">vs prev packet</span>
     </span>
   );
 }
 
-/** Half-ring gauge for a value on a fixed scale. */
-function Dial({ label, value, unit, max, note }: { label: string; value: number | null | undefined; unit: string; max: number; note: string }) {
+function Dial({
+  code,
+  label,
+  value,
+  unit,
+  max,
+  note,
+}: {
+  code: string;
+  label: string;
+  value: number | null | undefined;
+  unit: string;
+  max: number;
+  note: string;
+}) {
   const v = value == null ? 0 : Math.max(0, Math.min(1, value / max));
   const a = Math.PI * (1 - v);
-  const x = 80 + 64 * Math.cos(a), y = 80 - 64 * Math.sin(a);
+  const x = 80 + 62 * Math.cos(a),
+    y = 80 - 62 * Math.sin(a);
   return (
-    <div className={`${card} flex flex-col items-center px-5 pb-4 pt-5`}>
-      <p className="self-start text-xs text-sub">{label}</p>
-      <svg viewBox="0 0 160 88" className="mt-1 w-full max-w-[200px]" aria-hidden>
-        <path d="M16 80A64 64 0 0 1 144 80" fill="none" stroke="var(--c-raised)" strokeWidth="12" strokeLinecap="round" />
-        {value != null && v > 0 && <path d={`M16 80A64 64 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`} fill="none" stroke="var(--c-accent)" strokeWidth="12" strokeLinecap="round" />}
+    <div className={`${card} border-t-2 border-t-accent flex flex-col items-center px-4 pb-3.5 pt-3.5`}>
+      <div className="flex w-full items-center justify-between">
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">{label}</span>
+        <span className="font-mono text-[10px] text-accent">{code}</span>
+      </div>
+      <svg viewBox="0 0 160 88" className="mt-1 w-full max-w-[180px]" aria-hidden>
+        <path d="M18 80A62 62 0 0 1 142 80" fill="none" stroke="var(--c-raised)" strokeWidth="11" strokeLinecap="butt" />
+        {value != null && v > 0 && (
+          <path
+            d={`M18 80A62 62 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}`}
+            fill="none"
+            stroke="var(--c-accent)"
+            strokeWidth="11"
+            strokeLinecap="butt"
+          />
+        )}
       </svg>
       <p className="-mt-6 flex items-baseline gap-1">
-        <span className="text-3xl font-light tracking-tight text-ink">{value ?? "–"}</span>
-        <span className="text-xs text-sub">{unit}</span>
+        <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-ink">{value ?? "–"}</span>
+        <span className="font-mono text-xs text-sub">{unit}</span>
       </p>
-      <p className="mt-1 text-[11px] text-sub">{note}</p>
+      <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-sub">{note}</p>
     </div>
   );
 }
@@ -48,7 +77,7 @@ function Dial({ label, value, unit, max, note }: { label: string; value: number 
 const ago = (iso: string | undefined) => {
   if (!iso) return "";
   const m = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60000));
-  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+  return m < 1 ? "just now" : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`;
 };
 
 export default function LiveMonitorPage() {
@@ -64,7 +93,6 @@ export default function LiveMonitorPage() {
   );
   const series = seriesFromReadings(readings);
 
-  // Rows that arrive after the first load flash once, so new data is noticeable.
   const seen = useRef<Set<string> | null>(null);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   useEffect(() => {
@@ -73,13 +101,13 @@ export default function LiveMonitorPage() {
     if (seen.current) setFresh(new Set([...ids].filter((id) => !seen.current!.has(id))));
     seen.current = ids;
   }, [readings]);
-  useEffect(() => {
+
+  function handleStationChange(nextId: string) {
     seen.current = null;
     setFresh(new Set());
-  }, [activeId]);
+    setStationId(nextId);
+  }
 
-  // Manual catch-up after sleep/outage: re-pull the last 24 h for all
-  // stations. Readings already stored are skipped as duplicates.
   const { user } = useAuth();
   const [pulling, setPulling] = useState(false);
   const [pullMsg, setPullMsg] = useState<string | null>(null);
@@ -88,7 +116,9 @@ export default function LiveMonitorPage() {
     setPullMsg(null);
     try {
       const { stored, failed } = await pullLatest(24 * 60);
-      setPullMsg(`${stored} new readings queued${failed ? `, ${failed} stations failed` : ""}. Processing takes a minute.`);
+      setPullMsg(
+        `${stored} new readings queued${failed ? `, ${failed} stations failed` : ""}. Processing takes a minute.`
+      );
     } catch (err) {
       setPullMsg(err instanceof Error ? err.message : "Pull failed");
     } finally {
@@ -96,120 +126,222 @@ export default function LiveMonitorPage() {
     }
   }
   const latest = readings[0];
+  const prev = readings[1];
 
   const lanes = [
-    { key: "temperature_c", label: "Temperature", unit: "°C", data: series.temperature },
-    { key: "humidity_pct", label: "Humidity", unit: "%", data: series.humidity },
-    { key: "pressure_hpa", label: "Pressure", unit: "hPa", data: series.pressure },
+    { key: "temperature_c", code: "TEMP", label: "Surface Air Temperature", unit: "°C", data: series.temperature },
+    { key: "humidity_pct", code: "RH", label: "Relative Humidity", unit: "%", data: series.humidity },
+    { key: "pressure_hpa", code: "PRES", label: "Barometric Station Pressure", unit: "hPa", data: series.pressure },
   ] as const;
-  const stationName = stations.find((s) => s.dbId === activeId)?.name;
+  const activeStation = stations.find((s) => s.dbId === activeId);
+  const stationName = activeStation?.name;
 
   return (
     <>
       <PageHeader
-        title={stationName ? `Live · ${stationName}` : "Live"}
-        description="Latest 20 readings for one station, refreshed every 10 seconds."
-        actions={<StationPicker stations={stations} value={activeId} onChange={setStationId} />}
+        code="SYS-TEL-02 // REAL-TIME STATION PACKET STREAM"
+        title={stationName ? `Live Telemetry · ${stationName}` : "Live Station Telemetry"}
+        description="High-frequency 10-second polling of raw AWS observations, multi-parameter waveform traces, and packet-to-packet delta tracking."
+        actions={<StationPicker stations={stations} value={activeId} onChange={handleStationChange} />}
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-ok" />
+      {/* Live Uplink Status Bar */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-2.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-2 rounded border border-ok/30 bg-ok/10 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ok">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-ok" />
+            </span>
+            TELEMETRY UPLINK ACTIVE
           </span>
-          {latest ? `Last reading ${ago(latest.timestamp)} · ${latest.source}` : "Waiting for readings"}
-        </span>
+          <span className="font-mono text-xs text-sub">
+            {activeStation ? `STATION CODE: ${activeStation.code} · ` : ""}
+            {latest ? `LAST PACKET: ${ago(latest.timestamp)} · SOURCE: ${latest.source}` : "AWAITING INITIAL PACKET"}
+          </span>
+        </div>
+
         {user?.roles.includes("ADMIN") && (
-          <button onClick={pull} disabled={pulling} className={`${button} ml-auto`} title="Fetch the last 24 hours for all stations; existing readings are skipped">
+          <button
+            onClick={pull}
+            disabled={pulling}
+            className={button}
+            title="Fetch the last 24 hours for all stations; existing readings are skipped"
+          >
             <RefreshCw className={`h-3.5 w-3.5 ${pulling ? "animate-spin" : ""}`} />
-            {pulling ? "Pulling" : "Pull latest"}
+            {pulling ? "Synchronizing…" : "Backfill 24h Telemetry"}
           </button>
         )}
       </div>
 
       {pullMsg && (
-        <p role="status" className="mb-4 rounded-xl border border-line bg-surface px-4 py-2.5 text-[13px] text-ink">
+        <p role="status" className="mb-4 rounded border border-accent/30 bg-accent-soft px-4 py-2.5 font-mono text-xs text-ink">
           {pullMsg}
         </p>
       )}
 
       {!activeId ? (
         <div className={card}>
-          <Empty>No stations available.</Empty>
+          <Empty>No stations available in directory.</Empty>
         </div>
       ) : (
         <div className="space-y-5">
+          {/* Top 4-Parameter Live Readout Strip */}
+          <MetricStrip cols={4}>
+            <Metric
+              label="Air Temperature (TEMP)"
+              value={cell(latest?.temperature_c)}
+              unit="°C"
+              tone="info"
+              foot={<Delta now={latest?.temperature_c} prev={prev?.temperature_c} unit="°C" />}
+            />
+            <Metric
+              label="Relative Humidity (RH)"
+              value={cell(latest?.humidity_pct)}
+              unit="%"
+              tone="ok"
+              foot={<Delta now={latest?.humidity_pct} prev={prev?.humidity_pct} unit="%" />}
+            />
+            <Metric
+              label="Station Pressure (PRES)"
+              value={cell(latest?.pressure_hpa)}
+              unit="hPa"
+              tone="neutral"
+              foot={<Delta now={latest?.pressure_hpa} prev={prev?.pressure_hpa} unit=" hPa" />}
+            />
+            <Metric
+              label="Wind Speed & Precipitation"
+              value={`${cell(latest?.wind_speed_ms)} m/s`}
+              unit={`· ${cell(latest?.rainfall_mm)} mm`}
+              tone="neutral"
+              foot={<Delta now={latest?.wind_speed_ms} prev={prev?.wind_speed_ms} unit=" m/s" />}
+            />
+          </MetricStrip>
+
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <section className={`${card} divide-y divide-line px-6`}>
-              {lanes.map((l) => (
-                <div key={l.key} className="grid grid-cols-[150px_minmax(0,1fr)] items-center gap-5 py-5">
-                  <div>
-                    <p className="text-xs text-sub">{l.label}</p>
-                    <p className="mt-1 flex items-baseline gap-1">
-                      <span className="text-[28px] font-light tracking-tight text-ink">{cell(latest?.[l.key])}</span>
-                      <span className="text-xs text-sub">{l.unit}</span>
-                    </p>
-                    <p className="mt-1 text-[11px] text-sub">
-                      <Delta now={latest?.[l.key]} prev={readings[1]?.[l.key]} />
-                    </p>
+            <Section
+              title="Multi-Parameter Synoptic Waveform Traces"
+              meta="20-PACKET ROLLING WINDOW · 10S REFRESH"
+              flush
+              actions={
+                <span className="live-tag">
+                  <i /> Live Trace
+                </span>
+              }
+            >
+              <div className="divide-y divide-line px-5">
+                {lanes.map((l) => (
+                  <div key={l.key} className="grid grid-cols-1 items-center gap-4 py-4 sm:grid-cols-[180px_minmax(0,1fr)]">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] font-semibold text-accent">
+                          {l.code}
+                        </span>
+                        <span className="truncate text-xs font-semibold text-ink">{l.label}</span>
+                      </div>
+                      <p className="mt-2 flex items-baseline gap-1">
+                        <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-ink">
+                          {cell(latest?.[l.key])}
+                        </span>
+                        <span className="font-mono text-xs text-sub">{l.unit}</span>
+                      </p>
+                      <p className="mt-1 text-[11px] text-sub">
+                        <Delta now={latest?.[l.key]} prev={readings[1]?.[l.key]} />
+                      </p>
+                    </div>
+                    <div className="h-24">
+                      <TrendChart bare live label={l.label} unit={l.unit} current={latest?.[l.key]} data={l.data} />
+                    </div>
                   </div>
-                  <div className="h-24">
-                    <TrendChart bare live label={l.label} unit={l.unit} current={latest?.[l.key]} data={l.data} />
-                  </div>
-                </div>
-              ))}
-            </section>
-            <div className="grid gap-5 sm:grid-cols-3 lg:grid-cols-1">
-              <Dial label="Humidity" value={latest?.humidity_pct} unit="%" max={100} note={readings[1] ? `was ${cell(readings[1].humidity_pct)} %` : "relative humidity"} />
-              <Dial label="Wind" value={latest?.wind_speed_ms} unit="m/s" max={20} note="scale 0–20 m/s" />
-              <Dial label="Rain" value={latest?.rainfall_mm} unit="mm" max={50} note="per reading, scale 0–50 mm" />
+                ))}
+              </div>
+            </Section>
+
+            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+              <Dial
+                code="WMO-RH"
+                label="Relative Humidity"
+                value={latest?.humidity_pct}
+                unit="%"
+                max={100}
+                note={readings[1] ? `PREV: ${cell(readings[1].humidity_pct)}%` : "SCALE 0–100%"}
+              />
+              <Dial
+                code="WMO-WIND"
+                label="Surface Wind Velocity"
+                value={latest?.wind_speed_ms}
+                unit="m/s"
+                max={20}
+                note="SCALE 0–20 M/S"
+              />
+              <Dial
+                code="WMO-PRECIP"
+                label="Tipping-Bucket Rain"
+                value={latest?.rainfall_mm}
+                unit="mm"
+                max={50}
+                note="15-MIN ACCUMULATION (0–50 MM)"
+              />
             </div>
           </div>
 
-          <section className={card}>
-            <div className="flex items-baseline gap-3 px-6 pb-2 pt-5">
-              <h2 className="text-[15px] font-semibold text-ink">Stream</h2>
-              <span className="text-xs text-sub">newest first · {readings.length} readings</span>
-            </div>
+          <Section
+            title="Raw Telemetry Packet Stream"
+            meta={`NEWEST FIRST · ${readings.length} STORED OBSERVATIONS`}
+            flush
+            actions={
+              <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-sub">
+                <Radio className="h-3.5 w-3.5 text-accent" /> Auto-Polling 10s
+              </span>
+            }
+          >
             <div className={table.wrap}>
               <table className={table.table}>
                 <thead className={table.head}>
                   <tr>
-                    <th className={`${table.th} pl-6`}>Time</th>
-                    <th className={table.th}>Source</th>
-                    <th className={table.thNum}>Temp °C</th>
-                    <th className={table.thNum}>Humidity %</th>
-                    <th className={table.thNum}>Pressure hPa</th>
-                    <th className={table.thNum}>Rain mm</th>
-                    <th className={`${table.thNum} pr-6`}>Wind m/s</th>
+                    <th className={`${table.th} pl-5`}>Packet Timestamp (Local)</th>
+                    <th className={table.th}>Telemetry Source</th>
+                    <th className={table.thNum}>Air Temp (°C)</th>
+                    <th className={table.thNum}>Rel. Humidity (%)</th>
+                    <th className={table.thNum}>Pressure (hPa)</th>
+                    <th className={table.thNum}>Rainfall (mm)</th>
+                    <th className={`${table.thNum} pr-5`}>Wind Speed (m/s)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {readings.length === 0 && (
                     <tr>
                       <td colSpan={7}>
-                        <Empty>No observations yet for this station.</Empty>
+                        <Empty>No telemetry observations recorded for this station.</Empty>
                       </td>
                     </tr>
                   )}
                   {readings.map((r) => (
                     <tr key={r.id} className={`${table.row} ${fresh.has(r.id) ? "row-flash" : ""}`}>
-                      <td className={`${table.td} pl-6 font-mono text-xs text-ink whitespace-nowrap`}>
-                        {new Date(r.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                      <td className={`${table.td} pl-5 font-mono text-xs font-medium text-ink whitespace-nowrap`}>
+                        {new Date(r.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })}
                       </td>
-                      <td className={`${table.td} text-sub`}>{r.source}</td>
+                      <td className={table.td}>
+                        <span className="rounded border border-line bg-raised px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-sub">
+                          {r.source}
+                        </span>
+                      </td>
                       <td className={table.num}>{cell(r.temperature_c)}</td>
                       <td className={table.num}>{cell(r.humidity_pct)}</td>
                       <td className={table.num}>{cell(r.pressure_hpa)}</td>
                       <td className={table.num}>{cell(r.rainfall_mm)}</td>
-                      <td className={`${table.num} pr-6`}>{cell(r.wind_speed_ms)}</td>
+                      <td className={`${table.num} pr-5`}>{cell(r.wind_speed_ms)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
+          </Section>
         </div>
       )}
     </>

@@ -22,11 +22,11 @@ const statusText: Record<Station["status"], string> = {
 };
 
 const statusColor: Record<Station["status"], string> = {
-  normal: "#2f5fd0",
-  new: "#8fa9e8",
-  warning: "#b7791f",
-  critical: "#c2344d",
-  offline: "#9aa6bd",
+  normal: "#1d4ed8",
+  new: "#60a5fa",
+  warning: "#b45309",
+  critical: "#b91c1c",
+  offline: "#94a3b8",
 };
 
 const OSM_TILE = {

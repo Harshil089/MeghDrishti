@@ -45,7 +45,7 @@ export default function GoogleSignInButton({ onSuccess }: { onSuccess: () => voi
       theme: "outline",
       size: "large",
       width: 320,
-      shape: "pill",
+      shape: "rectangular",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scriptReady]);
@@ -71,7 +71,7 @@ export default function GoogleSignInButton({ onSuccess }: { onSuccess: () => voi
           the GSI script loads. */}
       <div ref={ref} className="h-10 w-[320px] max-w-full relative">
         {!scriptReady && !error && (
-          <div className="absolute inset-0 rounded-full bg-panel-2 animate-pulse" />
+          <div className="absolute inset-0 rounded bg-panel-2 animate-pulse" />
         )}
       </div>
       {error && <p className="text-[11px] text-crit text-center">{error}</p>}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends
@@ -81,11 +81,15 @@ async def list_alerts(
     status: str | None = None,
     priority: str | None = None,
     station_id: uuid.UUID | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    region: str | None = None,
     pagination: Pagination = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
 ):
+    """`since`/`until` bound the reading time (alert creation when no reading); `until` is exclusive."""
     repo = AlertRepository(db)
-    alerts = await repo.list(pagination.limit, pagination.offset, status, priority, station_id)
+    alerts = await repo.list(pagination.limit, pagination.offset, status, priority, station_id, since, until, region)
     return {"data": await _with_explanations(db, alerts), "meta": {"limit": pagination.limit, "offset": pagination.offset}}
 
 

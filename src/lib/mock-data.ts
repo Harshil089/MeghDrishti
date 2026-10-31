@@ -51,6 +51,8 @@ export interface Alert {
   anomalyId: string | null;
   status: string;
   station: string;
+  stationName?: string;
+  region?: string | null;
   code: string;
   message: string;
   severity: "critical" | "warning" | "info";

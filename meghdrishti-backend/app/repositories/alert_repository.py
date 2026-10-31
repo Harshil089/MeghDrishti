@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.alerts import Alert
 from app.models.anomalies import Anomaly
 from app.models.observations import WeatherObservation
+from app.models.stations import Station
 
 
 class AlertRepository:
@@ -49,12 +51,20 @@ class AlertRepository:
 
     async def list(
         self, limit: int, offset: int, status: str | None = None, priority: str | None = None, station_id: uuid.UUID | None = None,
+        since: datetime | None = None, until: datetime | None = None, region: str | None = None,
     ) -> list[Alert]:
+        event_at = func.coalesce(WeatherObservation.timestamp, Alert.created_at)
         stmt = (select(Alert)
                 .outerjoin(Anomaly, Anomaly.id == Alert.anomaly_id)
                 .outerjoin(WeatherObservation, WeatherObservation.id == Anomaly.observation_id)
-                .order_by(func.coalesce(WeatherObservation.timestamp, Alert.created_at).desc(), Alert.created_at.desc())
+                .order_by(event_at.desc(), Alert.created_at.desc())
                 .limit(limit).offset(offset))
+        if since:
+            stmt = stmt.where(event_at >= since)
+        if until:
+            stmt = stmt.where(event_at < until)
+        if region:
+            stmt = stmt.join(Station, Station.id == Alert.station_id).where(Station.region == region)
         if status:
             stmt = stmt.where(Alert.status == status)
         if priority:

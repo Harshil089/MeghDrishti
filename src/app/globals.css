@@ -1,22 +1,25 @@
 @import "tailwindcss";
 
-/* One light theme. A single blue-slate hue carries the UI; green, amber and red
-   only ever mean state. No gradients. */
+/* High-Precision Institutional Light / Hybrid Theme
+   Designed for Government of India · MoES / IMD Meteorological Operations. */
 :root {
-  --c-canvas: #f4f6fa;
+  --c-canvas: #f1f5f9;
   --c-surface: #ffffff;
-  --c-raised: #eef2f8;
-  --c-line: #dce3ee;
-  --c-ink: #0f1a2e;
-  --c-sub: #5a6782;
-  --c-accent: #2f5fd0;
-  --c-accent-soft: rgb(47 95 208 / 0.1);
+  --c-raised: #e8eef6;
+  --c-line: #cbd5e1;
+  --c-ink: #0b1528;
+  --c-sub: #475569;
+  --c-accent: #1d4ed8;
+  --c-accent-soft: rgb(29 78 216 / 0.09);
   --c-on-accent: #ffffff;
-  --c-ok: #1f8a5b;
-  --c-warn: #b7791f;
-  --c-crit: #c2344d;
+  --c-navy: #0b172a;
+  --c-navy-raised: #13233f;
+  --c-navy-line: #1e3358;
+  --c-ok: #15803d;
+  --c-warn: #b45309;
+  --c-crit: #b91c1c;
 
-  /* Older marketing-page names, kept as aliases of the console tokens. */
+  /* Compatibility aliases */
   --background: var(--c-canvas);
   --panel: var(--c-surface);
   --panel-2: var(--c-raised);
@@ -53,31 +56,48 @@
 body {
   background: var(--c-canvas);
   color: var(--c-ink);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 button, input, select, textarea { color: inherit; }
 
-/* Cards: flat surface, hairline border, one soft shadow. */
+/* Government of India subtle tricolor authority top border */
+.gov-tricolor {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #ff9933 0%, #ff9933 33.33%, #ffffff 33.33%, #ffffff 66.66%, #138808 66.66%, #138808 100%);
+}
+
+/* Institutional Cards: crisp 6px radius, 1px structural border, subtle elevation */
 .c-card {
   background: var(--c-surface);
   border: 1px solid var(--c-line);
-  box-shadow: 0 1px 2px rgb(15 26 46 / 0.04), 0 2px 8px rgb(15 26 46 / 0.04);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgb(11 21 40 / 0.04);
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
+/* Subtle engineering grid backdrop for hero / technical panels */
+.tech-grid {
+  background-image:
+    linear-gradient(to right, rgb(203 213 225 / 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(203 213 225 / 0.45) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--c-line); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: var(--c-line); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--c-sub); }
 
 @keyframes pulse-slow { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .animate-pulse-slow { animation: pulse-slow 2.4s ease-in-out infinite; }
 
-/* Map */
+/* Map styling */
 .leaflet-container { background: var(--c-raised); font-family: var(--font-sans), Arial, Helvetica, sans-serif; }
-.leaflet-tooltip { background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--c-line); }
-.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--c-surface); color: var(--c-ink); }
-.leaflet-popup-content-wrapper { border: 1px solid var(--c-line); }
+.leaflet-tooltip { background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--c-line); border-radius: 4px; box-shadow: 0 2px 6px rgb(11 21 40 / 0.1); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--c-surface); color: var(--c-ink); border-radius: 6px; }
+.leaflet-popup-content-wrapper { border: 1px solid var(--c-line); box-shadow: 0 8px 24px rgb(11 21 40 / 0.14); }
 .leaflet-popup-close-button { color: var(--c-sub) !important; }
 .station-pin { position: relative; display: flex; align-items: center; justify-content: center; }
 .station-pin__dot { position: relative; z-index: 2; border-radius: 50%; box-shadow: 0 0 0 1.5px var(--c-surface); }
@@ -87,31 +107,31 @@ button, input, select, textarea { color: inherit; }
   70%, 100% { transform: scale(4.2); opacity: 0; }
 }
 
-/* Page switch: blocks rise in, staggered. */
-@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.page-fade > * { animation: rise-in 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
-.page-fade > *:nth-child(2) { animation-delay: 60ms; }
-.page-fade > *:nth-child(3) { animation-delay: 120ms; }
-.page-fade > *:nth-child(n + 4) { animation-delay: 180ms; }
+/* Page switch: crisp, subtle rise */
+@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page-fade > * { animation: rise-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.page-fade > *:nth-child(2) { animation-delay: 40ms; }
+.page-fade > *:nth-child(3) { animation-delay: 80ms; }
+.page-fade > *:nth-child(n + 4) { animation-delay: 120ms; }
 
 @keyframes bar-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.meter-fill { transform-origin: left; animation: bar-grow 800ms cubic-bezier(0.22, 1, 0.36, 1) 150ms both; }
-@keyframes row-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
-.page-fade tbody tr { animation: row-in 400ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.meter-fill { transform-origin: left; animation: bar-grow 600ms cubic-bezier(0.22, 1, 0.36, 1) 100ms both; }
+@keyframes row-in { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+.page-fade tbody tr { animation: row-in 280ms cubic-bezier(0.22, 1, 0.36, 1) backwards; }
 
-/* Live charts: beeping dot that travels along the line, LIVE tag. */
+/* Live charts */
 .live-ping { transform-box: fill-box; transform-origin: center; animation: live-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
 @keyframes live-ping { 0% { transform: scale(1); opacity: 0.7; } 75%, 100% { transform: scale(3.4); opacity: 0; } }
-.live-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-accent); }
-.live-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent); animation: pulse-slow 1.4s ease-in-out infinite; }
+.live-tag { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono), monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-ok); background: rgb(21 128 61 / 0.1); border: 1px solid rgb(21 128 61 / 0.25); padding: 2px 6px; border-radius: 4px; }
+.live-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ok); animation: pulse-slow 1.4s ease-in-out infinite; }
 
 /* Chart interaction */
-.bar-cell { transform-box: fill-box; transform-origin: 50% 100%; transition: fill-opacity 400ms cubic-bezier(0.22, 1, 0.36, 1), transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1); }
-.bar-cell:hover { transform: scaleY(1.04); }
-.bar-cell.is-selected { transform: scaleY(1.06); }
-.recharts-tooltip-wrapper { transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease !important; }
+.bar-cell { transform-box: fill-box; transform-origin: 50% 100%; transition: fill-opacity 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.bar-cell:hover { transform: scaleY(1.03); }
+.bar-cell.is-selected { transform: scaleY(1.05); }
+.recharts-tooltip-wrapper { transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease !important; }
 
-/* New live observation: brief accent wash that fades out. */
+/* New live observation: brief accent wash */
 @keyframes row-flash { from { background-color: var(--c-accent-soft); } to { background-color: transparent; } }
 .row-flash, .page-fade tbody tr.row-flash { animation: row-flash 2200ms ease-out; }
 

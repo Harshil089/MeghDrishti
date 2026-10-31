@@ -49,7 +49,8 @@ export function useLiveDataWs<T>(
   fetcher: () => Promise<T>,
   fallback: T,
   wsPath: string,
-  fallbackPollMs = 60000
+  fallbackPollMs = 60000,
+  deps: unknown[] = []
 ): T {
   const [data, setData] = useState<T>(fallback);
   const fetcherRef = useRef(fetcher);
@@ -71,7 +72,8 @@ export function useLiveDataWs<T>(
       cancelled = true;
       clearInterval(id);
     };
-  }, [fallbackPollMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fallbackPollMs, ...deps]);
 
   useWebSocket(wsPath, () => {
     fetcherRef.current().then(setData).catch(() => {});

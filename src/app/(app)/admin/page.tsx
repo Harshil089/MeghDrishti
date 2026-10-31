@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, RotateCcw, Power, X as XIcon } from "lucide-react";
-import { PageHeader, Section, Badge, Empty, button, card, chip, type Tone } from "@/components/console/ui";
+import { Check, RotateCcw, Power, X as XIcon, AlertTriangle } from "lucide-react";
+import { PageHeader, Section, Badge, Empty, button, chip, type Tone } from "@/components/console/ui";
 import { useAuth } from "@/lib/useAuth";
 import { useLiveData } from "@/lib/useLiveData";
 import {
@@ -47,8 +47,8 @@ function IngestionJobs({ jobs }: { jobs: IngestionJob[] }) {
 
   return (
     <Section
-      title="Ingestion jobs"
-      meta={`${shown.length}`}
+      title="Telemetry Ingestion Job Queue"
+      meta={`${shown.length} JOBS`}
       flush
       actions={
         <button
@@ -57,31 +57,31 @@ function IngestionJobs({ jobs }: { jobs: IngestionJob[] }) {
           onClick={() => setOnlyFailed(!onlyFailed)}
           className={`${chip(onlyFailed)} h-7`}
         >
-          Failed only
+          Failed Only
         </button>
       }
     >
       {shown.length === 0 ? (
-        <Empty>{jobs.length ? "No failed jobs" : "No ingestion jobs yet"}</Empty>
+        <Empty>{jobs.length ? "No failed ingestion jobs" : "No ingestion jobs recorded"}</Empty>
       ) : (
-        <ul className="max-h-[460px] overflow-y-auto">
+        <ul className="max-h-[460px] divide-y divide-line overflow-y-auto">
           {shown.map((j) => (
-            <li key={j.id} className="flex items-start gap-3 border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-raised">
+            <li key={j.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-raised/60">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="truncate font-mono text-xs text-ink">{j.source}</span>
-                  <span className="text-[11px] text-sub">· attempt {j.attempt}</span>
+                  <span className="truncate font-mono text-xs font-semibold text-ink">{j.source}</span>
+                  <span className="font-mono text-[11px] text-sub">· ATTEMPT #{j.attempt}</span>
                 </div>
-                <p className="mt-0.5 text-[11px] text-sub" title={new Date(j.created_at).toLocaleString()}>
-                  {ago(j.created_at)}
+                <p className="mt-0.5 font-mono text-[11px] text-sub" title={new Date(j.created_at).toLocaleString()}>
+                  EXECUTED {ago(j.created_at).toUpperCase()}
                 </p>
                 {j.error_message && (
-                  <p className="mt-1 truncate text-[11px] text-crit" title={j.error_message}>
+                  <p className="mt-1 truncate font-mono text-[11px] text-crit" title={j.error_message}>
                     {j.error_message}
                   </p>
                 )}
                 {error?.id === j.id && (
-                  <p role="alert" className="mt-1 text-[11px] text-crit">
+                  <p role="alert" className="mt-1 font-mono text-[11px] text-crit">
                     {error.message}
                   </p>
                 )}
@@ -90,7 +90,7 @@ function IngestionJobs({ jobs }: { jobs: IngestionJob[] }) {
               {j.status === "FAILED" && (
                 <button onClick={() => replay(j.id)} disabled={busy === j.id} className={small}>
                   <RotateCcw className="h-3 w-3" />
-                  {busy === j.id ? "Replaying" : "Replay"}
+                  {busy === j.id ? "Replaying…" : "Replay"}
                 </button>
               )}
             </li>
@@ -118,37 +118,43 @@ function Models({ models }: { models: ModelVersion[] }) {
   }
 
   return (
-    <Section title="Isolation Forest models" meta={`${models.length}`} flush>
+    <Section title="Isolation Forest Model Registry" meta={`${models.length} VERSIONS`} flush>
       {models.length === 0 ? (
-        <Empty>No models trained yet</Empty>
+        <Empty>No Isolation Forest models trained yet</Empty>
       ) : (
-        <ul className="max-h-[460px] overflow-y-auto">
+        <ul className="max-h-[460px] divide-y divide-line overflow-y-auto">
           {models.map((m) => (
-            <li key={m.id} className="flex items-start gap-3 border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-raised">
+            <li key={m.id} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-raised/60">
               <div className="min-w-0 flex-1">
-                <p className="truncate font-mono text-xs text-ink">{m.measurement}</p>
-                <p className="truncate font-mono text-[11px] text-sub">v{m.model_version}</p>
+                <div className="flex items-center gap-2">
+                  <p className="truncate font-mono text-xs font-bold text-ink">{m.measurement}</p>
+                  <span className="font-mono text-[11px] text-sub">v{m.model_version}</span>
+                </div>
                 <div className="mt-1.5 flex flex-wrap gap-1.5 text-[11px]">
-                  <span className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-sub">
-                    {m.metrics.source_group === "sensor" ? "IMD sensor" : m.metrics.source_group === "forecast" ? "Open-Meteo forecast" : "mixed (old)"}
+                  <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] font-medium text-ink">
+                    {m.metrics.source_group === "sensor"
+                      ? "IMD Sensor Cohort"
+                      : m.metrics.source_group === "forecast"
+                      ? "Open-Meteo NWP Cohort"
+                      : "Mixed Cohort"}
                   </span>
                   {typeof m.metrics.training_samples === "number" && (
-                    <span className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-sub">
-                      {m.metrics.training_samples.toLocaleString()} rows
+                    <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] text-sub">
+                      {m.metrics.training_samples.toLocaleString()} samples
                     </span>
                   )}
-                  <span className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-sub">
-                    contamination {m.contamination}
+                  <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] text-sub">
+                    CONTAMINATION: {m.contamination}
                   </span>
-                  <span className="rounded-md border border-line bg-raised px-1.5 py-0.5 font-mono text-sub">
-                    threshold {m.threshold?.toFixed(3) ?? "-"}
+                  <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] text-sub">
+                    THRESHOLD: {m.threshold?.toFixed(3) ?? "-"}
                   </span>
                 </div>
                 {m.status === "CANDIDATE" && !m.eligible && m.ineligible_reason && (
-                  <p className="mt-1 text-[11px] text-sub">{m.ineligible_reason}</p>
+                  <p className="mt-1 font-mono text-[11px] text-sub">{m.ineligible_reason}</p>
                 )}
                 {error?.id === m.id && (
-                  <p role="alert" className="mt-1 text-[11px] text-crit">
+                  <p role="alert" className="mt-1 font-mono text-[11px] text-crit">
                     {error.message}
                   </p>
                 )}
@@ -156,8 +162,8 @@ function Models({ models }: { models: ModelVersion[] }) {
               <Badge tone={modelTone[m.status] ?? "neutral"}>{m.status.toLowerCase()}</Badge>
               {m.status === "CANDIDATE" && m.eligible && (
                 <button onClick={() => activate(m.id)} disabled={busy === m.id} className={small}>
-                  <Power className="h-3 w-3" />
-                  {busy === m.id ? "Activating" : "Activate"}
+                  <Power className="h-3 w-3 text-accent" />
+                  {busy === m.id ? "Promoting…" : "Activate"}
                 </button>
               )}
             </li>
@@ -168,7 +174,13 @@ function Models({ models }: { models: ModelVersion[] }) {
   );
 }
 
-const ring: Record<Tone, string> = { ok: "border-ok text-ok", warn: "border-warn text-warn", crit: "border-crit text-crit", info: "border-accent text-accent", neutral: "border-line text-sub" };
+const topBorder: Record<Tone, string> = {
+  ok: "border-t-2 border-t-ok",
+  warn: "border-t-2 border-t-warn",
+  crit: "border-t-2 border-t-crit",
+  info: "border-t-2 border-t-accent",
+  neutral: "border-t-2 border-t-line",
+};
 
 function AdminConsole() {
   const jobs = useLiveData(fetchIngestionJobs, [] as IngestionJob[], 15000);
@@ -186,68 +198,113 @@ function AdminConsole() {
 
   const bySource = useMemo(() => {
     const m = new Map<string, IngestionJob[]>();
-    for (const j of [...jobs].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))) m.set(j.source, [...(m.get(j.source) ?? []), j]);
+    for (const j of [...jobs].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)))
+      m.set(j.source, [...(m.get(j.source) ?? []), j]);
     return [...m];
   }, [jobs]);
 
-  const stages: { name: string; detail: string; tone: Tone }[] = [
-    { name: "Ingestion", detail: rate === null ? "No runs yet" : `${rate}% of ${jobs.length} runs ok`, tone: rate === null ? "warn" : failed ? "crit" : "ok" },
-    { name: "Data sources", detail: sources.length ? `${enabledSources} of ${sources.length} enabled` : "Not loaded", tone: !sources.length || enabledSources < sources.length ? "warn" : "ok" },
-    { name: "ML scoring", detail: `${active} active · ${candidates} candidate`, tone: active ? "ok" : "warn" },
-    { name: "Alerts", detail: summary ? `${summary.alerts.open} open · ${summary.alerts.critical} critical` : "Not loaded", tone: summary?.alerts.critical ? "crit" : "ok" },
+  const stages: { code: string; name: string; detail: string; tone: Tone }[] = [
+    {
+      code: "STAGE-01",
+      name: "Telemetry Ingestion",
+      detail: rate === null ? "No runs recorded" : `${rate}% of ${jobs.length} runs succeeded`,
+      tone: rate === null ? "warn" : failed ? "crit" : "ok",
+    },
+    {
+      code: "STAGE-02",
+      name: "External Context Feeds",
+      detail: sources.length ? `${enabledSources} of ${sources.length} feeds enabled` : "Loading feeds",
+      tone: !sources.length || enabledSources < sources.length ? "warn" : "ok",
+    },
+    {
+      code: "STAGE-03",
+      name: "Isolation Forest ML",
+      detail: `${active} active · ${candidates} candidate models`,
+      tone: active ? "ok" : "warn",
+    },
+    {
+      code: "STAGE-04",
+      name: "Alert Dispatch Engine",
+      detail: summary ? `${summary.alerts.open} open · ${summary.alerts.critical} critical` : "Loading queue",
+      tone: summary?.alerts.critical ? "crit" : "ok",
+    },
   ];
 
   return (
     <div className="space-y-5">
-      <section className={`${card} p-6`}>
-        <div className="mb-5 flex items-baseline gap-3">
-          <h2 className="text-[15px] font-semibold text-ink">Pipeline health</h2>
-          <span className="text-xs text-sub">every stage of the quality pipeline</span>
-        </div>
-        <ol className="flex flex-wrap items-start gap-y-5">
-          {stages.map((st, i) => (
-            <li key={st.name} className="flex min-w-[150px] flex-1 items-start">
-              <div className="flex flex-1 flex-col items-center gap-2 text-center">
-                <span className={`grid h-12 w-12 place-items-center rounded-full border-2 bg-raised ${ring[st.tone]}`}>
-                  {st.tone === "ok" ? <Check className="h-5 w-5" /> : st.tone === "crit" ? <XIcon className="h-5 w-5" /> : <span className="text-lg font-semibold leading-none">!</span>}
+      <Section title="Quality Control Pipeline Operational Status" meta="4-STAGE REAL-TIME TELEMETRY DAG">
+        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {stages.map((st) => (
+            <li
+              key={st.name}
+              className={`rounded border border-line bg-surface p-4 ${topBorder[st.tone]} flex flex-col justify-between gap-2`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">{st.code}</span>
+                <span
+                  className={`grid h-6 w-6 place-items-center rounded ${
+                    st.tone === "ok"
+                      ? "bg-ok/15 text-ok"
+                      : st.tone === "crit"
+                      ? "bg-crit/15 text-crit"
+                      : "bg-warn/15 text-warn"
+                  }`}
+                >
+                  {st.tone === "ok" ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : st.tone === "crit" ? (
+                    <XIcon className="h-3.5 w-3.5" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
                 </span>
-                <span className="text-[13px] font-medium text-ink">{st.name}</span>
-                <span className="text-xs text-sub">{st.detail}</span>
               </div>
-              {i < stages.length - 1 && <span aria-hidden className="mt-6 hidden h-px w-10 shrink-0 bg-line md:block" />}
+              <div>
+                <p className="text-sm font-bold text-ink">{st.name}</p>
+                <p className="mt-0.5 font-mono text-xs text-sub">{st.detail}</p>
+              </div>
             </li>
           ))}
         </ol>
-      </section>
+      </Section>
 
-      <section className={`${card} p-6`}>
-        <div className="mb-4 flex items-baseline gap-3">
-          <h2 className="text-[15px] font-semibold text-ink">Ingestion by source</h2>
-          <span className="text-xs text-sub">latest {jobs.length} runs, oldest left · red = failed</span>
-        </div>
+      <Section
+        title="Source Ingestion Uptime Matrix"
+        meta={`LATEST ${jobs.length} EXECUTION RUNS · OLDEST LEFT · RED = FAILED`}
+      >
         {bySource.length === 0 ? (
-          <Empty>No ingestion jobs yet</Empty>
+          <Empty>No ingestion execution runs recorded yet</Empty>
         ) : (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {bySource.map(([src, list]) => {
               const okPct = Math.round((100 * list.filter((j) => j.status === "SUCCEEDED").length) / list.length);
               return (
-                <div key={src} className="grid grid-cols-[120px_minmax(0,1fr)_48px] items-center gap-3">
-                  <span className="truncate font-mono text-xs text-ink">{src}</span>
+                <div key={src} className="grid grid-cols-[130px_minmax(0,1fr)_56px] items-center gap-3">
+                  <span className="truncate font-mono text-xs font-semibold text-ink">{src}</span>
                   <span className="flex gap-[3px] overflow-hidden">
                     {list.map((j) => (
-                      <span key={j.id} title={`${j.status.toLowerCase()} · ${new Date(j.created_at).toLocaleString()}`} className={`h-6 w-2 shrink-0 rounded-sm ${j.status === "FAILED" ? "bg-crit" : j.status === "SUCCEEDED" ? "bg-accent/60" : "bg-sub/30"}`} />
+                      <span
+                        key={j.id}
+                        title={`${j.status.toLowerCase()} · ${new Date(j.created_at).toLocaleString()}`}
+                        className={`h-5 w-2.5 shrink-0 rounded-[2px] ${
+                          j.status === "FAILED"
+                            ? "bg-crit"
+                            : j.status === "SUCCEEDED"
+                            ? "bg-ok/80"
+                            : "bg-sub/30"
+                        }`}
+                      />
                     ))}
                   </span>
-                  <span className="text-right font-mono text-xs text-sub">{okPct}%</span>
+                  <span className="text-right font-mono text-xs font-semibold tabular-nums text-ink">{okPct}%</span>
                 </div>
               );
             })}
           </div>
         )}
-      </section>
+      </Section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-5 xl:grid-cols-2">
         <IngestionJobs jobs={jobs} />
         <Models models={models} />
       </div>
@@ -261,19 +318,23 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Admin" description="Replay failed jobs and activate models." />
+      <PageHeader
+        code="SYS-ADM-09 // PIPELINE OPERATIONS & ML MODEL GOVERNANCE"
+        title="Pipeline Operations & ML Model Governance"
+        description="Monitor 4-stage ingestion and scoring pipeline health, replay failed telemetry ingestion jobs, and promote validated Isolation Forest models."
+      />
       {loading ? (
         <Section>
-          <Empty>Checking access</Empty>
+          <Empty>Verifying operator clearance…</Empty>
         </Section>
       ) : !isAdmin ? (
         <Section>
           <Empty>
-            Admin role required.{" "}
+            Administrator clearance required.{" "}
             <Link href="/login" className="text-accent hover:underline">
-              Sign in as an admin
+              Authenticate as an Administrator
             </Link>{" "}
-            to manage ingestion jobs and models.
+            to manage ingestion jobs and ML models.
           </Empty>
         </Section>
       ) : (

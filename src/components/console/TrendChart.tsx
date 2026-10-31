@@ -6,18 +6,18 @@ import type { SeriesPoint } from "@/lib/mock-data";
 
 // SVG presentation attributes can't resolve CSS variables; these mirror the
 // light tokens in globals.css (the console has one theme).
-const TOKENS = { accent: "#2f5fd0", line: "#dce3ee", sub: "#5a6782", surface: "#ffffff", ink: "#0f1a2e", ok: "#1f8a5b", warn: "#b7791f", crit: "#c2344d" };
+const TOKENS = { accent: "#1d4ed8", line: "#cbd5e1", sub: "#475569", surface: "#ffffff", ink: "#0b1528", ok: "#15803d", warn: "#b45309", crit: "#b91c1c" };
 export const chartColors = TOKENS;
 const useTokens = () => TOKENS;
 
 function tooltipStyle(t: ReturnType<typeof useTokens>) {
   return {
-    contentStyle: { background: t.surface, border: `1px solid ${t.line}`, borderRadius: 8, fontSize: 12, boxShadow: "0 4px 16px rgba(15,26,46,0.08)", color: t.ink },
-    labelStyle: { color: t.sub },
+    contentStyle: { background: t.surface, border: `1px solid ${t.line}`, borderRadius: 4, fontSize: 12, fontFamily: "var(--font-mono), monospace", boxShadow: "0 4px 12px rgba(11,21,40,0.12)", color: t.ink },
+    labelStyle: { color: t.sub, fontWeight: 600 },
     itemStyle: { color: t.ink },
     cursor: { stroke: t.line },
     isAnimationActive: true,
-    animationDuration: 280,
+    animationDuration: 240,
     animationEasing: "ease-out" as const,
   };
 }

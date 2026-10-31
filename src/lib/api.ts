@@ -92,6 +92,22 @@ export function regionLabel(region: string | null | undefined): string {
   return region.toLowerCase().split("_").map((w) => (w === "and" ? w : w[0].toUpperCase() + w.slice(1))).join(" ");
 }
 
+/** District from a station name: IMD AWS names end in ", District"; district-HQ stations are
+ * named after the district; the legacy "City Site AWS" stations take the city. */
+export function districtOf(name: string): string {
+  const comma = name.lastIndexOf(", ");
+  if (comma >= 0) return name.slice(comma + 2);
+  return name.endsWith(" AWS") ? name.split(" ")[0] : name;
+}
+
+export interface AlertFilter {
+  /** ISO instant, inclusive. */
+  since?: string;
+  /** ISO instant, exclusive. */
+  until?: string;
+  region?: string;
+}
+
 const PRIORITY_TO_SEVERITY: Record<string, Alert["severity"]> = {
   CRITICAL: "critical",
   HIGH: "critical",
@@ -99,7 +115,12 @@ const PRIORITY_TO_SEVERITY: Record<string, Alert["severity"]> = {
   LOW: "info",
 };
 
-export async function fetchAlerts(): Promise<Alert[]> {
+/** Open alerts, newest first. With a filter it returns every status, so past alerts that were
+ * resolved or dismissed are visible too. */
+export async function fetchAlerts(filter: AlertFilter = {}): Promise<Alert[]> {
+  const past = !!(filter.since || filter.until || filter.region);
+  const qs = new URLSearchParams({ limit: past ? "500" : "50" });
+  for (const k of ["since", "until", "region"] as const) if (filter[k]) qs.set(k, filter[k]!);
   const [rows, stations] = await Promise.all([
     getJSON<
       {
@@ -117,22 +138,25 @@ export async function fetchAlerts(): Promise<Alert[]> {
         received_at: string | null;
         detected_at: string;
       }[]
-    >("/alerts?limit=50"),
+    >(`/alerts?${qs}`),
     // The overview covers every station; /stations pages at 100 and missed most codes.
     fetchOverview(),
   ]);
-  const codeById = new Map(stations.map((s) => [s.id, s.station_code]));
+  const byId = new Map(stations.map((s) => [s.id, s]));
 
   return rows
-    .filter((a) => a.status !== "DISMISSED" && a.status !== "RESOLVED")
+    .filter((a) => past || (a.status !== "DISMISSED" && a.status !== "RESOLVED"))
     .map((a) => {
+      const st = byId.get(a.station_id);
       const reasonCodes = Array.isArray(a.details.reason_codes) ? (a.details.reason_codes as string[]) : [];
       const confidence = typeof a.details.confidence === "number" ? a.details.confidence : null;
       return {
         id: a.id,
         anomalyId: a.anomaly_id,
         status: a.status,
-        station: codeById.get(a.station_id) ?? a.station_id.slice(0, 8),
+        station: st?.station_code ?? a.station_id.slice(0, 8),
+        stationName: st?.name,
+        region: st?.region ?? null,
         code: reasonCodes[0] ?? a.policy,
         message: a.explanation?.summary ?? a.title,
         policyTitle: a.title,

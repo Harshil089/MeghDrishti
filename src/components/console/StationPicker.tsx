@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Select } from "@/components/console/Select";
-import { regionLabel, type StationOption } from "@/lib/api";
+import { districtOf, regionLabel, type StationOption } from "@/lib/api";
 
-/** State dropdown followed by a station dropdown limited to that state. With ~3,000
- * stations a single list is unusable, and the state is how operators think about them. */
+/** State, district and station dropdowns, each limited by the one before. With ~3,000
+ * stations a single list is unusable; operators look for a city like Pune, not a state. */
 export function StationPicker({
   stations,
   value,
@@ -30,13 +30,29 @@ export function StationPicker({
     return [...counts].sort(([a], [b]) => regionLabel(a).localeCompare(regionLabel(b)));
   }, [stations]);
 
+  const [chosenDistrict, setChosenDistrict] = useState<string | null>(null);
+  const district = chosenDistrict ?? (region && selected ? districtOf(selected.name) : "");
+
   const inRegion = useMemo(
     () => stations.filter((s) => !region || (s.region ?? "") === region).sort((a, b) => a.name.localeCompare(b.name)),
     [stations, region]
   );
+  const districts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of inRegion) counts.set(districtOf(s.name), (counts.get(districtOf(s.name)) ?? 0) + 1);
+    return [...counts].sort(([a], [b]) => a.localeCompare(b));
+  }, [inRegion]);
+  const inDistrict = district ? inRegion.filter((s) => districtOf(s.name) === district) : inRegion;
+
+  function pickDistrict(next: string) {
+    setChosenDistrict(next);
+    const first = inRegion.find((s) => !next || districtOf(s.name) === next);
+    if (first) onChange(first.dbId);
+  }
 
   function pickRegion(next: string) {
     setChosenRegion(next);
+    setChosenDistrict(null);
     // Picking a state jumps to its first station; "All states" goes back to the network-wide view.
     const first = stations.filter((s) => (s.region ?? "") === next).sort((a, b) => a.name.localeCompare(b.name))[0];
     onChange(next && first ? first.dbId : allowAll ? "" : stations[0]?.dbId ?? "");
@@ -52,9 +68,19 @@ export function StationPicker({
           </option>
         ))}
       </Select>
+      {region && (
+        <Select aria-label="District" value={district} onChange={(e) => pickDistrict(e.target.value)} className="min-w-[150px]">
+          <option value="">All districts</option>
+          {districts.map(([d, n]) => (
+            <option key={d} value={d}>
+              {d} ({n})
+            </option>
+          ))}
+        </Select>
+      )}
       <Select aria-label="Station" value={value} onChange={(e) => onChange(e.target.value)} className="min-w-[200px]">
         {allowAll && <option value="">All stations</option>}
-        {inRegion.map((s) => (
+        {inDistrict.map((s) => (
           <option key={s.dbId} value={s.dbId}>
             {s.name}
           </option>
