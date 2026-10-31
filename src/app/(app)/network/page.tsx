@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Bell, MapPin, Search, Thermometer } from "lucide-react";
 import StationMap from "@/components/StationMap";
+import AlertDetailModal from "@/components/AlertDetailModal";
 import { PageHeader, Badge, Empty, Select, card, chip as chipCls, field, type Tone } from "@/components/console/ui";
 import { statusMeta, type Alert, type Station, type StationStatus } from "@/lib/mock-data";
 import { fetchAlerts, fetchStations, regionLabel } from "@/lib/api";
@@ -24,11 +25,15 @@ export default function NetworkPage() {
   const searchParams = useSearchParams();
   const initialStation = searchParams.get("station") ?? "";
   const initialRegion = searchParams.get("region") ?? searchParams.get("state") ?? "";
+  const shouldOpenNotify = searchParams.get("notify") === "1" || searchParams.get("notify") === "true";
 
   const [selectedId, setSelectedId] = useState<string>(initialStation);
+  const [selectedAlertForModal, setSelectedAlertForModal] = useState<Alert | null>(null);
   const [filter, setFilter] = useState<StationStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState(initialRegion);
+
+  const rawAlerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts");
 
   // If station is specified in URL but region wasn't, sync region when stations load
   useEffect(() => {
@@ -37,6 +42,14 @@ export default function NetworkPage() {
       if (match?.region) setRegion(match.region);
     }
   }, [initialStation, region, stations]);
+
+  // If redirected with notify=1, auto-open notification modal when alerts arrive
+  useEffect(() => {
+    if (initialStation && shouldOpenNotify && rawAlerts.length > 0) {
+      const a = rawAlerts.find((item) => item.station === initialStation);
+      if (a) setSelectedAlertForModal(a);
+    }
+  }, [initialStation, shouldOpenNotify, rawAlerts]);
 
   const regions = useMemo(() => {
     const counts = new Map<string, number>();
@@ -78,9 +91,8 @@ export default function NetworkPage() {
       `${s.name} ${s.id}`.toLowerCase().includes(query.trim().toLowerCase())
   );
 
-  const stationAlerts = useLiveDataWs(fetchAlerts, [] as Alert[], "/ws/alerts").filter(
-    (a) => a.station === selected?.id
-  ).length;
+  const currentStationAlerts = rawAlerts.filter((a) => a.station === selected?.id);
+  const stationAlerts = currentStationAlerts.length;
 
   const kpiBox =
     "inline-flex items-center gap-2 rounded border border-line bg-surface px-3 py-1.5 font-mono text-xs text-sub";
@@ -130,7 +142,12 @@ export default function NetworkPage() {
             Initializing National AWS Spatial Grid…
           </div>
         ) : (
-          <StationMap stations={inRegion} selectedId={selected?.id} onSelect={(s) => setSelectedId(s.id)} />
+          <StationMap
+            stations={inRegion}
+            selectedId={selected?.id}
+            onSelect={(s) => setSelectedId(s.id)}
+            onOpenNotification={(alert) => setSelectedAlertForModal(alert)}
+          />
         )}
 
         {/* State Selection Prompt Overlay when no state selected */}
@@ -340,12 +357,22 @@ export default function NetworkPage() {
             </dl>
 
             {stationAlerts > 0 && (
-              <div className="border-t border-line bg-raised/40 px-4 py-2 text-right">
+              <div className="flex items-center justify-between border-t border-line bg-raised/40 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const first = currentStationAlerts[0];
+                    if (first) setSelectedAlertForModal(first);
+                  }}
+                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-accent hover:underline cursor-pointer"
+                >
+                  <Bell className="h-3 w-3" /> Incident Dossier
+                </button>
                 <Link
                   href="/alerts"
-                  className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline"
+                  className="inline-flex items-center gap-0.5 font-mono text-[10px] text-sub hover:text-ink hover:underline"
                 >
-                  Inspect Active Flags <ArrowRight className="h-3 w-3" />
+                  Queue <ArrowRight className="h-2.5 w-2.5" />
                 </Link>
               </div>
             )}
@@ -394,6 +421,14 @@ export default function NetworkPage() {
           );
         })}
       </div>
+
+      {/* Modal for Incident Notification Dossier */}
+      {selectedAlertForModal && (
+        <AlertDetailModal
+          alert={selectedAlertForModal}
+          onClose={() => setSelectedAlertForModal(null)}
+        />
+      )}
     </>
   );
 }

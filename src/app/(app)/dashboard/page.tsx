@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Cloud, CloudRain, Droplets, Gauge, Sun, Thermometer, Wind, ArrowUpRight, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Cloud, CloudRain, Droplets, Gauge, Sun, Thermometer, Wind, ArrowUpRight, AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
 import AlertDetailModal from "@/components/AlertDetailModal";
 import {
   Badge,
@@ -153,15 +153,17 @@ function StationCard({
     tone === "crit" ? "border-t-2 border-t-crit" : tone === "warn" ? "border-t-2 border-t-warn" : "border-t-2 border-t-accent";
 
   return (
-    <button
-      onClick={onPick}
-      className={`${card} ${topBorder} flex min-w-0 flex-col gap-2.5 p-3.5 text-left transition-colors hover:border-accent/50 ${
+    <Link
+      href={`/network?station=${station.id}&notify=1`}
+      className={`${card} ${topBorder} group flex min-w-0 flex-col gap-2.5 p-3.5 text-left transition-colors hover:border-accent hover:shadow-md ${
         active ? "border-accent ring-1 ring-accent bg-accent-soft/20" : ""
       }`}
     >
       <span className="flex items-start justify-between gap-2">
         <span className="min-w-0">
-          <span className="block truncate text-xs font-semibold text-ink">{station.name}</span>
+          <span className="block truncate text-xs font-semibold text-ink group-hover:text-accent transition-colors">
+            {station.name}
+          </span>
           <span className="block truncate font-mono text-[10px] text-sub">{station.id}</span>
         </span>
         <Badge tone={tone}>{statusMeta[station.status].label}</Badge>
@@ -173,7 +175,13 @@ function StationCard({
         <span className="font-mono text-[10px] uppercase text-sub">24H TRACE</span>
       </div>
       <Sparkline values={temps} color={toneColor[tone]} height={32} />
-    </button>
+      <div className="mt-0.5 flex items-center justify-between border-t border-line/60 pt-2 font-mono text-[10px] text-accent">
+        <span className="inline-flex items-center gap-1 font-semibold">
+          <MapPin className="h-3 w-3" /> Locate & Open Alert
+        </span>
+        <span className="transition-transform group-hover:translate-x-0.5">→</span>
+      </div>
+    </Link>
   );
 }
 
@@ -320,11 +328,19 @@ export default function DashboardPage() {
               {/* Station Identity & Synoptic Summary */}
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-lg font-bold tracking-tight text-ink">
                       {focusStation?.name ?? focusCode ?? "No Station Selected"}
                     </h3>
                     {focusStation && <Badge tone={statusTone[focusStation.status]}>{statusMeta[focusStation.status].label}</Badge>}
+                    {focusStation && (
+                      <Link
+                        href={`/network?station=${focusStation.id}&notify=1`}
+                        className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-accent hover:bg-raised transition-colors shadow-2xs"
+                      >
+                        <MapPin className="h-3 w-3 text-accent" /> Locate on Grid Map →
+                      </Link>
+                    )}
                   </div>
                   <p className="mt-0.5 font-mono text-xs text-sub">
                     CODE: {focusCode ?? "N/A"} · SYNOPTIC STATE: {cond.toUpperCase()}
@@ -507,7 +523,15 @@ export default function DashboardPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-xs font-semibold text-ink">{a.station}</span>
+                            <Link
+                              href={`/network?station=${a.station}&notify=1`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="font-mono text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1 rounded bg-accent-soft/30 px-1.5 py-0.5"
+                              title="Locate station on Grid Map"
+                            >
+                              <MapPin className="h-3 w-3" />
+                              {a.station}
+                            </Link>
                             <Badge tone={tone}>
                               {a.explanation?.classification ? pretty(a.explanation.classification) : a.severity}
                             </Badge>

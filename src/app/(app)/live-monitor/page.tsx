@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Minus, RefreshCw, Radio } from "lucide-react";
+import Link from "next/link";
+import { ArrowDown, ArrowUp, Minus, RefreshCw, Radio, MapPin } from "lucide-react";
 import { StationPicker } from "@/components/console/StationPicker";
 import { PageHeader, Section, Metric, MetricStrip, Empty, button, card, table } from "@/components/console/ui";
 import { TrendChart } from "@/components/console/TrendChart";
@@ -159,6 +160,14 @@ export default function LiveMonitorPage() {
             {activeStation ? `STATION CODE: ${activeStation.code} · ` : ""}
             {latest ? `LAST PACKET: ${ago(latest.timestamp)} · SOURCE: ${latest.source}` : "AWAITING INITIAL PACKET"}
           </span>
+          {activeStation && (
+            <Link
+              href={`/network?station=${activeStation.code}&notify=1`}
+              className="inline-flex items-center gap-1 rounded border border-line bg-raised/70 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent hover:bg-raised transition-colors"
+            >
+              <MapPin className="h-3 w-3 text-accent" /> Locate on Grid Map →
+            </Link>
+          )}
         </div>
 
         {user?.roles.includes("ADMIN") && (

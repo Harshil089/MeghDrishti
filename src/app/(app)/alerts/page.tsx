@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X, Filter } from "lucide-react";
+import Link from "next/link";
+import { Search, X, Filter, MapPin } from "lucide-react";
 import AlertDetailModal from "@/components/AlertDetailModal";
 import { Select } from "@/components/console/Select";
 import { Empty, PageHeader, Badge, button, card, field, severityTone, type Tone } from "@/components/console/ui";
@@ -291,6 +292,14 @@ export default function AlertsPage() {
                               <span className={`block h-full ${bar[tone]}`} style={{ width: `${a.confidence}%` }} />
                             </span>
                             <span className="font-mono text-[10px] text-sub">CONF {a.confidence}%</span>
+                            <Link
+                              href={`/network?station=${a.station}&notify=1`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="ml-auto inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-accent hover:underline"
+                              title="Locate station on Grid Map"
+                            >
+                              <MapPin className="h-2.5 w-2.5" /> Map →
+                            </Link>
                           </div>
                         </div>
                         <span className="whitespace-nowrap font-mono text-[11px] text-sub">

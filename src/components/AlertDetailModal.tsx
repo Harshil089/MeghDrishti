@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { X, Check, Ban, CloudLightning, HelpCircle, ShieldAlert, FileCheck2 } from "lucide-react";
+import { X, Check, Ban, CloudLightning, HelpCircle, ShieldAlert, FileCheck2, MapPin } from "lucide-react";
 import { Badge, button, severityTone } from "@/components/console/ui";
 import { alertSafetySteps, defaultSafetySteps, type Alert } from "@/lib/mock-data";
 import { fetchAlertExplanation, submitReview, updateAlertStatus, type ReviewClassification } from "@/lib/api";
@@ -103,6 +103,13 @@ export default function AlertDetailModal({
               <span className="font-mono text-[10px] uppercase tracking-wider text-sub">
                 DOSSIER #{alert.id.slice(0, 8)}
               </span>
+              <Link
+                href={`/network?station=${alert.station}&notify=1`}
+                onClick={onClose}
+                className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-accent hover:underline ml-auto"
+              >
+                <MapPin className="h-3 w-3" /> Locate on Grid Map →
+              </Link>
             </div>
             <h2 id="alert-drawer-title" className="mt-2 text-base font-semibold tracking-tight text-ink">
               {alert.stationName ? `${alert.stationName} (${alert.station})` : alert.station}

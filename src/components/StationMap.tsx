@@ -16,6 +16,7 @@ export default function StationMap(props: {
   stations: Station[];
   selectedId?: string;
   onSelect?: (s: Station) => void;
+  onOpenNotification?: (alert: any) => void;
 }) {
   return (
     <div className="absolute inset-0 overflow-hidden rounded-b-2xl">

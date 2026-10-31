@@ -107,7 +107,7 @@ export default function ConsoleHeader() {
                       <button
                         onMouseDown={() => {
                           setQuery("");
-                          router.push(`/network?station=${s.id}`);
+                          router.push(`/network?station=${s.id}&notify=1`);
                         }}
                         className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-raised"
                       >
