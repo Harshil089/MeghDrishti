@@ -19,6 +19,16 @@ logger = get_logger("meghdrishti.ml.registry")
 MODEL_STORE = Path(__file__).resolve().parent.parent.parent / "model_store"
 
 
+def ineligibility(metrics: dict | None) -> str | None:
+    """Why a candidate may not be activated, or None if it may."""
+    metrics = metrics or {}
+    if metrics.get("training_policy_version") != 2 or metrics.get("evaluation_method") != "chronological_holdout":
+        return "Trained under an old policy; retrain first"
+    if not metrics.get("sensor_data_only"):
+        return "Trained on forecast-model output; diagnostic only"
+    return None
+
+
 class ModelRegistry:
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -70,16 +80,8 @@ class ModelRegistry:
         """Explicit activation only — never automatic just because training succeeded."""
         result = await self.session.execute(select(ModelVersion).where(ModelVersion.id == model_version_id))
         candidate = result.scalar_one()
-        metrics = candidate.metrics or {}
-        if (
-            metrics.get("training_policy_version") != 2
-            or metrics.get("evaluation_method") != "chronological_holdout"
-            or not metrics.get("sensor_data_only")
-        ):
-            raise ValidationAppError(
-                "Not eligible. Retrain on sensor data first.",
-                code="MODEL_NOT_ELIGIBLE",
-            )
+        if (reason := ineligibility(candidate.metrics)) is not None:
+            raise ValidationAppError(f"Not eligible: {reason}.", code="MODEL_NOT_ELIGIBLE")
 
         prev = await self.session.execute(
             select(ModelVersion).where(

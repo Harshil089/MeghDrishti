@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.qc import cross_variable, drift, dropout, persistence, physical, spike
 from app.qc.defaults import DEFAULT_RULE_THRESHOLDS
@@ -64,7 +64,10 @@ class QCEngine:
                     )
                 )
 
-            results.append(spike.evaluate_spike(measurement, value, history_values, thresholds))
+            # A baseline from before a data gap compares morning with last night: diurnal change, not a spike.
+            max_age = timedelta(minutes=thresholds.get("SPIKE", {}).get("max_history_age_minutes", 180))
+            recent = [h[measurement] for h in ctx.history if h.get(measurement) is not None and ctx.timestamp - h["timestamp"] <= max_age]
+            results.append(spike.evaluate_spike(measurement, value, recent, thresholds))
             results.append(persistence.evaluate_persistence(measurement, value, history_values, thresholds))
             results.append(persistence.evaluate_stuck_sensor(measurement, value, history_values, thresholds))
 
@@ -75,7 +78,10 @@ class QCEngine:
             # has not reported recently (no sensor, or not in its feed, e.g. IMD rainfall) is not one.
             # Wind direction is undefined in calm air, so a blank direction at 0 m/s is not a dropout.
             calm = measurement == "wind_direction_deg" and ctx.measurements.get("wind_speed_ms") == 0
-            if (value is not None or history_values) and not calm:
+            # IMD rainfall is derived from a running total and is blank whenever the previous slot
+            # is missing; a rain gauge that truly stops sends nothing and shows up as a telemetry gap.
+            derived = measurement == "rainfall_mm"
+            if (value is not None or history_values) and not calm and not derived:
                 results.append(dropout.evaluate_dropout(measurement, value, thresholds))
 
         results.append(dropout.evaluate_telemetry_gap(ctx.timestamp, ctx.last_observation_timestamp, thresholds))

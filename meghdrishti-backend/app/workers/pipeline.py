@@ -47,6 +47,20 @@ def _measurements_dict(obs: WeatherObservation) -> dict[str, float | None]:
     return {m: getattr(obs, m) for m in MEASUREMENTS}
 
 
+async def _ingestion_outage(session: AsyncSession, source: str, after, before) -> bool:
+    """True when no reading of this source arrived from any station between two readings
+    longer than 30 minutes apart (machine asleep, ingestion down)."""
+    if before - after <= timedelta(minutes=30):
+        return False
+    # shortcut: scans by timestamp without a (source, timestamp) index; add one if outages get frequent.
+    found = await session.execute(
+        select(WeatherObservation.id)
+        .where(WeatherObservation.source == source, WeatherObservation.timestamp > after, WeatherObservation.timestamp < before)
+        .limit(1)
+    )
+    return found.first() is None
+
+
 async def run_rule_engine(
     session: AsyncSession, observation_id: uuid.UUID, rule_thresholds: dict | None = None
 ) -> list:
@@ -61,12 +75,15 @@ async def run_rule_engine(
     thresholds = merge_thresholds(rule_thresholds)
     if obs.source == "OPEN_METEO":
         thresholds["TELEMETRY_GAP"]["expected_interval_minutes"] = 60
+    last_seen = history[0]["timestamp"] if history else None
+    if last_seen is not None and await _ingestion_outage(session, obs.source, last_seen, obs.timestamp):
+        last_seen = None  # nothing arrived from any station of this source: our outage, not the station's
     ctx = QCContext(
         timestamp=obs.timestamp,
         received_at=obs.received_at,
         measurements=_measurements_dict(obs),
         history=history,
-        last_observation_timestamp=history[0]["timestamp"] if history else None,
+        last_observation_timestamp=last_seen,
         thresholds=thresholds,
     )
     results = QCEngine().run(ctx)

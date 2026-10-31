@@ -112,3 +112,19 @@ def test_saturated_humidity_needs_a_much_longer_flat_run():
     assert not persistence.evaluate_persistence("humidity_pct", 100.0, night, T).triggered
     assert persistence.evaluate_stuck_sensor("humidity_pct", 100.0, [100.0] * 60, T).triggered  # 15 h
     assert persistence.evaluate_stuck_sensor("humidity_pct", 60.0, [60.0] * 13, T).triggered
+
+
+def test_spike_ignores_baseline_from_before_a_long_gap():
+    # Flat 97 % humidity last night, 6 h gap, normal 80 % this morning.
+    night = [{"timestamp": BASE - timedelta(hours=6, minutes=15 * i), "humidity_pct": 97.0} for i in range(10)]
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"humidity_pct": 80.0}, history=night)
+    assert not any(r.rule == "SPIKE" and r.triggered for r in QCEngine().run(ctx))
+    recent = [{"timestamp": BASE - timedelta(minutes=15 * (i + 1)), "humidity_pct": 97.0 + (i % 2) * 0.1} for i in range(10)]
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"humidity_pct": 80.0}, history=recent)
+    assert any(r.rule == "SPIKE" and r.triggered for r in QCEngine().run(ctx))
+
+
+def test_blank_derived_rainfall_is_not_a_dropout():
+    history = [{"timestamp": BASE - timedelta(minutes=15), "temperature_c": 25.0, "rainfall_mm": 0.5}]
+    ctx = QCContext(timestamp=BASE, received_at=BASE, measurements={"temperature_c": 25.0, "rainfall_mm": None}, history=history)
+    assert not any(r.rule == "DROPOUT" and r.triggered for r in QCEngine().run(ctx))

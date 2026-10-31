@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -60,7 +60,7 @@ def coord(raw: str | None) -> float | None:
         return None
 
 
-SNAPSHOT_TTL_S = 300
+SNAPSHOT_TTL_S = 120  # shorter than the 5-minute poll, so every poll sees a fresh snapshot
 _snapshot: tuple[float, list[dict]] = (0.0, [])
 
 
@@ -89,13 +89,50 @@ def _row_for(station: Any, rows: list[dict]) -> dict | None:
     return next((r for r in rows if r.get("ID") == imd_id), None)
 
 
+# imd_id -> (slot time, running total, 15-minute amount derived for that slot).
+# shortcut: in-process memory, so the first slot after an API restart has no rainfall; persist it if that gap matters.
+_rain: dict[str, tuple[datetime, float, float | None]] = {}
+SLOT = timedelta(minutes=15)
+
+
+def _rain_day_start(ts: datetime) -> datetime:
+    """IMD rain days run 03:00 to 03:00 UTC (08:30 IST); the 03:00 reading closes the old day."""
+    start = ts.replace(hour=3, minute=0, second=0, microsecond=0)
+    return start if ts > start else start - timedelta(days=1)
+
+
+def rain_increment(imd_id: str, ts: datetime, total: float | None) -> float | None:
+    """Turn IMD's running daily RAINFALL total into the amount that fell in this 15-minute slot.
+
+    None when it cannot be told: no earlier slot, a skipped slot, or a total that went down
+    without a day reset (bad data). Repeat calls for the same slot return the same answer.
+    """
+    if total is None:
+        return None
+    prev = _rain.get(imd_id)
+    if prev and prev[0] == ts:
+        return prev[2]
+    day_start = _rain_day_start(ts)
+    if ts - day_start <= SLOT:
+        amount: float | None = total  # first slot of a new rain day: the whole total fell in it
+    elif prev and ts - prev[0] == SLOT and prev[0] > day_start and total >= prev[1]:
+        amount = round(total - prev[1], 2)
+    else:
+        amount = None
+    _rain[imd_id] = (ts, total, amount)
+    return amount
+
+
 def to_payload(station: Any, row: dict) -> dict:
     wind_kmh = _num(row.get("WIND_SPEED"))
     direction = _num(row.get("WIND_DIRECTION"))
+    ts = datetime.strptime(f"{row['DATE']} {row['TIME']}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+    total = _num(row.get("RAINFALL"))
     return {
         "station_id": station.station_code,
         "imd_id": row.get("ID"),
-        "timestamp": datetime.strptime(f"{row['DATE']} {row['TIME']}", "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC).isoformat(),
+        "timestamp": ts.isoformat(),
+        "rainfall_total_mm": total,  # IMD's running total since 03:00 UTC, kept for audit
         "location": {"latitude": station.latitude, "longitude": station.longitude},
         "measurements": {
             "temperature_c": _num(row.get("CURR_TEMP")),
@@ -105,9 +142,7 @@ def to_payload(station: Any, row: dict) -> dict:
             "wind_speed_ms": round(wind_kmh / 3.6, 2) if wind_kmh is not None else None,
             # Direction is undefined in calm air; 0 deg with 0 speed is "no direction", not north.
             "wind_direction_deg": direction if wind_kmh else None,
-            # RAINFALL looks like a running total since 08:30 IST (up to 72 mm in one snapshot),
-            # not a 15-minute amount; left out until the accumulation period is confirmed.
-            "rainfall_mm": None,
+            "rainfall_mm": rain_increment(row.get("ID") or station.station_code, ts, total),
         },
     }
 
@@ -130,7 +165,8 @@ class IMDAdapter(WeatherSourceAdapter):
         payload = to_payload(station, row)
         m = payload["measurements"]
         # Offline AWS rows arrive with every field null except wind 0/0; that is not a reading.
-        if m["temperature_c"] is None and m["humidity_pct"] is None and m["pressure_hpa"] is None:
+        # Rain gauges (ARG) report rainfall only, so rainfall alone counts.
+        if m["temperature_c"] is None and m["humidity_pct"] is None and m["pressure_hpa"] is None and m["rainfall_mm"] is None:
             return []
         ts = datetime.fromisoformat(payload["timestamp"])
         return [payload] if start_time <= ts <= end_time else []

@@ -24,6 +24,8 @@ DEFAULT_RULE_THRESHOLDS: dict = {
     "SPIKE": {
         "z_score_threshold": 4.0,
         "min_history": 8,
+        # Older readings describe another part of the day (night vs morning humidity).
+        "max_history_age_minutes": 180,
     },
     "PERSISTENCE": {
         "min_consecutive": 6,

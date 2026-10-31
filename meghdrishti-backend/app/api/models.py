@@ -6,19 +6,21 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import defer
 
 from app.api.deps import Pagination, pagination_params
 from app.core.exceptions import NotFoundError
 from app.core.permissions import Permission, require_permission
 from app.db.session import get_db
-from app.ml.registry import ModelRegistry
+from app.ml.registry import ModelRegistry, ineligibility
 from app.ml.workflow import train_candidates
 from app.models.ml import ModelVersion
 
 router = APIRouter()
 
 
-def _out(m: ModelVersion) -> dict:
+def _out(m: ModelVersion, metrics: dict | None = None) -> dict:
+    metrics = m.metrics if metrics is None else metrics
     return {
         "id": str(m.id),
         "model_id": m.model_id,
@@ -29,7 +31,9 @@ def _out(m: ModelVersion) -> dict:
         "feature_names": m.feature_names,
         "contamination": m.contamination,
         "threshold": m.threshold,
-        "metrics": m.metrics,
+        "metrics": metrics,
+        "eligible": ineligibility(metrics) is None,
+        "ineligible_reason": ineligibility(metrics),
         "status": m.status,
         "created_at": m.created_at.isoformat(),
     }
@@ -42,14 +46,22 @@ async def list_models(
     pagination: Pagination = Depends(pagination_params),
     db: AsyncSession = Depends(get_db),
 ):
-    stmt = select(ModelVersion).order_by(ModelVersion.created_at.desc()).limit(pagination.limit).offset(pagination.offset)
+    # The dataset manifest lists every training row (megabytes per model); strip it in SQL so
+    # the list neither reads nor sends it. GET /models/{id} still returns it in full.
+    slim = ModelVersion.metrics.op("-")("dataset_manifest").label("slim_metrics")
+    stmt = (
+        select(ModelVersion, slim)
+        .options(defer(ModelVersion.metrics))
+        .order_by(ModelVersion.created_at.desc())
+        .limit(pagination.limit)
+        .offset(pagination.offset)
+    )
     if measurement:
         stmt = stmt.where(ModelVersion.measurement == measurement)
     if status:
         stmt = stmt.where(ModelVersion.status == status)
-    result = await db.execute(stmt)
-    rows = list(result.scalars().all())
-    return {"data": [_out(m) for m in rows], "meta": {"limit": pagination.limit, "offset": pagination.offset}}
+    rows = (await db.execute(stmt)).all()
+    return {"data": [_out(m, metrics) for m, metrics in rows], "meta": {"limit": pagination.limit, "offset": pagination.offset}}
 
 
 @router.get("/{model_id}")

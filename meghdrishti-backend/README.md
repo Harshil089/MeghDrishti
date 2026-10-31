@@ -116,7 +116,7 @@ as "context unavailable", never as zero.
 | **NASA GPM** IMERG Early | `app/ingestion/gpm.py` | `NASA_GPM_STORAGE` (`PPS` or `GES_DISC`), `NASA_GPM_USERNAME`, `NASA_GPM_PASSWORD`, `NASA_GPM_DATA_DIR` | Uses [gpm-api](https://gpm-api.readthedocs.io/); about 4 h latency; rainfall only |
 | **ERA5** | `app/ingestion/era5.py` | `ERA5_CDS_URL`, `ERA5_CDS_KEY` | Accept the dataset licence on the CDS site first; about 5 days latency, so newer readings are skipped |
 | **NOAA GHCN** | `app/ingestion/ghcn.py` | `GHCN_BASE_URL`, `GHCN_API_TOKEN` | Daily summaries; recent coverage for India is sparse |
-| **IMD AWS** | `app/ingestion/imd.py` | `IMD_ENABLED`, `IMD_API_BASE_URL`, `IMD_API_KEY`, `IMD_EMAIL`, `IMD_PASSWORD` | `aws_data` snapshot every 15 minutes for ~1,200 reporting AWS (about 25 min behind, no backfill). The key is bound to one static public IP. Rainfall is not ingested yet (the feed's value is a running total) |
+| **IMD AWS** | `app/ingestion/imd.py` | `IMD_ENABLED`, `IMD_API_BASE_URL`, `IMD_API_KEY`, `IMD_EMAIL`, `IMD_PASSWORD` | `aws_data` snapshot every 15 minutes (minutes 5, 20, 35, 50) for ~1,200 reporting AWS (about 25 min behind, no backfill). The key is bound to one static public IP. Rainfall is not ingested yet (the feed's value is a running total) |
 
 > A provider is never used to confirm its own data. Open-Meteo readings are not checked against the
 > Open-Meteo forecast, and so on.

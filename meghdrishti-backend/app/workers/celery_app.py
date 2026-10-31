@@ -39,13 +39,17 @@ celery_app.conf.update(
             "task": "app.workers.schedule_tasks.run_scheduled_job",
             "schedule": schedule,
             "args": (operation,),
+            "kwargs": kwargs,
         }
-        for name, operation, schedule in [
-            ("weather-ingestion", "ingest", crontab(minute="*/15")),
+        for name, operation, schedule, kwargs in [
+            ("weather-ingestion", "ingest", crontab(minute="*/15"), {"sources": ["OPEN_METEO"]}),
+            # Every 15 min (offset from Open-Meteo): 5-min polling preceded IMD 403s and connect
+            # timeouts. IMD serves only latest readings, so a slot replaced between polls is lost.
+            ("imd-ingestion", "ingest", crontab(minute="5-59/15"), {"sources": ["IMD"]}),
             # Daily while IMD sensor history builds up (each run sees one more day-night cycle).
-            ("model-training", "train", crontab(minute=30, hour=3)),
-            ("calibration", "calibrate", crontab(minute=0, hour=4, day_of_week=1)),
-            ("station-roster", "roster", crontab(minute=0, hour=3)),
+            ("model-training", "train", crontab(minute=30, hour=3), {}),
+            ("calibration", "calibrate", crontab(minute=0, hour=4, day_of_week=1), {}),
+            ("station-roster", "roster", crontab(minute=0, hour=3), {}),
         ]
     },
 )

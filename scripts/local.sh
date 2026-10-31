@@ -128,11 +128,14 @@ EOF
     cd "$ROOT"
     [[ -f .env.local ]] || cp .env.example .env.local
     start_process frontend node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port 13000
+    # Keep the Mac from idle-sleeping while the stack runs: IMD only serves its latest
+    # readings, so every hour asleep is data lost for good. Closing the lid still sleeps.
+    start_process caffeinate caffeinate -i
     echo; echo 'Frontend: http://localhost:13000  API: http://localhost:18000/docs'
     ;;
   stop)
     for f in "$STATE"/worker-*.pid; do [[ -e "$f" ]] && stop_process "$(basename "$f" .pid)"; done
-    for name in beat frontend worker api; do stop_process "$name"; done
+    for name in caffeinate beat frontend worker api; do stop_process "$name"; done
     if [[ -f "$STATE/redis/redis.pid" ]] && kill -0 "$(cat "$STATE/redis/redis.pid")" 2>/dev/null; then
       redis-cli -p "$REDIS_PORT" shutdown
     fi
@@ -152,7 +155,7 @@ EOF
     done < <(.venv/bin/python scripts/requeue_by_station.py)
     ;;
   status)
-    for name in api worker beat frontend; do
+    for name in api worker beat frontend caffeinate; do
       if [[ -f "$STATE/$name.pid" ]] && kill -0 "$(cat "$STATE/$name.pid")" 2>/dev/null; then
         echo "$name running ($(cat "$STATE/$name.pid"))"
       else echo "$name stopped"; fi
