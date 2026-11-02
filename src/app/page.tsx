@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { motion } from "framer-motion";
 import {
   ArrowRight,
   Check,
@@ -16,7 +15,6 @@ import {
   FileCheck2,
   Cpu,
   Radio,
-  Sparkles,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import Reveal from "@/components/Reveal";
@@ -27,336 +25,212 @@ import { pipelineStages } from "@/lib/mock-data";
 import { SpotlightCard } from "@/components/ui/SpotlightCard";
 import { MagneticButton } from "@/components/ui/MagneticButton";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
-import { motionTransitions } from "@/lib/motion-tokens";
 
 const REPO = "https://github.com/Harshil089/MeghDrishti";
 
-const ARCHITECTURE_STATS = [
-  {
-    code: "SCALE-01",
-    value: "3,111+",
-    numericValue: 3111,
-    suffix: "+",
-    label: "National AWS & ARG Stations",
-    sub: "Pan-India coverage across 36 States & UTs",
-  },
-  {
-    code: "WMO-QC-02",
-    value: "11",
-    numericValue: 11,
-    label: "Deterministic Rule Checks",
-    sub: "Range, spike, persistence, drift & step limits",
-  },
-  {
-    code: "FUSION-03",
-    value: "4",
-    numericValue: 4,
-    label: "Spatial & Satellite Context Feeds",
-    sub: "Neighboring AWS, NASA GPM, ERA5 & NWP",
-  },
-  {
-    code: "AUDIT-04",
-    value: "6",
-    numericValue: 6,
-    label: "Auditable Ensemble Verdicts",
-    sub: "Reason-coded decisions with operator review",
-  },
+const STATS = [
+  { numericValue: 3111, suffix: "+", label: "National Weather Stations" },
+  { numericValue: 11, label: "Deterministic QC Checks" },
+  { numericValue: 4, label: "Satellite & Spatial Feeds" },
+  { numericValue: 15, suffix: "m", label: "Synoptic Telemetry Cadence" },
 ];
 
 const EXAMPLES = [
   {
-    code: "CASE STUDY A · CONVECTIVE EXTREME",
-    where: "Pune AWS (IMD_PUNE_001) · Tipping-Bucket Rain Gauge",
-    value: "182.0",
-    numericValue: 182.0,
-    unit: "mm / 15 min",
+    title: "Pune AWS · Tipping-Bucket Rain Gauge",
+    value: 182.0,
+    unit: "mm / 15m",
     Icon: CloudRain,
-    verdict: "LIKELY_GENUINE_EXTREME",
-    verdictLabel: "Verified Severe Weather Event",
+    verdict: "Verified Extreme Weather",
     real: true,
     spotlight: "rgba(21, 128, 61, 0.12)",
     checks: [
-      "Neighboring AWS stations within 25 km confirm intense convective core",
-      "NASA GPM IMERG satellite precipitation rate matches storm footprint",
-      "High-resolution NWP forecast projected localized heavy rainfall",
+      "Neighboring stations confirm localized convective core",
+      "NASA GPM satellite precipitation matches footprint",
+      "NWP mesoscale forecast projected heavy precipitation band",
     ],
-    disposition: "Cleared for IMD Nowcast & State Disaster Management (SDMA) alert feeds.",
+    summary: "Cleared for national weather warnings and disaster management feeds.",
   },
   {
-    code: "CASE STUDY B · HARDWARE PROBE FAULT",
-    where: "Nagpur AWS (IMD_NAGPUR_001) · Surface Air Temperature",
-    value: "49.2",
-    numericValue: 49.2,
-    unit: "°C in 5 min",
+    title: "Nagpur AWS · Air Temperature Probe",
+    value: 49.2,
+    unit: "°C in 5m",
     Icon: Thermometer,
-    verdict: "PROBABLE_SENSOR_FAULT",
-    verdictLabel: "Quarantined Sensor Spike / Fault",
+    verdict: "Sensor Fault Quarantined",
     real: false,
     spotlight: "rgba(185, 28, 28, 0.12)",
     checks: [
-      "Surrounding regional stations report stable 31.8 °C – 32.4 °C median",
-      "ECMWF ERA5 reanalysis shows no corresponding thermal advection",
-      "+17.0 °C jump in one 5-min packet violates probe thermal inertia limits",
+      "Surrounding stations report stable 32 °C regional median",
+      "ECMWF ERA5 shows no thermal advection boundary",
+      "+17 °C single-packet spike violates probe thermal inertia",
     ],
-    disposition: "Withheld from NWP assimilation; automated field recalibration work order generated.",
+    summary: "Withheld from NWP models; automated maintenance dispatch queued.",
   },
 ];
 
-const GOVERNANCE_PILLARS = [
+const FEEDS = [
   {
-    icon: ShieldCheck,
-    code: "WMO-NO.8 ALIGNED",
-    title: "Standardized Meteorological QC",
-    detail:
-      "Implements physical range, temporal rate-of-change, flatline persistence, and step-change checks aligned with WMO and IMD surface observation guidelines.",
-  },
-  {
-    icon: Database,
-    code: "IMMUTABLE TELEMETRY",
-    title: "Zero Silent Data Interpolation",
-    detail:
-      "Raw AWS and ARG packets are archived exactly as transmitted. Quality scores, ML anomaly probabilities, and reason codes attach as non-destructive metadata.",
+    icon: Radio,
+    title: "Neighboring AWS Grid",
+    detail: "Spatial median and variance consensus across surrounding stations within 50 km.",
   },
   {
     icon: Satellite,
-    code: "SPATIAL CONSENSUS",
-    title: "Satellite & Reanalysis Fusion",
-    detail:
-      "Every flagged reading is automatically cross-verified against neighboring surface stations, NASA GPM satellite rainfall, ECMWF ERA5, and NWP forecast bands.",
+    title: "NASA GPM IMERG",
+    detail: "Satellite precipitation radar confirmation for suspected convective rainfall extremes.",
   },
   {
-    icon: FileCheck2,
-    code: "HUMAN-IN-THE-LOOP",
-    title: "Cryptographic Operator Audit Trail",
-    detail:
-      "Duty meteorologists review evidence dossiers and log binding dispositions (Sensor Fault, Valid Extreme, False Positive) with full auditability.",
+    icon: Database,
+    title: "ECMWF ERA5 Reanalysis",
+    detail: "Synoptic background comparison for temperature, wind vector, and barometric pressure.",
+  },
+  {
+    icon: Cpu,
+    title: "NWP Forecast Models",
+    detail: "High-resolution mesoscale weather model boundary checks via Open-Meteo feeds.",
   },
 ];
 
-const LON = ["68°E", "72°E", "76°E", "80°E", "84°E", "88°E", "92°E", "96°E"];
-const LAT = ["32°N", "28°N", "24°N", "20°N", "16°N", "12°N", "08°N"];
-
-function ChartFrame() {
-  const tick = "font-mono text-[10px] tracking-wider text-sub/80";
-  const pill = "rounded bg-canvas/90 px-1";
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
-      <div className="absolute inset-x-10 top-[24px] flex justify-between">
-        {LON.map((l) => (
-          <span key={l} className={`${tick} flex flex-col items-center gap-1`}>
-            <span className="h-2 w-px bg-line" />
-            <span className={pill}>{l}</span>
-          </span>
-        ))}
-      </div>
-      <div className="absolute bottom-24 left-3 top-[72px] flex flex-col justify-between">
-        {LAT.map((l) => (
-          <span key={l} className={`${tick} flex items-center gap-1.5`}>
-            <span className="h-px w-2 bg-line" />
-            <span className={pill}>{l}</span>
-          </span>
-        ))}
-      </div>
-      <div className="absolute bottom-24 right-3 top-[72px] flex flex-col justify-between">
-        {LAT.map((l) => (
-          <span key={l} className={`${tick} flex items-center gap-1.5`}>
-            <span className={pill}>{l}</span>
-            <span className="h-px w-2 bg-line" />
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SectionBadge({ code, label }: { code: string; label: string }) {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/90 backdrop-blur-xs px-3.5 py-1 font-mono text-[11px] uppercase tracking-wider shadow-2xs">
-      <span className="font-semibold text-accent">{code}</span>
-      <span className="text-line">|</span>
-      <span className="text-sub">{label}</span>
-    </div>
-  );
-}
+const PILLARS = [
+  {
+    icon: ShieldCheck,
+    title: "Standardized QC Rules",
+    detail: "Range, temporal rate-of-change, flatline persistence, and step-change limit checks.",
+  },
+  {
+    icon: Database,
+    title: "Immutable Telemetry",
+    detail: "Raw sensor packets preserved verbatim with non-destructive quality metadata.",
+  },
+  {
+    icon: Satellite,
+    title: "Spatial Consensus",
+    detail: "Cross-verification against nearby surface stations and spaceborne sensors.",
+  },
+  {
+    icon: FileCheck2,
+    title: "Operator Audit Trail",
+    detail: "Duty meteorologist verification dossiers with reason-coded binding decisions.",
+  },
+];
 
 export default function LandingPage() {
-  const wrap = "mx-auto max-w-[1280px] px-4 md:px-8";
+  const wrap = "mx-auto max-w-[1200px] px-4 md:px-8";
 
   return (
-    <div className="relative isolate flex-1 bg-canvas text-ink">
+    <div className="relative isolate flex-1 bg-canvas text-ink selection:bg-accent/15">
       <AsciiBackdrop field={0.65}>
         <AsciiArt art={stationsSm} x={0.88} dy={0.48} depth={0.45} effect="twinkle" />
         <AsciiArt art={trace} anchor="#signal" center x={0.5} depth={0.85} effect="reveal" />
         <AsciiArt art={radar} anchor="#radar" center x={0.28} depth={0.88} effect="sweep" />
       </AsciiBackdrop>
 
-      {/* Top Official Government of India / MoES Institutional Masthead */}
-      <div className="sticky top-0 z-50">
-        <div className="gov-tricolor" />
-        <div className="border-b border-[#1e3358] bg-[#0b172a] text-slate-300">
-          <div className={`${wrap} flex flex-wrap items-center justify-between gap-2 py-1.5 font-mono text-[10px] uppercase tracking-wider`}>
-            <div className="flex items-center gap-2.5">
-              <span className="font-semibold text-white">भारत सरकार · पृथ्वी विज्ञान मंत्रालय</span>
-              <span className="hidden text-slate-500 sm:inline">|</span>
-              <span className="hidden sm:inline">Government of India · Ministry of Earth Sciences (MoES) · IMD Initiative</span>
-            </div>
-            <div className="flex items-center gap-3 text-slate-400">
-              <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                WMO-No. 8 QC Standard
-              </span>
-              <span className="hidden md:inline">· Smart India Hackathon 2026</span>
-            </div>
+      {/* Top Floating Glass Navigation */}
+      <header className="sticky top-0 z-50 border-b border-line/80 bg-surface/85 backdrop-blur-md">
+        <nav className={`${wrap} flex h-14 items-center justify-between gap-6`}>
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <Logo size={28} />
+            <span className="text-sm font-semibold tracking-tight text-ink group-hover:text-accent transition-colors">
+              MeghDrishti
+            </span>
+          </Link>
+
+          <div className="hidden items-center gap-6 text-xs font-medium text-sub md:flex">
+            <a href="#how" className="transition-colors hover:text-ink">
+              Pipeline
+            </a>
+            <a href="#cases" className="transition-colors hover:text-ink">
+              Case Studies
+            </a>
+            <a href="#radar" className="transition-colors hover:text-ink">
+              Spatial Fusion
+            </a>
+            <a href={REPO} target="_blank" rel="noreferrer" className="transition-colors hover:text-ink flex items-center gap-1.5">
+              <GitFork className="h-3 w-3" /> GitHub
+            </a>
           </div>
-        </div>
 
-        {/* Main Navigation Bar */}
-        <header className="border-b border-line bg-surface/90 backdrop-blur-md">
-          <nav className={`${wrap} flex h-16 items-center justify-between gap-6`}>
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="transition-transform duration-200 group-hover:scale-105">
-                <Logo size={36} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-bold tracking-tight text-ink group-hover:text-accent transition-colors">
-                    MeghDrishti
-                  </span>
-                  <span className="rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-accent">
-                    v2.6 National Grid
-                  </span>
-                </div>
-                <p className="font-mono text-[10px] uppercase tracking-wider text-sub">
-                  National AWS Quality Control & Telemetry Intelligence
-                </p>
-              </div>
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <MagneticButton strength={0.25} size="sm" variant="primary">
+                Launch Console <ArrowRight className="h-3.5 w-3.5" />
+              </MagneticButton>
             </Link>
+          </div>
+        </nav>
+      </header>
 
-            <div className="hidden items-center gap-6 text-xs font-medium uppercase tracking-wider text-sub lg:flex">
-              <a href="#problem" className="transition-colors hover:text-ink">
-                Operational Challenge
-              </a>
-              <a href="#how" className="transition-colors hover:text-ink">
-                6-Stage QC Pipeline
-              </a>
-              <a href="#radar" className="transition-colors hover:text-ink">
-                Spatial Fusion
-              </a>
-              <a href="#governance" className="transition-colors hover:text-ink">
-                Institutional Readiness
-              </a>
-              <a href={REPO} target="_blank" rel="noreferrer" className="transition-colors hover:text-ink">
-                Source Repository
-              </a>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Link href="/login">
-                <MagneticButton strength={0.3} size="sm" variant="primary">
-                  Launch Console <ArrowRight className="h-3.5 w-3.5" />
-                </MagneticButton>
-              </Link>
-            </div>
-          </nav>
-        </header>
-      </div>
-
-      {/* Executive Hero Section */}
-      <section className="relative overflow-hidden border-b border-line pt-12 pb-20 md:pt-16">
-        <div className="absolute inset-x-0 top-0 h-[820px]">
-          <ChartFrame />
-        </div>
-
+      {/* Hero Section */}
+      <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28">
         <div className={`${wrap} relative`}>
           <Reveal>
-            <div className="mx-auto max-w-[920px] text-center">
-              <SectionBadge
-                code="MISSION-CRITICAL METEOROLOGICAL INFRASTRUCTURE"
-                label="AUTOMATED AWS / ARG QUALITY CONTROL"
-              />
-              <h1 className="mt-6 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-5xl md:text-[62px]">
-                Automated Quality Assurance for India&apos;s{" "}
-                <span className="text-accent underline decoration-accent/30 underline-offset-8">
-                  3,100+ Weather Station
-                </span>{" "}
-                Network.
+            <div className="mx-auto max-w-[800px] text-center">
+              <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/80 px-3 py-1 text-xs text-sub shadow-2xs backdrop-blur-xs mb-6">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+                <span>Real-time Weather Intelligence</span>
+              </div>
+
+              <h1 className="text-4xl font-bold tracking-tight text-ink sm:text-5xl md:text-6xl leading-[1.1]">
+                Quality control for India&apos;s{" "}
+                <span className="text-accent">3,100+ weather stations</span>.
               </h1>
-              <p className="mx-auto mt-5 max-w-[74ch] text-base leading-relaxed text-sub md:text-[17px]">
-                Automatic Weather Stations (AWS) operate in extreme environments where clogged rain gauges, drifting
-                thermistors, and telemetry dropouts mimic severe weather. <strong>MeghDrishti</strong> cross-verifies every
-                15-minute observation against deterministic WMO rules, unsupervised ML, neighboring stations, and NASA/ECMWF
-                satellite feeds—separating genuine cloudbursts and heatwaves from hardware faults in real time.
+
+              <p className="mx-auto mt-5 max-w-[62ch] text-base leading-relaxed text-sub md:text-lg">
+                Automated verification fusing surface observations with radar, satellite, and NWP feeds to separate
+                genuine severe weather from sensor faults in real time.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link href="/login">
-                  <MagneticButton strength={0.35} size="lg" variant="primary">
-                    Open Operations Console <ArrowRight className="h-4 w-4" />
+                  <MagneticButton strength={0.3} size="md" variant="primary">
+                    Open Console <ArrowRight className="h-4 w-4" />
                   </MagneticButton>
                 </Link>
                 <a href="#how">
-                  <MagneticButton strength={0.25} size="lg" variant="secondary">
-                    Inspect 6-Stage QC Pipeline
+                  <MagneticButton strength={0.2} size="md" variant="secondary">
+                    View QC Pipeline
                   </MagneticButton>
-                </a>
-                <a
-                  href="#problem"
-                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-line bg-surface/80 px-5 text-xs font-medium uppercase tracking-wider text-sub transition-colors hover:text-ink hover:bg-raised"
-                >
-                  Verification Case Studies
                 </a>
               </div>
             </div>
           </Reveal>
 
-          {/* Executive KPI Grid with EasyUI Spotlight Cards */}
+          {/* Clean 4-Column Stat Strip */}
           <Reveal delay={0.06}>
-            <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {ARCHITECTURE_STATS.map((s) => (
-                <SpotlightCard
-                  key={s.code}
-                  spotlightColor="rgba(29, 78, 216, 0.12)"
-                  spotlightSize={280}
-                  className="border-t-2 border-t-accent bg-surface p-5 rounded-xl shadow-xs"
-                >
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">{s.code}</p>
-                  <div className="mt-1.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-ink flex items-baseline">
+            <div className="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line shadow-xs lg:grid-cols-4">
+              {STATS.map((s) => (
+                <div key={s.label} className="bg-surface p-5 text-center transition-colors hover:bg-raised/20">
+                  <div className="font-mono text-3xl font-bold tracking-tight text-ink flex items-baseline justify-center">
                     <AnimatedNumber value={s.numericValue} />
                     {s.suffix && <span>{s.suffix}</span>}
                   </div>
-                  <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
-                  <p className="mt-0.5 text-xs text-sub">{s.sub}</p>
-                </SpotlightCard>
+                  <p className="mt-1 text-xs font-medium text-sub">{s.label}</p>
+                </div>
               ))}
             </div>
           </Reveal>
 
-          {/* Framed Live Console Preview */}
-          <Reveal delay={0.12}>
-            <div className="mt-10 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_20px_50px_-24px_rgb(11_21_40/0.22)]">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e3358] bg-[#0b172a] px-4 py-2.5 text-xs text-slate-300">
-                <div className="flex items-center gap-2.5">
+          {/* Console Preview Window */}
+          <Reveal delay={0.1}>
+            <div className="mt-12 overflow-hidden rounded-xl border border-line bg-surface shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#1a2234] bg-[#090d16] px-4 py-2.5 text-xs text-slate-300">
+                <div className="flex items-center gap-2">
                   <span className="flex gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-700" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-slate-700" />
                   </span>
-                  <span className="ml-2 font-mono text-[11px] font-semibold uppercase tracking-wider text-white">
-                    MEGHDRISHTI-OPS // NATIONAL TELEMETRY COMMAND WORKBENCH
-                  </span>
+                  <span className="ml-2 font-mono text-[11px] text-slate-400">meghdrishti.local/dashboard</span>
                 </div>
-                <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-wider text-slate-400">
-                  <span className="text-emerald-400 flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    STREAM ACTIVE
-                  </span>
-                  <span>15-MIN SYNOPTIC CADENCE</span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span>Live Stream</span>
                 </div>
               </div>
               <div className="bg-canvas p-2 md:p-3">
                 <Image
                   src="/console-preview.png"
-                  alt="MeghDrishti National AWS Quality Control Console Overview"
+                  alt="MeghDrishti Console"
                   width={1440}
                   height={900}
                   priority
@@ -368,64 +242,58 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Section 1: The Operational Challenge (Case Study Comparison with Spotlight Cards) */}
-      <section id="problem" className={`${wrap} scroll-mt-24 pt-20 pb-16`}>
+      {/* Case Studies */}
+      <section id="cases" className={`${wrap} scroll-mt-20 py-16 border-t border-line`}>
         <Reveal>
-          <div className="max-w-[780px]">
-            <SectionBadge code="OPERATIONAL CHALLENGE" label="EXTREME WEATHER VS. INSTRUMENT FAILURE" />
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink md:text-4xl">
-              Two Critical Telemetry Spikes. Two Opposite Operational Decisions.
+          <div className="max-w-[640px]">
+            <h2 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
+              Severe storm vs. instrument failure.
             </h2>
-            <p className="mt-3 text-base leading-relaxed text-sub">
-              Simple threshold filters fail meteorological operations: setting thresholds too tight discards genuine
-              cloudbursts, while setting them too loose lets broken sensors trigger false heatwave or flood advisories.
-              MeghDrishti resolves this ambiguity by fusing local rules with spatial and satellite evidence.
+            <p className="mt-2 text-sm text-sub leading-relaxed">
+              Simple threshold filters fail: tight limits discard genuine cloudbursts, while loose limits let broken
+              sensors trigger false heatwave advisories.
             </p>
           </div>
         </Reveal>
 
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
           {EXAMPLES.map((e, i) => (
-            <Reveal key={e.where} delay={i * 0.08}>
+            <Reveal key={e.title} delay={i * 0.08}>
               <SpotlightCard
                 spotlightColor={e.spotlight}
-                spotlightSize={380}
-                className={`flex h-full flex-col justify-between overflow-hidden rounded-xl border-t-4 p-0 shadow-sm ${
+                spotlightSize={360}
+                className={`flex h-full flex-col justify-between overflow-hidden rounded-xl border-t-2 p-0 shadow-xs ${
                   e.real ? "border-t-ok" : "border-t-crit"
                 }`}
               >
-                <div className="p-6 md:p-7">
-                  <div className="flex items-start justify-between gap-4 border-b border-line pb-5">
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-4 border-b border-line pb-4">
                     <div>
-                      <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">{e.code}</p>
-                      <p className="mt-1 text-sm font-semibold text-ink">{e.where}</p>
-                      <div className="mt-3 flex items-baseline gap-2">
-                        <span className="font-mono text-5xl font-bold tabular-nums tracking-tight text-ink">
-                          <AnimatedNumber value={e.numericValue} decimals={1} />
+                      <p className="text-xs font-semibold text-ink">{e.title}</p>
+                      <div className="mt-2 flex items-baseline gap-2">
+                        <span className="font-mono text-4xl font-bold tracking-tight text-ink">
+                          <AnimatedNumber value={e.value} decimals={1} />
                         </span>
-                        <span className="font-mono text-sm font-medium text-sub">{e.unit}</span>
+                        <span className="font-mono text-xs text-sub">{e.unit}</span>
                       </div>
                     </div>
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-line bg-raised text-accent">
-                      <e.Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden />
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-line bg-raised text-accent">
+                      <e.Icon className="h-5 w-5" strokeWidth={1.8} />
                     </div>
                   </div>
 
-                  <p className="mt-5 font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">
-                    Multi-Source Cross-Verification Evidence
-                  </p>
-                  <ul className="mt-2.5 space-y-2">
+                  <ul className="mt-4 space-y-2">
                     {e.checks.map((c) => (
                       <li
                         key={c}
-                        className="flex items-start gap-2.5 rounded-lg border border-line/80 bg-canvas/70 px-3.5 py-2.5 text-xs leading-relaxed text-ink"
+                        className="flex items-start gap-2.5 rounded-lg border border-line/70 bg-canvas/60 px-3 py-2 text-xs text-ink"
                       >
                         <span
-                          className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-sm ${
+                          className={`mt-0.5 grid h-3.5 w-3.5 shrink-0 place-items-center rounded-sm ${
                             e.real ? "bg-ok text-white" : "bg-crit text-white"
                           }`}
                         >
-                          {e.real ? <Check className="h-3 w-3" strokeWidth={3} /> : <X className="h-3 w-3" strokeWidth={3} />}
+                          {e.real ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : <X className="h-2.5 w-2.5" strokeWidth={3} />}
                         </span>
                         <span>{c}</span>
                       </li>
@@ -433,21 +301,16 @@ export default function LandingPage() {
                   </ul>
                 </div>
 
-                <div className="border-t border-line bg-raised/60 px-6 py-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">
-                      ENSEMBLE VERDICT
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs font-semibold uppercase ${
-                        e.real ? "border-ok/30 bg-ok/10 text-ok" : "border-crit/30 bg-crit/10 text-crit"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${e.real ? "bg-ok" : "bg-crit"}`} />
-                      {e.verdict} · {e.verdictLabel}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-sub">{e.disposition}</p>
+                <div className="border-t border-line bg-raised/40 px-6 py-3.5 flex items-center justify-between gap-3 text-xs">
+                  <span className="text-sub truncate">{e.summary}</span>
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-[11px] font-semibold ${
+                      e.real ? "border-ok/30 bg-ok/10 text-ok" : "border-crit/30 bg-crit/10 text-crit"
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${e.real ? "bg-ok" : "bg-crit"}`} />
+                    {e.verdict}
+                  </span>
                 </div>
               </SpotlightCard>
             </Reveal>
@@ -455,13 +318,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Live Synoptic Band */}
+      {/* Live Synoptic Waveform Band */}
       <section
         id="signal"
         aria-label="Live temperature trace"
-        className={`${wrap} relative my-8 h-[260px] rounded-xl border border-line bg-surface/60 overflow-hidden shadow-xs`}
+        className={`${wrap} relative my-12 h-[240px] rounded-2xl border border-line bg-surface/50 overflow-hidden shadow-xs`}
       >
-        <div className="flex items-center justify-between border-b border-line bg-raised/60 px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-sub">
+        <div className="flex items-center justify-between border-b border-line bg-raised/40 px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-sub">
           <span>SYNOPTIC WAVEFORM MONITOR // DELHI SAFDARJUNG AWS (42182)</span>
           <span>DIURNAL THERMAL BAND · 48H TRACE</span>
         </div>
@@ -470,128 +333,88 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* Section 2: 6-Stage Deterministic + AI/ML Quality Pipeline */}
-      <section id="how" className="border-y border-line bg-surface py-20 scroll-mt-20">
+      {/* 6-Stage Ensemble Pipeline */}
+      <section id="how" className="border-y border-line bg-surface/50 py-16 scroll-mt-20">
         <div className={wrap}>
           <Reveal>
-            <div className="max-w-[780px]">
-              <SectionBadge code="SYSTEM ARCHITECTURE" label="6-STAGE ENSEMBLE QUALITY PIPELINE" />
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink md:text-4xl">
-                Deterministic WMO Rules + Unsupervised ML + Spatial Consensus.
+            <div className="max-w-[640px]">
+              <h2 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
+                6-stage verification pipeline.
               </h2>
-              <p className="mt-3 text-base leading-relaxed text-sub">
-                Every incoming station packet passes through a six-stage verification DAG. No single model acts as a black
-                box—each stage contributes structured evidence weights and explicit reason codes.
+              <p className="mt-2 text-sm text-sub leading-relaxed">
+                Deterministic rules, unsupervised ML, and spatial consensus evaluate every incoming packet with explicit
+                reason codes.
               </p>
             </div>
           </Reveal>
 
-          <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             {pipelineStages.map((s, i) => (
-              <Reveal key={s.key} delay={i * 0.05}>
-                <SpotlightCard
-                  spotlightColor="rgba(29, 78, 216, 0.08)"
-                  spotlightSize={220}
-                  className="flex h-full flex-col justify-between rounded-xl border-t-2 border-t-accent p-4 bg-canvas/60 shadow-2xs"
-                >
+              <Reveal key={s.key} delay={i * 0.04}>
+                <div className="flex h-full flex-col justify-between rounded-xl border border-line bg-surface p-4 transition-all duration-200 hover:border-accent/40 hover:shadow-xs">
                   <div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-accent">
-                        STAGE {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <Cpu className="h-4 w-4 text-sub" />
-                    </div>
-                    <h3 className="mt-3 text-sm font-bold text-ink">{s.label}</h3>
-                    <p className="mt-1.5 text-xs leading-relaxed text-sub">{s.detail}</p>
+                    <span className="font-mono text-[10px] font-semibold text-accent">0{i + 1}</span>
+                    <h3 className="mt-2 text-sm font-semibold text-ink">{s.label}</h3>
+                    <p className="mt-1 text-xs text-sub leading-relaxed">{s.detail}</p>
                   </div>
-                  <div className="mt-4 border-t border-line pt-2.5 font-mono text-[10px] uppercase tracking-wider text-sub">
-                    {i === pipelineStages.length - 1 ? "OUTPUT: REASON-CODED VERDICT" : `NEXT → STAGE 0${i + 2}`}
-                  </div>
-                </SpotlightCard>
+                </div>
               </Reveal>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 
-      {/* Section 3: Spatial & Satellite Consensus */}
-      <section id="radar" className={`${wrap} relative mt-16 grid min-h-[460px] items-center gap-8 py-12 md:grid-cols-2`}>
-        <div aria-hidden className="min-h-[280px]" />
+      {/* Spatial & Satellite Feeds with ASCII Radar */}
+      <section
+        id="radar"
+        className={`${wrap} relative mt-16 grid min-h-[460px] items-center gap-8 py-12 md:grid-cols-2 scroll-mt-20`}
+      >
+        {/* Left column reserved for the WebGL ASCII Radar sweep */}
+        <div aria-hidden className="min-h-[280px] hidden md:block" />
+
         <Reveal>
           <SpotlightCard
-            spotlightColor="rgba(29, 78, 216, 0.1)"
+            spotlightColor="rgba(29, 78, 216, 0.08)"
             spotlightSize={350}
-            className="rounded-xl border-t-4 border-t-accent p-7 md:p-8 shadow-sm"
+            className="rounded-2xl border border-line bg-surface p-7 md:p-8 shadow-xs"
           >
-            <SectionBadge code="SPATIAL-TEMPORAL VERIFICATION" label="OUTSIDE-IN EVIDENCE FUSION" />
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-ink md:text-3xl">
-              Radar, Satellites, Reanalysis, and Neighboring Stations Checked on Every Flag.
+            <h2 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
+              Four independent context layers.
             </h2>
-            <p className="mt-3 text-sm leading-relaxed text-sub">
-              A single sensor cannot validate itself during severe weather. Before MeghDrishti classifies an anomaly as a
-              hardware fault, it queries four independent spatial and atmospheric context layers:
+            <p className="mt-2 text-sm text-sub leading-relaxed">
+              Before classifying an anomaly as a hardware failure, MeghDrishti queries spatial consensus across multiple
+              independent feeds:
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
-                <p className="font-mono text-[11px] font-semibold text-ink">01 · NEIGHBORING AWS GRID</p>
-                <p className="mt-1 text-xs text-sub">Spatial median & consistency check across nearby IMD stations.</p>
-              </div>
-              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
-                <p className="font-mono text-[11px] font-semibold text-ink">02 · NASA GPM IMERG</p>
-                <p className="mt-1 text-xs text-sub">Satellite precipitation rate verification for extreme rain flags.</p>
-              </div>
-              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
-                <p className="font-mono text-[11px] font-semibold text-ink">03 · ECMWF ERA5 REANALYSIS</p>
-                <p className="mt-1 text-xs text-sub">Synoptic background comparison for temperature, wind & pressure.</p>
-              </div>
-              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
-                <p className="font-mono text-[11px] font-semibold text-ink">04 · NWP FORECAST ENSEMBLE</p>
-                <p className="mt-1 text-xs text-sub">Expected mesoscale boundary check via Open-Meteo NWP feeds.</p>
-              </div>
+              {FEEDS.map((f) => (
+                <div
+                  key={f.title}
+                  className="rounded-xl border border-line/80 bg-canvas/70 p-3.5 transition-colors hover:border-accent/40"
+                >
+                  <p className="font-mono text-xs font-semibold text-ink">{f.title}</p>
+                  <p className="mt-1 text-xs text-sub leading-relaxed">{f.detail}</p>
+                </div>
+              ))}
             </div>
           </SpotlightCard>
         </Reveal>
       </section>
 
-      {/* Section 4: Institutional & Government Readiness */}
-      <section id="governance" className="border-t border-line bg-surface py-20 scroll-mt-20">
+      {/* Governance & Architecture */}
+      <section className="border-t border-line bg-surface/50 py-16">
         <div className={wrap}>
-          <Reveal>
-            <div className="max-w-[780px]">
-              <SectionBadge code="INSTITUTIONAL DEPLOYMENT" label="BUILT FOR NATIONAL METEOROLOGICAL AGENCIES" />
-              <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink md:text-4xl">
-                Engineered for Mission-Critical Government Operations.
-              </h2>
-              <p className="mt-3 text-base leading-relaxed text-sub">
-                Designed from the ground up to integrate into existing India Meteorological Department (IMD) and State
-                Disaster Management data pipelines without disrupting legacy archival formats.
-              </p>
-            </div>
-          </Reveal>
-
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {GOVERNANCE_PILLARS.map((p, i) => {
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {PILLARS.map((p, i) => {
               const Icon = p.icon;
               return (
-                <Reveal key={p.code} delay={i * 0.06}>
-                  <SpotlightCard
-                    spotlightColor="rgba(29, 78, 216, 0.08)"
-                    spotlightSize={260}
-                    className="flex h-full flex-col justify-between rounded-xl p-6 shadow-xs"
-                  >
+                <Reveal key={p.title} delay={i * 0.05}>
+                  <div className="rounded-xl border border-line bg-surface p-5 h-full flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center justify-between">
-                        <span className="grid h-9 w-9 place-items-center rounded-lg border border-accent/25 bg-accent-soft text-accent">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">
-                          {p.code}
-                        </span>
-                      </div>
-                      <h3 className="mt-4 text-base font-bold text-ink">{p.title}</h3>
-                      <p className="mt-2 text-xs leading-relaxed text-sub">{p.detail}</p>
+                      <Icon className="h-4 w-4 text-accent" />
+                      <h3 className="mt-3 text-sm font-semibold text-ink">{p.title}</h3>
+                      <p className="mt-1 text-xs text-sub leading-relaxed">{p.detail}</p>
                     </div>
-                  </SpotlightCard>
+                  </div>
                 </Reveal>
               );
             })}
@@ -599,58 +422,43 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Executive Call-To-Action */}
-      <section id="cta" className={`${wrap} py-16`}>
+      {/* CTA */}
+      <section className={`${wrap} py-16`}>
         <Reveal>
-          <div className="overflow-hidden rounded-2xl border border-[#1e3358] bg-[#0b172a] text-white shadow-xl">
-            <div className="gov-tricolor" />
-            <div className="grid items-center gap-8 px-6 py-12 md:grid-cols-[1fr_auto] md:px-12">
-              <div>
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-blue-400">
-                  LIVE COMMAND & CONTROL DEMONSTRATION · SIH 2026
-                </p>
-                <h2 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
-                  Inspect Live National AWS Telemetry & Quality Verdicts.
-                </h2>
-                <p className="mt-2.5 max-w-[68ch] text-sm leading-relaxed text-slate-300">
-                  Access the full operator workbench: monitor 3,100+ stations on the national spatial grid, inspect
-                  real-time anomaly dossiers, review sensor reliability indices, and dispatch field maintenance teams.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/login">
-                  <MagneticButton strength={0.35} size="lg" variant="primary">
-                    <Radio className="h-4 w-4" />
-                    Launch Command Console
-                  </MagneticButton>
-                </Link>
-              </div>
+          <div className="rounded-2xl border border-line bg-surface p-8 md:p-12 text-center shadow-sm">
+            <h2 className="text-2xl font-bold tracking-tight text-ink md:text-3xl">
+              Inspect the live national grid.
+            </h2>
+            <p className="mx-auto mt-2 max-w-[50ch] text-sm text-sub">
+              Access the operator workbench to monitor 3,100+ stations, triage anomalies, and review sensor health.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Link href="/login">
+                <MagneticButton strength={0.3} size="md" variant="primary">
+                  Launch Console <ArrowRight className="h-4 w-4" />
+                </MagneticButton>
+              </Link>
             </div>
           </div>
         </Reveal>
       </section>
 
-      {/* Official Institutional Footer */}
-      <footer className="border-t border-line bg-surface">
-        <div className={`${wrap} flex flex-wrap items-center justify-between gap-4 py-6 text-xs text-sub`}>
-          <div className="flex items-center gap-3">
-            <Logo size={24} />
-            <div>
-              <p className="font-semibold text-ink">
-                MeghDrishti — National Automatic Weather Station Quality Control Platform
-              </p>
-              <p className="font-mono text-[10px] uppercase tracking-wider text-sub">
-                Smart India Hackathon 2026 · Built for India Meteorological Department (IMD) & MoES Networks
-              </p>
-            </div>
+      {/* Minimal Footer */}
+      <footer className="border-t border-line bg-surface py-6 text-xs text-sub">
+        <div className={`${wrap} flex flex-wrap items-center justify-between gap-4`}>
+          <div className="flex items-center gap-2.5">
+            <Logo size={20} />
+            <span className="font-semibold text-ink">MeghDrishti</span>
+            <span className="text-line">·</span>
+            <span>National Weather Station Quality Control</span>
           </div>
           <a
             href={REPO}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-canvas px-3 py-1.5 font-mono text-[11px] text-ink transition-colors hover:bg-raised"
+            className="inline-flex items-center gap-1.5 text-sub hover:text-ink transition-colors"
           >
-            <GitFork className="h-3.5 w-3.5 text-accent" /> github.com/Harshil089/MeghDrishti
+            <GitFork className="h-3.5 w-3.5" /> GitHub
           </a>
         </div>
       </footer>

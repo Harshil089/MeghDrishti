@@ -97,22 +97,10 @@ export default function AlertsPage() {
 
   return (
     <>
-      <PageHeader
-        code="SYS-TRG-03 // ANOMALY TRIAGE & OPERATOR VERIFICATION"
-        title="Anomaly Triage & Verification Workbench"
-        description={
-          past
-            ? `Displaying ${alerts.length} historical & active quality flags matching spatial/temporal criteria.`
-            : `${alerts.length} open quality flags in queue (newest first). Select an alert to inspect detection evidence, satellite cross-checks, and record an official operator disposition.`
-        }
-      />
+      <PageHeader title="Alerts" />
 
       {/* Spatial & Temporal Filter Toolbar */}
       <div className={`${card} mb-5 flex flex-wrap items-center gap-2.5 bg-surface px-4 py-2.5`}>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-sub mr-1">
-          <Filter className="h-3.5 w-3.5 text-accent" />
-          SCOPE FILTER:
-        </span>
         <Select
           aria-label="State"
           value={region}

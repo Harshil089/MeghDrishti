@@ -263,16 +263,14 @@ export default function DashboardPage() {
       <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
 
       <PageHeader
-        code="SYS-CMD-01 // NATIONAL SURFACE TELEMETRY OVERVIEW"
-        title="National AWS Network Command Overview"
-        description="Real-time quality assurance, active station triage queue, and 24-hour spatial anomaly distribution across the India Meteorological Department (IMD) AWS network."
+        title="Overview"
         actions={
           <>
             <Link href="/network" className={button}>
-              National GIS Grid <ArrowUpRight className="h-3.5 w-3.5 text-sub" />
+              Grid Map <ArrowUpRight className="h-3.5 w-3.5 text-sub" />
             </Link>
             <Link href="/alerts" className={buttonPrimary}>
-              Open Alert Triage ({alerts.length})
+              Alerts ({alerts.length})
             </Link>
           </>
         }
@@ -282,52 +280,44 @@ export default function DashboardPage() {
         {/* Top Executive KPI Strip */}
         <MetricStrip cols={4}>
           <Metric
-            label="Fleet Quality Index (WMO-QC)"
+            label="Fleet Health"
             value={health === null ? "–" : `${Math.round(health)}%`}
             unit="composite"
             tone={healthTone(health)}
-            foot={verdictLine}
           />
           <Metric
-            label="Active Reporting Stations"
+            label="Active Stations"
             value={onlineCount.toLocaleString()}
             unit={`/ ${stations.length.toLocaleString()}`}
             tone="info"
-            foot={`${counts.offline.toLocaleString()} stations awaiting telemetry uplink`}
           />
           <Metric
-            label="Active Triage Queue"
+            label="Active Alerts"
             value={alerts.length.toLocaleString()}
-            unit="open flags"
+            unit="flags"
             tone={counts.faulty > 0 ? "crit" : counts.watch > 0 ? "warn" : "ok"}
-            foot={`${counts.faulty} critical faults · ${counts.watch} watch advisories`}
           />
           <Metric
-            label="24-Hour Flagged Events"
+            label="24h Anomalies"
             value={(summary?.anomalies_24h ?? 0).toLocaleString()}
-            unit="anomalies"
+            unit="events"
             tone="neutral"
-            foot="Evaluated across 11 deterministic rules + ML"
           />
         </MetricStrip>
 
         {/* Primary Telemetry Spotlight + Fleet Integrity */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
           <Section
-            title="Priority Station Telemetry Spotlight"
-            meta={focusCode ? `STATION ID: ${focusCode}` : "SELECT STATION"}
+            title="Station Telemetry"
             actions={
-              <Link href="/live-monitor" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline">
+              <Link href="/live-monitor" className="text-xs font-medium text-accent hover:underline">
                 Full Stream →
               </Link>
             }
           >
             <div className="flex flex-col gap-4">
               {/* Station selector tabs */}
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-line pb-3">
-                <span className="mr-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">
-                  PRIORITY QUEUE:
-                </span>
+              <div className="flex flex-wrap items-center gap-1.5 border-b border-line/80 pb-3">
                 {attention.map((s) => (
                   <button key={s.id} onClick={() => setFocus(s.id)} className={chip(s.id === focusCode)}>
                     {s.name}
@@ -339,53 +329,50 @@ export default function DashboardPage() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-lg font-bold tracking-tight text-ink">
+                    <h3 className="text-base font-bold tracking-tight text-ink">
                       {focusStation?.name ?? focusCode ?? "No Station Selected"}
                     </h3>
                     {focusStation && <Badge tone={statusTone[focusStation.status]}>{statusMeta[focusStation.status].label}</Badge>}
                     {focusStation && (
                       <Link
                         href={`/network?station=${focusStation.id}&notify=1`}
-                        className="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-0.5 font-mono text-[11px] font-semibold text-accent hover:bg-raised transition-colors shadow-2xs"
+                        className="inline-flex items-center gap-1 text-xs text-accent hover:underline ml-1"
                       >
-                        <MapPin className="h-3 w-3 text-accent" /> Locate on Grid Map →
+                        <MapPin className="h-3 w-3" /> Map
                       </Link>
                     )}
                   </div>
-                  <p className="mt-0.5 font-mono text-xs text-sub">
-                    CODE: {focusCode ?? "N/A"} · SYNOPTIC STATE: {cond.toUpperCase()}
-                    {latest?.source && ` · SOURCE: ${latest.source}`}
+                  <p className="mt-0.5 text-xs text-sub">
+                    {focusCode} · {cond}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 rounded border border-line bg-raised/50 px-3.5 py-2">
-                  <CondIcon className="h-7 w-7 text-accent" strokeWidth={1.6} aria-hidden />
-                  <div className="text-right font-mono">
-                    <span className="block text-[10px] uppercase tracking-wider text-sub">LAST PACKET</span>
-                    <span className="block text-xs font-semibold text-ink">{latest ? hhmm(latest.timestamp) : "--:--"}</span>
+                <div className="flex items-center gap-3 rounded-lg border border-line bg-raised/40 px-3.5 py-1.5">
+                  <CondIcon className="h-5 w-5 text-accent" strokeWidth={1.8} aria-hidden />
+                  <div className="text-right">
+                    <span className="block text-[11px] font-mono text-ink font-semibold">{latest ? hhmm(latest.timestamp) : "--:--"}</span>
                   </div>
                 </div>
               </div>
 
               {/* 5-Parameter Structured Telemetry Grid */}
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded border border-line bg-line sm:grid-cols-5">
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-5">
                 {parameters.map(({ Icon, code, label, value, unit }) => (
                   <div key={code} className="bg-surface p-3.5">
                     <div className="flex items-center justify-between text-sub">
-                      <span className="font-mono text-[10px] font-semibold uppercase tracking-wider">{code}</span>
+                      <span className="text-[11px] font-medium text-sub">{label}</span>
                       <Icon className="h-3.5 w-3.5 text-accent" aria-hidden />
                     </div>
-                    <p className="mt-1.5 flex items-baseline gap-1">
+                    <p className="mt-1 flex items-baseline gap-1">
                       <span className="font-mono text-2xl font-bold tabular-nums text-ink">{value ?? "–"}</span>
-                      <span className="font-mono text-[11px] text-sub">{unit}</span>
+                      <span className="font-mono text-xs text-sub">{unit}</span>
                     </p>
-                    <p className="mt-0.5 truncate text-[11px] text-sub">{label}</p>
                   </div>
                 ))}
               </div>
 
               {/* Active Diagnostic Verdict Banner */}
               <div
-                className={`flex flex-wrap items-start gap-3 rounded border px-4 py-3 text-xs ${
+                className={`flex flex-wrap items-start gap-3 rounded-xl border px-4 py-3 text-xs ${
                   focusAlert
                     ? severityTone[focusAlert.severity] === "crit"
                       ? "border-crit/30 bg-crit/5 text-ink"
@@ -404,27 +391,27 @@ export default function DashboardPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[11px] font-semibold uppercase tracking-wider">
-                      {focusAlert ? `ACTIVE QC FLAG · ${focusAlert.code}` : "WMO-QC VERIFIED · NOMINAL"}
+                    <span className="font-semibold">
+                      {focusAlert ? focusAlert.code : "Nominal"}
                     </span>
                     {focusAlert && (
                       <span className="font-mono text-[11px] text-sub">
-                        CONFIDENCE: {focusAlert.confidence}%
+                        {focusAlert.confidence}% confidence
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 leading-relaxed text-sub">
+                  <p className="mt-0.5 text-sub">
                     {focusAlert
                       ? focusAlert.message
-                      : "All parameters within physical, temporal, and spatial consistency bounds."}
+                      : "All parameters within physical and spatial consistency bounds."}
                   </p>
                 </div>
                 {focusAlert && (
                   <button
                     onClick={() => setSelectedAlert(focusAlert)}
-                    className="shrink-0 font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline"
+                    className="shrink-0 text-xs font-medium text-accent hover:underline cursor-pointer"
                   >
-                    Inspect Evidence →
+                    Inspect →
                   </button>
                 )}
               </div>
@@ -432,27 +419,24 @@ export default function DashboardPage() {
           </Section>
 
           {/* Right: Fleet Integrity Breakdown */}
-          <Section title="Fleet Integrity Breakdown" meta="NATIONAL GRID">
+          <Section title="Fleet Integrity">
             <div className="flex flex-col justify-between h-full gap-4">
-              <div className="flex items-center gap-5 border-b border-line pb-4">
+              <div className="flex items-center gap-4 border-b border-line pb-4">
                 <TrustRing value={health} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
-                    NETWORK HEALTH STATUS
-                  </p>
-                  <p className="mt-1 text-sm font-semibold leading-snug text-ink">{verdictLine}</p>
-                  <p className="mt-1.5 font-mono text-[11px] text-sub">
-                    {onlineCount.toLocaleString()} reporting · {counts.offline.toLocaleString()} offline
+                  <p className="text-sm font-semibold text-ink">{verdictLine}</p>
+                  <p className="mt-1 font-mono text-xs text-sub">
+                    {onlineCount.toLocaleString()} online · {counts.offline.toLocaleString()} offline
                   </p>
                 </div>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  { label: "Nominal (Verified)", count: counts.clean, tone: "bg-ok", textTone: "text-ok" },
-                  { label: "Watch (Suspect Flag)", count: counts.watch, tone: "bg-warn", textTone: "text-warn" },
-                  { label: "Critical (Sensor Fault)", count: counts.faulty, tone: "bg-crit", textTone: "text-crit" },
-                  { label: "Telemetry Offline", count: counts.offline, tone: "bg-sub/50", textTone: "text-sub" },
+                  { label: "Nominal", count: counts.clean, tone: "bg-ok", textTone: "text-ok" },
+                  { label: "Watch", count: counts.watch, tone: "bg-warn", textTone: "text-warn" },
+                  { label: "Critical", count: counts.faulty, tone: "bg-crit", textTone: "text-crit" },
+                  { label: "Offline", count: counts.offline, tone: "bg-sub/50", textTone: "text-sub" },
                 ].map((row) => {
                   const pct = Math.round((row.count / totalStations) * 100);
                   return (
@@ -464,7 +448,7 @@ export default function DashboardPage() {
                           <span className="text-[10px] font-normal text-sub">({pct}%)</span>
                         </span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-xs bg-raised">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-raised">
                         <div className={`h-full ${row.tone}`} style={{ width: `${Math.max(1, pct)}%` }} />
                       </div>
                     </div>
@@ -477,11 +461,10 @@ export default function DashboardPage() {
 
         {/* Priority Watchlist */}
         <Section
-          title="Priority Watchlist · Stations Requiring Operator Attention"
-          meta="RANKED BY SEVERITY · 24H TEMPERATURE TRACE"
+          title="Watchlist"
           actions={
-            <Link href="/network" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline">
-              Open Spatial Map →
+            <Link href="/network" className="text-xs font-medium text-accent hover:underline">
+              Grid Map →
             </Link>
           }
         >
@@ -505,17 +488,16 @@ export default function DashboardPage() {
         {/* Bottom Split: Decision Feed + 24h Anomaly Matrix */}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
           <Section
-            title="Real-Time Ensemble Decision Stream"
-            meta="LATEST REASON-CODED VERDICTS"
+            title="Recent Decisions"
             flush
             actions={
-              <Link href="/alerts" className="font-mono text-[11px] font-semibold uppercase tracking-wider text-accent hover:underline">
-                Full Triage Queue →
+              <Link href="/alerts" className="text-xs font-medium text-accent hover:underline">
+                All Alerts →
               </Link>
             }
           >
             {alerts.length === 0 ? (
-              <Empty>No active anomaly decisions in queue</Empty>
+              <Empty>No active anomaly decisions</Empty>
             ) : (
               <ul className="divide-y divide-line">
                 {alerts.slice(0, 6).map((a) => {
@@ -524,7 +506,7 @@ export default function DashboardPage() {
                     <li key={a.id}>
                       <button
                         onClick={() => setSelectedAlert(a)}
-                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-raised/60"
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-raised/60 cursor-pointer"
                       >
                         <span
                           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
@@ -533,23 +515,15 @@ export default function DashboardPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={`/network?station=${a.station}&notify=1`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="font-mono text-xs font-semibold text-accent hover:underline inline-flex items-center gap-1 rounded bg-accent-soft/30 px-1.5 py-0.5"
-                              title="Locate station on Grid Map"
-                            >
-                              <MapPin className="h-3 w-3" />
+                            <span className="font-mono text-xs font-semibold text-accent">
                               {a.station}
-                            </Link>
+                            </span>
                             <Badge tone={tone}>
                               {a.explanation?.classification ? pretty(a.explanation.classification) : a.severity}
                             </Badge>
-                            <span className="rounded border border-line bg-raised px-1.5 py-0.5 font-mono text-[10px] text-ink">
-                              {a.code}
-                            </span>
+                            <span className="text-xs text-ink">{a.code}</span>
                             <span className="ml-auto font-mono text-[11px] text-sub">
-                              CONF {a.confidence}% · {hhmm(a.detectedAt)}
+                              {hhmm(a.detectedAt)}
                             </span>
                           </div>
                           <p className="mt-1 truncate text-xs text-sub">{a.message}</p>
@@ -562,37 +536,23 @@ export default function DashboardPage() {
             )}
           </Section>
 
-          <Section
-            title="24-Hour Spatial-Temporal Anomaly Matrix"
-            meta={`${(summary?.anomalies_24h ?? 0).toLocaleString()} FLEET-WIDE`}
-          >
+          <Section title="Anomaly Matrix">
             {attention.length === 0 ? (
               <Empty>Awaiting station hourly series</Empty>
             ) : (
               <div className="space-y-2">
-                <div className="grid grid-cols-[120px_1fr_36px] gap-2.5 border-b border-line pb-1.5 font-mono text-[10px] uppercase tracking-wider text-sub">
-                  <span>STATION</span>
+                <div className="grid grid-cols-[120px_1fr_36px] gap-2.5 border-b border-line pb-1.5 text-[11px] font-medium text-sub">
+                  <span>Station</span>
                   <span className="flex justify-between">
-                    <span>-24H</span>
-                    <span>-12H</span>
-                    <span>NOW</span>
+                    <span>-24h</span>
+                    <span>-12h</span>
+                    <span>Now</span>
                   </span>
-                  <span className="text-right">SUM</span>
+                  <span className="text-right">Sum</span>
                 </div>
                 {attention.map((s) => (
                   <StripRow key={s.id} name={s.name} dbId={dbByCode.get(s.id)} />
                 ))}
-                <div className="flex flex-wrap items-center gap-4 border-t border-line pt-3 font-mono text-[10px] uppercase tracking-wider text-sub">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-[2px] bg-accent/25" /> 1–2 Flags/hr
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-[2px] bg-accent" /> Elevated
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 rounded-[2px] bg-warn" /> ≥3 Flags/hr (Burst)
-                  </span>
-                </div>
               </div>
             )}
           </Section>

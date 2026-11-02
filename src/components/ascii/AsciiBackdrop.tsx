@@ -222,10 +222,14 @@ export default function AsciiBackdrop({ children, cell = 11, field = 0, opacity 
         gl.viewport(0, 0, el.width, el.height);
         gl.uniform2f(u("uRes"), el.width, el.height);
         rest = pieces.map(({ props: p }) => {
-          const a = p.anchor ? document.querySelector(p.anchor) : null;
-          const r = a?.getBoundingClientRect();
-          const top = r ? r.top + window.scrollY + (p.center ? r.height / 2 : 0) : 0;
-          return top + (p.dy ?? 0) * window.innerHeight;
+          if (p.anchor) {
+            const a = document.querySelector(p.anchor);
+            if (!a) return -999999;
+            const r = a.getBoundingClientRect();
+            const top = r.top + window.scrollY + (p.center ? r.height / 2 : 0);
+            return top + (p.dy ?? 0) * window.innerHeight;
+          }
+          return (p.dy ?? 0) * window.innerHeight;
         });
         wake();
       };
@@ -258,11 +262,13 @@ export default function AsciiBackdrop({ children, cell = 11, field = 0, opacity 
       measure();
       const ro = new ResizeObserver(measure);
       ro.observe(document.body);
+      window.addEventListener("resize", measure);
       window.addEventListener("scroll", wake, { passive: true });
       document.addEventListener("visibilitychange", wake);
       return () => {
         cancelAnimationFrame(raf);
         ro.disconnect();
+        window.removeEventListener("resize", measure);
         window.removeEventListener("scroll", wake);
         document.removeEventListener("visibilitychange", wake);
         gl.deleteTexture(artTex);

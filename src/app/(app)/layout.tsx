@@ -10,7 +10,7 @@ function ShellSkeleton() {
   return (
     <div className="min-h-dvh bg-canvas md:flex">
       <div className="hidden md:block">
-        <div className="h-dvh w-60 bg-[#0b172a]" />
+        <div className="h-dvh w-56 bg-[#090d16]" />
       </div>
       <div className="flex-1 space-y-5 px-4 py-6 md:px-6">
         <div className="h-8 w-64 rounded bg-raised animate-pulse" />

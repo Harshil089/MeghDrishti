@@ -318,11 +318,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader
-        code="SYS-ADM-09 // PIPELINE OPERATIONS & ML MODEL GOVERNANCE"
-        title="Pipeline Operations & ML Model Governance"
-        description="Monitor 4-stage ingestion and scoring pipeline health, replay failed telemetry ingestion jobs, and promote validated Isolation Forest models."
-      />
+      <PageHeader title="Administration" />
       {loading ? (
         <Section>
           <Empty>Verifying operator clearance…</Empty>

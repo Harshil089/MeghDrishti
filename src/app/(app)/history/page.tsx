@@ -468,15 +468,13 @@ export default function HistoryPage() {
   return (
     <>
       <PageHeader
-        code="SYS-AUD-08 // IMMUTABLE TELEMETRY & OPERATOR DECISION LEDGER"
-        title="Telemetry & Operator Audit Ledger"
-        description="Non-destructive archival ledger of raw ingested AWS observations (stored without interpolation) and cryptographically logged operator classifications."
+        title="Audit Ledger"
         actions={
-          <div role="tablist" className="inline-flex rounded border border-line bg-surface p-0.5 text-xs">
+          <div role="tablist" className="inline-flex rounded-lg border border-line bg-surface p-0.5 text-xs">
             {(
               [
-                ["readings", "Raw Telemetry Archive"],
-                ["reviews", "Operator Decision Ledger"],
+                ["readings", "Telemetry"],
+                ["reviews", "Operator Reviews"],
               ] as const
             ).map(([t, label]) => (
               <button

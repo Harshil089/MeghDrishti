@@ -1,7 +1,7 @@
 "use client";
 
-// Institutional Console Design System Primitives
-// Elevated with EasyUI tactile micro-interactions and Framer Motion spring physics.
+// Linear & Apple Notes Inspired Console Design System Primitives
+// High density, zero fluff, instant visual clarity.
 import React, { type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { motionTransitions } from "@/lib/motion-tokens";
@@ -49,11 +49,9 @@ const toneDot: Record<Tone, string> = {
   neutral: "bg-sub/70",
 };
 
-/** Institutional page heading row: classification tag, title, operational description, and right-hand toolbar. */
+/** Crisp, uncluttered page heading: clean title and action bar. */
 export function PageHeader({
   title,
-  description,
-  code = "IMD-AWS // NATIONAL TELEMETRY GRID",
   actions,
 }: {
   title: string;
@@ -62,18 +60,16 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="relative z-20 mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+    <header className="relative z-20 mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-line/80 pb-4">
       <div className="min-w-0">
-        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-accent">{code}</p>
-        <h1 className="mt-1 text-[23px] font-semibold tracking-tight text-ink md:text-[25px]">{title}</h1>
-        {description && <p className="mt-1 max-w-[78ch] text-[13px] leading-relaxed text-sub">{description}</p>}
+        <h1 className="text-2xl font-bold tracking-tight text-ink md:text-[26px]">{title}</h1>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>
   );
 }
 
-/** Structured institutional panel with a recessed header bar. `flush` drops body padding (for tables & GIS maps). */
+/** Focused, high-contrast container with refined header and clean elevation. */
 export function Section({
   title,
   meta,
@@ -91,12 +87,14 @@ export function Section({
 }) {
   return (
     <section
-      className={`c-card group relative flex min-w-0 flex-col overflow-hidden rounded-md transition-shadow duration-300 hover:shadow-md ${className}`}
+      className={`c-card group relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-surface transition-all duration-200 hover:shadow-xs ${className}`}
     >
       {title && (
-        <div className="flex h-11 shrink-0 items-center gap-3 border-b border-line bg-raised/55 px-4">
-          <h2 className="truncate text-[13px] font-semibold uppercase tracking-wide text-ink">{title}</h2>
-          {meta && <span className="truncate font-mono text-[11px] text-sub">{meta}</span>}
+        <div className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-line bg-raised/35 px-4">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <h2 className="truncate text-xs font-semibold tracking-tight text-ink">{title}</h2>
+            {meta && <span className="truncate font-mono text-[11px] text-sub">{meta}</span>}
+          </div>
           {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
         </div>
       )}
@@ -105,14 +103,13 @@ export function Section({
   );
 }
 
-/** Helper to format numeric display with EasyUI AnimatedNumber where appropriate */
+/** Formats numeric display with EasyUI AnimatedNumber where appropriate */
 function renderMetricValue(value: ReactNode): ReactNode {
   if (typeof value === "number") {
     const isFloat = value % 1 !== 0;
     return <AnimatedNumber value={value} decimals={isFloat ? 1 : 0} />;
   }
   if (typeof value === "string") {
-    // If it's a string number like "98.4" or "3111"
     const trimmed = value.trim();
     const num = Number(trimmed);
     if (!isNaN(num) && trimmed !== "" && !trimmed.includes(":")) {
@@ -124,12 +121,11 @@ function renderMetricValue(value: ReactNode): ReactNode {
   return value;
 }
 
-/** Single KPI cell designed to sit inside <MetricStrip> with subtle hover glow. */
+/** Minimal, razor-sharp KPI cell designed for Linear-style dashboards. */
 export function Metric({
   label,
   value,
   unit,
-  foot,
   tone = "neutral",
 }: {
   label: string;
@@ -142,8 +138,8 @@ export function Metric({
     <div
       className={`group relative min-w-0 bg-surface px-4 py-3.5 transition-colors duration-200 hover:bg-raised/30 ${toneTopBorder[tone]}`}
     >
-      <p className="truncate font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">{label}</p>
-      <div className="mt-1.5 flex items-baseline gap-1.5">
+      <p className="truncate text-xs font-medium text-sub">{label}</p>
+      <div className="mt-1 flex items-baseline gap-1.5">
         <span
           className={`font-mono text-2xl font-semibold tabular-nums tracking-tight ${
             tone === "neutral" ? "text-ink" : toneText[tone]
@@ -153,7 +149,6 @@ export function Metric({
         </span>
         {unit && <span className="font-mono text-xs text-sub">{unit}</span>}
       </div>
-      {foot && <p className="mt-1 truncate text-[11px] text-sub">{foot}</p>}
     </div>
   );
 }
@@ -167,17 +162,17 @@ export function MetricStrip({ children, cols = 4 }: { children: ReactNode; cols?
     6: "grid-cols-2 md:grid-cols-3 xl:grid-cols-6",
   }[cols];
   return (
-    <div className={`grid ${grid} gap-px overflow-hidden rounded-md border border-line bg-line shadow-[0_1px_2px_rgb(11_21_40/0.04)]`}>
+    <div className={`grid ${grid} gap-px overflow-hidden rounded-xl border border-line bg-line shadow-xs`}>
       {children}
     </div>
   );
 }
 
-/** Crisp rectangular institutional status tag with semantic border, tint, and status indicator dot. */
+/** Minimal status badge with status dot. */
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (
     <span
-      className={`inline-flex h-5 items-center gap-1.5 rounded border px-2 font-mono text-[10px] font-semibold uppercase tracking-wider leading-none whitespace-nowrap transition-colors ${toneBadgeStyle[tone]}`}
+      className={`inline-flex h-5 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[10px] font-semibold uppercase tracking-wider leading-none whitespace-nowrap transition-colors ${toneBadgeStyle[tone]}`}
     >
       <i aria-hidden className={`h-1.5 w-1.5 shrink-0 rounded-full ${toneDot[tone]}`} />
       <span className="inline-block leading-none">{children}</span>
@@ -185,16 +180,16 @@ export function Badge({ tone = "neutral", children }: { tone?: Tone; children: R
   );
 }
 
-/** Precision horizontal meter bar for a 0-100 value with smooth spring fill. */
+/** Precision horizontal meter bar with smooth spring fill. */
 export function Meter({ pct, tone = "info" }: { pct: number; tone?: Tone }) {
   const bounded = Math.max(0, Math.min(100, pct));
   return (
-    <div className="h-1.5 w-full overflow-hidden rounded-sm bg-raised" role="presentation">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-raised" role="presentation">
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${bounded}%` }}
         transition={motionTransitions.springSmooth}
-        className={`meter-fill h-full rounded-sm ${toneFill[tone]}`}
+        className={`meter-fill h-full rounded-full ${toneFill[tone]}`}
       />
     </div>
   );
@@ -207,27 +202,27 @@ export function Empty({ children }: { children: ReactNode }) {
 export { Select } from "@/components/console/Select";
 
 export const field =
-  "h-8 w-full rounded border border-line bg-surface px-2.5 text-[13px] text-ink placeholder:text-sub/75 transition-colors focus-visible:outline-2 focus-visible:outline-accent";
+  "h-8 w-full rounded-lg border border-line bg-surface px-2.5 text-[13px] text-ink placeholder:text-sub/75 transition-colors focus-visible:outline-2 focus-visible:outline-accent";
 
 export const button =
-  "inline-flex h-8 items-center gap-1.5 rounded border border-line bg-surface px-3 text-xs font-medium text-ink transition-all hover:bg-raised active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer";
+  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-xs font-medium text-ink transition-all hover:bg-raised active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer";
 
 export const buttonPrimary =
-  "inline-flex h-8 items-center gap-1.5 rounded bg-accent px-3.5 text-xs font-semibold text-on-accent transition-all hover:bg-accent/90 shadow-xs active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer";
+  "inline-flex h-8 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-xs font-semibold text-on-accent transition-all hover:bg-accent/90 shadow-xs active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer";
 
-/** Institutional flat card shell (6px radius, 1px crisp border). */
-export const card = "c-card rounded-md";
+/** Standard card shell. */
+export const card = "c-card rounded-xl";
 
-/** Structured filter tab / chip with tactile spring states. */
+/** Filter tab / chip with tactile spring states. */
 export function chip(on: boolean) {
-  return `inline-flex h-7 items-center gap-1.5 rounded border px-2.5 text-xs font-medium transition-all active:scale-[0.97] cursor-pointer ${
+  return `inline-flex h-7 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition-all active:scale-[0.97] cursor-pointer ${
     on
       ? "border-accent bg-accent-soft text-accent font-semibold shadow-xs"
       : "border-line bg-surface text-sub hover:bg-raised hover:text-ink"
   }`;
 }
 
-/** Uppercase monospace section eyebrow. */
+/** Monospace section eyebrow. */
 export function Eyebrow({ children }: { children: ReactNode }) {
   return <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-sub">{children}</p>;
 }
@@ -236,15 +231,15 @@ export function Eyebrow({ children }: { children: ReactNode }) {
 export const table = {
   wrap: "overflow-x-auto",
   table: "w-full text-[13px] border-collapse",
-  head: "bg-raised/70 text-left font-mono text-[10px] font-semibold uppercase tracking-wider text-sub",
+  head: "bg-raised/60 text-left font-mono text-[10px] font-semibold uppercase tracking-wider text-sub",
   th: "px-4 h-9 font-semibold whitespace-nowrap border-b border-line",
-  row: "border-b border-line/80 last:border-0 transition-colors hover:bg-raised/60",
+  row: "border-b border-line/80 last:border-0 transition-colors hover:bg-raised/50",
   td: "px-4 py-2.5",
   num: "px-4 py-2.5 font-mono text-xs tabular-nums text-right text-ink",
   thNum: "px-4 h-9 font-semibold whitespace-nowrap border-b border-line text-right",
 };
 
-/** Map a 0-100 health/reliability value to a WMO status tone. */
+/** Map a 0-100 health/reliability value to a status tone. */
 export function healthTone(pct: number | null): Tone {
   if (pct === null) return "neutral";
   if (pct >= 90) return "ok";

@@ -62,19 +62,20 @@ body {
 
 button, input, select, textarea { color: inherit; }
 
-/* Government of India subtle tricolor authority top border */
+/* Subtle authority top border */
 .gov-tricolor {
-  height: 3px;
+  height: 2px;
   width: 100%;
   background: linear-gradient(90deg, #ff9933 0%, #ff9933 33.33%, #ffffff 33.33%, #ffffff 66.66%, #138808 66.66%, #138808 100%);
+  opacity: 0.85;
 }
 
-/* Institutional Cards: crisp 6px radius, 1px structural border, subtle elevation */
+/* Cards: crisp 12px radius, 1px structural border, subtle elevation */
 .c-card {
   background: var(--c-surface);
   border: 1px solid var(--c-line);
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgb(11 21 40 / 0.04);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgb(11 21 40 / 0.03);
 }
 
 /* Subtle engineering grid backdrop for hero / technical panels */

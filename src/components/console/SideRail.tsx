@@ -20,32 +20,31 @@ import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/useAuth";
 import { motionTransitions } from "@/lib/motion-tokens";
 
-type NavItem = { href: string; label: string; shortLabel: string; code: string; icon: LucideIcon; admin?: boolean };
+type NavItem = { href: string; label: string; icon: LucideIcon; admin?: boolean };
 
-const GROUPS: { title: string; items: NavItem[] }[] = [
+const GROUPS: { title?: string; items: NavItem[] }[] = [
   {
-    title: "Operations",
     items: [
-      { href: "/dashboard", label: "Command Overview", shortLabel: "Overview", code: "01", icon: LayoutDashboard },
-      { href: "/live-monitor", label: "Live Telemetry", shortLabel: "Live", code: "02", icon: Activity },
-      { href: "/alerts", label: "Anomaly Triage", shortLabel: "Triage", code: "03", icon: Bell },
-      { href: "/network", label: "National AWS Grid", shortLabel: "Grid Map", code: "04", icon: Map },
+      { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+      { href: "/live-monitor", label: "Live Telemetry", icon: Activity },
+      { href: "/alerts", label: "Alerts", icon: Bell },
+      { href: "/network", label: "Grid Map", icon: Map },
     ],
   },
   {
-    title: "Quality Intelligence",
+    title: "Intelligence",
     items: [
-      { href: "/analysis", label: "QC & Rule Analytics", shortLabel: "Analytics", code: "05", icon: BarChart3 },
-      { href: "/sensor-health", label: "Sensor Fleet Health", shortLabel: "Sensors", code: "06", icon: Gauge },
-      { href: "/maintenance", label: "Field Dispatch", shortLabel: "Dispatch", code: "07", icon: Wrench },
+      { href: "/analysis", label: "Analytics", icon: BarChart3 },
+      { href: "/sensor-health", label: "Sensors", icon: Gauge },
+      { href: "/maintenance", label: "Dispatch", icon: Wrench },
     ],
   },
   {
-    title: "Governance & Audit",
+    title: "System",
     items: [
-      { href: "/history", label: "Audit Ledger", shortLabel: "Ledger", code: "08", icon: Clock },
-      { href: "/admin", label: "Pipeline & ML Admin", shortLabel: "Admin", code: "09", icon: Shield, admin: true },
-      { href: "/settings", label: "System Calibration", shortLabel: "Config", code: "10", icon: Settings },
+      { href: "/history", label: "Audit Ledger", icon: Clock },
+      { href: "/admin", label: "Admin", icon: Shield, admin: true },
+      { href: "/settings", label: "Settings", icon: Settings },
     ],
   },
 ];
@@ -58,14 +57,12 @@ export default function SideRail() {
   const mobileItems = GROUPS.flatMap((g) => g.items).filter((n) => !n.admin || isAdmin);
 
   return (
-    <aside className="z-30 shrink-0 bg-[#0b172a] text-slate-200 md:sticky md:top-0 md:h-dvh md:w-60 md:border-r md:border-[#1e3358]">
-      <div className="gov-tricolor" />
-
-      {/* Mobile horizontal navigation bar */}
-      <nav aria-label="Console mobile" className="flex items-center gap-1 overflow-x-auto border-b border-[#1e3358] px-3 py-2 md:hidden">
+    <aside className="z-30 shrink-0 bg-[#090d16] text-slate-200 md:sticky md:top-0 md:h-dvh md:w-56 md:border-r md:border-[#1a2234]">
+      {/* Mobile navigation bar */}
+      <nav aria-label="Console mobile" className="flex items-center gap-1 overflow-x-auto border-b border-[#1a2234] px-3 py-2 md:hidden">
         <Link href="/" aria-label="MeghDrishti home" className="mr-2 flex shrink-0 items-center gap-2">
-          <Logo size={28} />
-          <span className="font-mono text-xs font-semibold tracking-wider text-white">MEGHDRISHTI</span>
+          <Logo size={26} />
+          <span className="font-semibold text-xs tracking-tight text-white">MeghDrishti</span>
         </Link>
         {mobileItems.map((n) => {
           const active = pathname === n.href;
@@ -76,52 +73,50 @@ export default function SideRail() {
               href={n.href}
               aria-current={active ? "page" : undefined}
               className={`relative flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                active ? "text-white" : "text-slate-300 hover:text-white"
+                active ? "text-white" : "text-slate-400 hover:text-white"
               }`}
             >
               {active && (
                 <motion.span
                   layoutId="activeSideRailMobile"
                   transition={motionTransitions.springMorph}
-                  className="absolute inset-0 rounded-lg bg-[#1d4ed8] -z-10 shadow-xs"
+                  className="absolute inset-0 rounded-lg bg-[#2563eb] -z-10 shadow-xs"
                 />
               )}
-              <Icon className="h-3.5 w-3.5" strokeWidth={1.9} />
-              {n.shortLabel}
+              <Icon className="h-3.5 w-3.5" strokeWidth={1.8} />
+              {n.label}
             </Link>
           );
         })}
       </nav>
 
-      {/* Desktop full-height institutional command rail */}
-      <nav aria-label="Console" className="hidden h-[calc(100dvh-3px)] flex-col justify-between md:flex">
+      {/* Desktop sidebar */}
+      <nav aria-label="Console" className="hidden h-dvh flex-col justify-between md:flex">
         <div>
-          <div className="border-b border-[#1e3358] px-4 py-3.5">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="transition-transform duration-200 group-hover:scale-105">
-                <Logo size={34} />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold tracking-tight text-white group-hover:text-blue-300 transition-colors">
+          <div className="border-b border-[#1a2234] px-4 py-3.5">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <Logo size={30} />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold tracking-tight text-white group-hover:text-blue-300 transition-colors">
                   MeghDrishti
-                </p>
-                <p className="truncate font-mono text-[10px] uppercase tracking-wider text-slate-400">
-                  MoES · IMD AWS QC
-                </p>
+                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
               </div>
             </Link>
           </div>
 
-          <div className="space-y-5 px-3 py-4">
-            {GROUPS.map((group) => {
+          <div className="space-y-4 px-3 py-3">
+            {GROUPS.map((group, idx) => {
               const visible = group.items.filter((n) => !n.admin || isAdmin);
               if (visible.length === 0) return null;
               return (
-                <div key={group.title}>
-                  <p className="mb-1.5 px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                    {group.title}
-                  </p>
-                  <ul className="space-y-0.5">
+                <div key={idx} className="space-y-0.5">
+                  {group.title && (
+                    <p className="px-2 pt-2 pb-1 text-[11px] font-medium text-slate-500 tracking-wider uppercase">
+                      {group.title}
+                    </p>
+                  )}
+                  <ul>
                     {visible.map((item) => {
                       const active = pathname === item.href;
                       const Icon = item.icon;
@@ -130,33 +125,26 @@ export default function SideRail() {
                           <Link
                             href={item.href}
                             aria-current={active ? "page" : undefined}
-                            className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors select-none ${
+                            className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors select-none ${
                               active
                                 ? "text-white font-semibold"
-                                : "text-slate-300 hover:text-white"
+                                : "text-slate-400 hover:text-white"
                             }`}
                           >
                             {active && (
                               <motion.div
                                 layoutId="activeSideRailDesktop"
                                 transition={motionTransitions.springMorph}
-                                className="absolute inset-0 rounded-lg bg-[#1d4ed8] shadow-[0_1px_8px_rgba(29,78,216,0.35)] -z-10"
+                                className="absolute inset-0 rounded-lg bg-[#2563eb] shadow-[0_1px_8px_rgba(37,99,235,0.35)] -z-10"
                               />
                             )}
                             <Icon
-                              className={`h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110 ${
+                              className={`h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-105 ${
                                 active ? "text-white" : "text-slate-400 group-hover:text-slate-200"
                               }`}
-                              strokeWidth={1.9}
+                              strokeWidth={1.8}
                             />
                             <span className="truncate flex-1">{item.label}</span>
-                            <span
-                              className={`font-mono text-[10px] ${
-                                active ? "text-blue-200" : "text-slate-500 group-hover:text-slate-400"
-                              }`}
-                            >
-                              {item.code}
-                            </span>
                           </Link>
                         </li>
                       );
@@ -168,19 +156,13 @@ export default function SideRail() {
           </div>
         </div>
 
-        <div className="border-t border-[#1e3358] bg-[#081120] px-4 py-3">
+        {/* Minimal status indicator at bottom */}
+        <div className="border-t border-[#1a2234] px-4 py-3 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-300">
-              WMO-No. 8 QC Engine
-            </span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-medium text-slate-400">Operational</span>
           </div>
-          <p className="mt-1 font-mono text-[10px] text-slate-400">
-            National Surface Telemetry · v2.6
-          </p>
+          <span className="font-mono text-[10px] text-slate-500">v2.6</span>
         </div>
       </nav>
     </aside>

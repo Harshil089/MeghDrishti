@@ -140,32 +140,27 @@ export default function LiveMonitorPage() {
   return (
     <>
       <PageHeader
-        code="SYS-TEL-02 // REAL-TIME STATION PACKET STREAM"
-        title={stationName ? `Live Telemetry · ${stationName}` : "Live Station Telemetry"}
-        description="High-frequency 10-second polling of raw AWS observations, multi-parameter waveform traces, and packet-to-packet delta tracking."
+        title={stationName ? `Live Telemetry · ${stationName}` : "Live Telemetry"}
         actions={<StationPicker stations={stations} value={activeId} onChange={handleStationChange} />}
       />
 
       {/* Live Uplink Status Bar */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-2.5">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 rounded border border-ok/30 bg-ok/10 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-wider text-ok">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-ok" />
-            </span>
-            TELEMETRY UPLINK ACTIVE
+          <span className="inline-flex items-center gap-2 rounded-full border border-ok/30 bg-ok/10 px-2.5 py-0.5 text-xs font-medium text-ok">
+            <span className="h-1.5 w-1.5 rounded-full bg-ok shadow-[0_0_6px_rgba(21,128,61,0.6)]" />
+            Live
           </span>
-          <span className="font-mono text-xs text-sub">
-            {activeStation ? `STATION CODE: ${activeStation.code} · ` : ""}
-            {latest ? `LAST PACKET: ${ago(latest.timestamp)} · SOURCE: ${latest.source}` : "AWAITING INITIAL PACKET"}
+          <span className="text-xs text-sub">
+            {activeStation ? `${activeStation.name} (${activeStation.code}) · ` : ""}
+            {latest ? `Updated ${ago(latest.timestamp)}` : "Awaiting packet"}
           </span>
           {activeStation && (
             <Link
               href={`/network?station=${activeStation.code}&notify=1`}
-              className="inline-flex items-center gap-1 rounded border border-line bg-raised/70 px-2 py-0.5 font-mono text-[11px] font-semibold text-accent hover:bg-raised transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-accent hover:underline ml-1"
             >
-              <MapPin className="h-3 w-3 text-accent" /> Locate on Grid Map →
+              <MapPin className="h-3 w-3" /> Map
             </Link>
           )}
         </div>

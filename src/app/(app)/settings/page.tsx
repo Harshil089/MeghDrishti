@@ -84,11 +84,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader
-        code="SYS-CFG-10 // SYSTEM CALIBRATION & EVIDENCE WEIGHTING"
-        title="System Calibration & External Data Feeds"
-        description="Active WMO/IMD decision thresholds, ensemble evidence fusion weights, and external satellite/reanalysis data source status. Read-only here; update via the calibration DAG or Admin API."
-      />
+      <PageHeader title="Settings" />
 
       <div className="grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label="Settings sections" className={`${card} overflow-hidden lg:sticky lg:top-16`}>

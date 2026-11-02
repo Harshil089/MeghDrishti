@@ -86,11 +86,7 @@ export default function SensorHealthPage() {
 
   return (
     <>
-      <PageHeader
-        code="SYS-SNS-05 // SUBSYSTEM INSTRUMENTATION RELIABILITY"
-        title="Sensor Fleet & Probe Reliability"
-        description="7-day subsystem reliability index derived from WMO physical range, step-change, and persistence rule trigger rates across all reporting AWS stations."
-      />
+      <PageHeader title="Sensor Health" />
 
       {sensors.length === 0 ? (
         <div className={card}>

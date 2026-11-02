@@ -55,11 +55,7 @@ export default function MaintenancePage() {
 
   return (
     <>
-      <PageHeader
-        code="SYS-MNT-07 // PREDICTIVE FIELD ENGINEERING & CALIBRATION DISPATCH"
-        title="Field Maintenance & Calibration Dispatch"
-        description="Stations prioritized for regional instrument division dispatch based on 7-day WMO quality check trigger rates and telemetry dropout frequency."
-      />
+      <PageHeader title="Field Dispatch" />
 
       {predictions.length === 0 ? (
         <div className={card}>

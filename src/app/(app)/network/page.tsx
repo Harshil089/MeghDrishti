@@ -105,32 +105,29 @@ export default function NetworkPage() {
   return (
     <>
       <PageHeader
-        code="SYS-GIS-06 // NATIONAL GEOSPATIAL TELEMETRY GRID"
-        title="National AWS Spatial Grid"
-        description="Geospatial distribution and live operational status across 3,100+ Indian Automatic Weather Stations (15-minute IMD synoptic reporting cycle)."
+        title="Grid Map"
         actions={
           <>
             <span className={kpiBox}>
-              <span>SCOPE:</span>
               <b className="font-semibold text-accent">
-                {region === "" ? "NO STATE SELECTED" : region === "all" ? "ALL INDIA" : regionLabel(region).toUpperCase()}
+                {region === "" ? "No Selection" : region === "all" ? "All India" : regionLabel(region)}
               </b>
             </span>
             <span className={kpiBox}>
-              <span>TOTAL STATIONS:</span>
               <b className="font-semibold text-ink">{region === "" ? "0" : inRegion.length.toLocaleString()}</b>
+              <span className="text-sub">stations</span>
             </span>
             <span className={kpiBox}>
-              <span>ONLINE:</span>
               <b className="font-semibold text-ok">{region === "" ? "0" : online.length.toLocaleString()}</b>
+              <span className="text-sub">online</span>
             </span>
             <span className={kpiBox}>
-              <span>FLAGGED:</span>
               <b className={`font-semibold ${attention ? "text-warn" : "text-ink"}`}>{region === "" ? "0" : attention}</b>
+              <span className="text-sub">alerts</span>
             </span>
             <span className={kpiBox}>
-              <span>MEAN TEMP:</span>
               <b className="font-semibold text-ink">{region === "" ? "–" : `${avgTemp}°C`}</b>
+              <span className="text-sub">mean</span>
             </span>
           </>
         }

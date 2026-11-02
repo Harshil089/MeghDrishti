@@ -86,21 +86,13 @@ export default function ConsoleHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md transition-shadow duration-300">
       <div className="mx-auto flex max-w-[1440px] items-center gap-3 px-4 py-2.5 md:px-6">
-        {/* Institutional authority status & dual synoptic clock */}
-        <div className="flex items-center gap-3 min-w-0">
-          <span className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-ok/30 bg-ok/10 px-2.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ok shadow-2xs">
-            <ShieldCheck className="h-3 w-3" />
-            IMD-QC Live
-          </span>
-          <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-sub">
-            <Clock className="h-3.5 w-3.5 text-accent" />
-            <span className="font-semibold text-ink">{istTime} IST</span>
-            <span className="text-line">|</span>
-            <span>{utcTime} UTC</span>
-          </div>
+        {/* Synoptic clock and live indicator */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+          <span className="font-mono text-xs text-sub">{istTime} IST</span>
         </div>
 
-        {/* Global Station & Alert Command Search */}
+        {/* Global Command Search */}
         <div className="relative ml-auto hidden w-full max-w-md sm:block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sub" />
           <input
@@ -109,7 +101,7 @@ export default function ConsoleHeader() {
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
-            placeholder="Search AWS station code, district, or QC reason code…"
+            placeholder="Search stations, alerts..."
             aria-label="Search stations and alerts"
             className="h-8 w-full rounded-lg border border-line bg-canvas/70 pl-8 pr-12 text-xs text-ink placeholder:text-sub transition-all focus:bg-surface focus:border-accent/60 focus:shadow-xs focus-visible:outline-none"
           />
@@ -245,21 +237,16 @@ export default function ConsoleHeader() {
           </div>
 
           {user && (
-            <div className="flex items-center gap-2 border-l border-line pl-2.5">
-              <div className="hidden lg:block text-right">
-                <p className="max-w-44 truncate text-xs font-medium leading-none text-ink" title={user.email}>
-                  {user.email}
-                </p>
-                <p className="mt-1 font-mono text-[10px] uppercase tracking-wider text-sub">
-                  {user.roles?.[0] ?? "OPERATOR"} · CLEARANCE L2
-                </p>
-              </div>
+            <div className="flex items-center gap-2.5 border-l border-line pl-3">
+              <span className="hidden lg:block max-w-44 truncate text-xs font-medium text-ink" title={user.email}>
+                {user.email}
+              </span>
               <motion.button
                 whileTap={{ scale: 0.94 }}
                 onClick={logout}
                 className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface text-sub transition-colors hover:bg-raised hover:text-ink cursor-pointer"
                 aria-label="Sign out"
-                title="Sign out of console"
+                title="Sign out"
               >
                 <LogOut className="h-3.5 w-3.5" />
               </motion.button>

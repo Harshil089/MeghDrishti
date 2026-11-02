@@ -154,9 +154,7 @@ export default function AnalysisPage() {
   return (
     <>
       <PageHeader
-        code="SYS-ANL-04 // ENSEMBLE QC & DETERMINISTIC RULE ANALYTICS"
-        title="Quality Control & Anomaly Analytics"
-        description={`Statistical breakdown of ensemble classifications, deterministic WMO rule trigger frequencies, and hourly fault incidence over the last ${analytics.window_hours} hours.`}
+        title="Analytics"
         actions={<StationPicker stations={stations} value={stationId} onChange={setStationId} allowAll />}
       />
 
