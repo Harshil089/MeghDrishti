@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import Logo from "@/components/Logo";
 import GoogleSignInButton from "@/components/GoogleSignInButton";
 import { login } from "@/lib/auth";
 import { ArrowLeft, ArrowRight, Eye, EyeOff, Lock, Mail, Radio, ShieldCheck, FileSearch, AlertTriangle } from "lucide-react";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MagneticButton } from "@/components/ui/MagneticButton";
 
 const POINTS = [
   {
@@ -30,7 +33,7 @@ const POINTS = [
 ];
 
 const input =
-  "h-10 w-full rounded border border-line bg-surface pl-9 pr-3 text-sm text-ink outline-none transition-colors placeholder:text-sub/70 focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/20";
+  "h-10 w-full rounded-lg border border-line bg-surface pl-9 pr-3 text-sm text-ink outline-none transition-all placeholder:text-sub/70 focus:border-accent focus:shadow-xs focus-visible:ring-2 focus-visible:ring-accent/20";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -68,10 +71,14 @@ export default function LoginPage() {
             GOVERNMENT OF INDIA · MINISTRY OF EARTH SCIENCES · IMD AWS TELEMETRY COMMAND
           </div>
           <div className="px-10 pt-8">
-            <Link href="/" className="flex w-fit items-center gap-3">
-              <Logo size={36} />
+            <Link href="/" className="flex w-fit items-center gap-3 group">
+              <div className="transition-transform duration-200 group-hover:scale-105">
+                <Logo size={36} />
+              </div>
               <div>
-                <span className="block text-base font-bold tracking-tight text-white">MeghDrishti</span>
+                <span className="block text-base font-bold tracking-tight text-white group-hover:text-blue-300 transition-colors">
+                  MeghDrishti
+                </span>
                 <span className="block font-mono text-[10px] uppercase tracking-wider text-slate-400">
                   National AWS Quality Intelligence · v2.6
                 </span>
@@ -81,7 +88,7 @@ export default function LoginPage() {
         </div>
 
         <div className="max-w-[540px] px-10 py-8">
-          <span className="inline-flex items-center gap-2 rounded border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-blue-300">
+          <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-blue-300">
             RESTRICTED ACCESS · AUTHORIZED METEOROLOGICAL PERSONNEL
           </span>
           <h2 className="mt-4 text-4xl font-bold leading-[1.1] tracking-tight text-white">
@@ -96,9 +103,9 @@ export default function LoginPage() {
             {POINTS.map(({ code, icon: Icon, title, text }) => (
               <li
                 key={code}
-                className="flex items-start gap-3.5 rounded border border-[#1e3358] bg-[#13233f]/80 px-4 py-3 text-xs"
+                className="flex items-start gap-3.5 rounded-xl border border-[#1e3358] bg-[#13233f]/80 px-4 py-3 text-xs transition-colors hover:border-blue-400/40"
               >
-                <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded border border-blue-400/30 bg-blue-500/15 text-blue-300">
+                <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-blue-400/30 bg-blue-500/15 text-blue-300">
                   <Icon className="h-4 w-4" />
                 </span>
                 <div>
@@ -134,7 +141,11 @@ export default function LoginPage() {
               Return to Executive Overview
             </Link>
 
-            <div className="c-card overflow-hidden rounded-md border-t-4 border-t-accent bg-surface p-6 sm:p-8 shadow-sm">
+            <SpotlightCard
+              spotlightColor="rgba(29, 78, 216, 0.08)"
+              spotlightSize={320}
+              className="overflow-hidden rounded-2xl border-t-4 border-t-accent bg-surface p-6 sm:p-8 shadow-lg"
+            >
               <div className="mb-5 flex items-center gap-3 lg:hidden">
                 <Logo size={32} />
                 <div>
@@ -200,7 +211,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShow(!show)}
                       aria-label={show ? "Hide password" : "Show password"}
-                      className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-sub transition-colors hover:text-ink"
+                      className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded text-sub transition-colors hover:text-ink cursor-pointer"
                     >
                       {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -208,27 +219,28 @@ export default function LoginPage() {
                 </div>
 
                 {error && (
-                  <p role="alert" className="flex items-center gap-2 rounded border border-crit/30 bg-crit/10 px-3 py-2 text-xs text-crit">
+                  <p role="alert" className="flex items-center gap-2 rounded-lg border border-crit/30 bg-crit/10 px-3 py-2 text-xs text-crit">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     {error}
                   </p>
                 )}
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={busy}
-                  className="group flex h-10 w-full items-center justify-center gap-2 rounded bg-accent text-xs font-semibold uppercase tracking-wider text-on-accent transition-colors hover:bg-accent/90 active:translate-y-px disabled:opacity-60"
+                  className="group flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-accent text-xs font-semibold uppercase tracking-wider text-on-accent transition-all hover:bg-accent/90 shadow-xs cursor-pointer disabled:opacity-60"
                 >
                   {busy ? "Verifying Credentials…" : "Authenticate & Enter Console"}
                   {!busy && <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />}
-                </button>
+                </motion.button>
               </form>
 
-              <div className="mt-5 rounded border border-line bg-raised/60 px-3 py-2.5 font-mono text-[10px] leading-relaxed text-sub">
+              <div className="mt-5 rounded-lg border border-line bg-raised/60 px-3 py-2.5 font-mono text-[10px] leading-relaxed text-sub">
                 AUDIT NOTICE: All operator classifications, alert acknowledgements, and model activations are logged with
                 operator identity and UTC timestamp.
               </div>
-            </div>
+            </SpotlightCard>
           </div>
         </div>
       </main>

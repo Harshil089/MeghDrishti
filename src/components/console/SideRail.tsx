@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   Activity,
   BarChart3,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/lib/useAuth";
+import { motionTransitions } from "@/lib/motion-tokens";
 
 type NavItem = { href: string; label: string; shortLabel: string; code: string; icon: LucideIcon; admin?: boolean };
 
@@ -73,10 +75,17 @@ export default function SideRail() {
               key={n.href}
               href={n.href}
               aria-current={active ? "page" : undefined}
-              className={`flex shrink-0 items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                active ? "bg-[#1d4ed8] text-white" : "text-slate-300 hover:bg-[#13233f] hover:text-white"
+              className={`relative flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                active ? "text-white" : "text-slate-300 hover:text-white"
               }`}
             >
+              {active && (
+                <motion.span
+                  layoutId="activeSideRailMobile"
+                  transition={motionTransitions.springMorph}
+                  className="absolute inset-0 rounded-lg bg-[#1d4ed8] -z-10 shadow-xs"
+                />
+              )}
               <Icon className="h-3.5 w-3.5" strokeWidth={1.9} />
               {n.shortLabel}
             </Link>
@@ -88,10 +97,14 @@ export default function SideRail() {
       <nav aria-label="Console" className="hidden h-[calc(100dvh-3px)] flex-col justify-between md:flex">
         <div>
           <div className="border-b border-[#1e3358] px-4 py-3.5">
-            <Link href="/" className="flex items-center gap-3">
-              <Logo size={34} />
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="transition-transform duration-200 group-hover:scale-105">
+                <Logo size={34} />
+              </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold tracking-tight text-white">MeghDrishti</p>
+                <p className="truncate text-sm font-semibold tracking-tight text-white group-hover:text-blue-300 transition-colors">
+                  MeghDrishti
+                </p>
                 <p className="truncate font-mono text-[10px] uppercase tracking-wider text-slate-400">
                   MoES · IMD AWS QC
                 </p>
@@ -113,18 +126,25 @@ export default function SideRail() {
                       const active = pathname === item.href;
                       const Icon = item.icon;
                       return (
-                        <li key={item.href}>
+                        <li key={item.href} className="relative">
                           <Link
                             href={item.href}
                             aria-current={active ? "page" : undefined}
-                            className={`group flex items-center gap-2.5 rounded px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                            className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors select-none ${
                               active
-                                ? "bg-[#1d4ed8] text-white shadow-xs"
-                                : "text-slate-300 hover:bg-[#13233f] hover:text-white"
+                                ? "text-white font-semibold"
+                                : "text-slate-300 hover:text-white"
                             }`}
                           >
+                            {active && (
+                              <motion.div
+                                layoutId="activeSideRailDesktop"
+                                transition={motionTransitions.springMorph}
+                                className="absolute inset-0 rounded-lg bg-[#1d4ed8] shadow-[0_1px_8px_rgba(29,78,216,0.35)] -z-10"
+                              />
+                            )}
                             <Icon
-                              className={`h-4 w-4 shrink-0 ${
+                              className={`h-4 w-4 shrink-0 transition-transform duration-150 group-hover:scale-110 ${
                                 active ? "text-white" : "text-slate-400 group-hover:text-slate-200"
                               }`}
                               strokeWidth={1.9}
@@ -150,7 +170,10 @@ export default function SideRail() {
 
         <div className="border-t border-[#1e3358] bg-[#081120] px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-300">
               WMO-No. 8 QC Engine
             </span>

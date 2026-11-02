@@ -2,8 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Cloud, CloudRain, Droplets, Gauge, Sun, Thermometer, Wind, ArrowUpRight, AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
 import AlertDetailModal from "@/components/AlertDetailModal";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MagneticButton } from "@/components/ui/MagneticButton";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { motionTransitions } from "@/lib/motion-tokens";
 import {
   Badge,
   Empty,
@@ -151,36 +156,41 @@ function StationCard({
   const tone = statusTone[station.status];
   const topBorder =
     tone === "crit" ? "border-t-2 border-t-crit" : tone === "warn" ? "border-t-2 border-t-warn" : "border-t-2 border-t-accent";
+  const spotlight =
+    tone === "crit" ? "rgba(185, 28, 28, 0.12)" : tone === "warn" ? "rgba(180, 83, 9, 0.12)" : "rgba(29, 78, 216, 0.1)";
 
   return (
-    <Link
-      href={`/network?station=${station.id}&notify=1`}
-      className={`${card} ${topBorder} group flex min-w-0 flex-col gap-2.5 p-3.5 text-left transition-colors hover:border-accent hover:shadow-md ${
-        active ? "border-accent ring-1 ring-accent bg-accent-soft/20" : ""
-      }`}
-    >
-      <span className="flex items-start justify-between gap-2">
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-semibold text-ink group-hover:text-accent transition-colors">
-            {station.name}
+    <Link href={`/network?station=${station.id}&notify=1`} className="block group">
+      <SpotlightCard
+        spotlightColor={spotlight}
+        spotlightSize={240}
+        className={`${topBorder} flex min-w-0 flex-col gap-2.5 p-3.5 text-left rounded-xl transition-all duration-200 hover:border-accent hover:shadow-md ${
+          active ? "border-accent ring-1 ring-accent bg-accent-soft/20" : ""
+        }`}
+      >
+        <span className="flex items-start justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block truncate text-xs font-semibold text-ink group-hover:text-accent transition-colors">
+              {station.name}
+            </span>
+            <span className="block truncate font-mono text-[10px] text-sub">{station.id}</span>
           </span>
-          <span className="block truncate font-mono text-[10px] text-sub">{station.id}</span>
+          <Badge tone={tone}>{statusMeta[station.status].label}</Badge>
         </span>
-        <Badge tone={tone}>{statusMeta[station.status].label}</Badge>
-      </span>
-      <div className="flex items-baseline justify-between gap-2 pt-1">
-        <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-ink">
-          {station.temp == null ? "–" : `${station.temp.toFixed(1)}°C`}
-        </span>
-        <span className="font-mono text-[10px] uppercase text-sub">24H TRACE</span>
-      </div>
-      <Sparkline values={temps} color={toneColor[tone]} height={32} />
-      <div className="mt-0.5 flex items-center justify-between border-t border-line/60 pt-2 font-mono text-[10px] text-accent">
-        <span className="inline-flex items-center gap-1 font-semibold">
-          <MapPin className="h-3 w-3" /> Locate & Open Alert
-        </span>
-        <span className="transition-transform group-hover:translate-x-0.5">→</span>
-      </div>
+        <div className="flex items-baseline justify-between gap-2 pt-1">
+          <span className="font-mono text-2xl font-bold tabular-nums tracking-tight text-ink">
+            {station.temp == null ? "–" : `${station.temp.toFixed(1)}°C`}
+          </span>
+          <span className="font-mono text-[10px] uppercase text-sub">24H TRACE</span>
+        </div>
+        <Sparkline values={temps} color={toneColor[tone]} height={32} />
+        <div className="mt-0.5 flex items-center justify-between border-t border-line/60 pt-2 font-mono text-[10px] text-accent">
+          <span className="inline-flex items-center gap-1 font-semibold">
+            <MapPin className="h-3 w-3" /> Locate & Open Alert
+          </span>
+          <span className="transition-transform group-hover:translate-x-0.5">→</span>
+        </div>
+      </SpotlightCard>
     </Link>
   );
 }

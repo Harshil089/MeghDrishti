@@ -9,6 +9,7 @@ import { Badge, button, severityTone } from "@/components/console/ui";
 import { alertSafetySteps, defaultSafetySteps, type Alert } from "@/lib/mock-data";
 import { fetchAlertExplanation, submitReview, updateAlertStatus, type ReviewClassification } from "@/lib/api";
 import { useAuth } from "@/lib/useAuth";
+import { motionTransitions } from "@/lib/motion-tokens";
 
 const REVIEW_ACTIONS: { classification: ReviewClassification; label: string; code: string; icon: typeof Check }[] = [
   { classification: "CONFIRMED_SENSOR_FAULT", label: "Confirm Sensor Fault", code: "FAULT", icon: Ban },
@@ -299,20 +300,20 @@ export default function AlertDetailModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.2 }}
           onKeyDown={(e) => e.key === "Escape" && onClose()}
         >
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} />
+          <div className="absolute inset-0 bg-ink/40 backdrop-blur-xs" onClick={onClose} />
 
           <motion.aside
             role="dialog"
             aria-modal="true"
             aria-labelledby="alert-drawer-title"
             className="relative flex h-full w-full max-w-lg flex-col border-l border-line bg-surface text-ink shadow-2xl shadow-ink/25"
-            initial={reduce ? false : { x: 32 }}
+            initial={reduce ? false : { x: "100%" }}
             animate={{ x: 0 }}
-            exit={reduce ? undefined : { x: 32 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            exit={reduce ? undefined : { x: "100%" }}
+            transition={motionTransitions.springSmooth}
           >
             {inner}
           </motion.aside>

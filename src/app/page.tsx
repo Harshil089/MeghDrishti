@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Check,
@@ -15,6 +16,7 @@ import {
   FileCheck2,
   Cpu,
   Radio,
+  Sparkles,
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import Reveal from "@/components/Reveal";
@@ -22,6 +24,10 @@ import AsciiBackdrop from "@/components/ascii/AsciiBackdrop";
 import AsciiArt from "@/components/ascii/AsciiArt";
 import { radar, stationsSm, trace } from "@/components/ascii/art";
 import { pipelineStages } from "@/lib/mock-data";
+import { SpotlightCard } from "@/components/ui/SpotlightCard";
+import { MagneticButton } from "@/components/ui/MagneticButton";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { motionTransitions } from "@/lib/motion-tokens";
 
 const REPO = "https://github.com/Harshil089/MeghDrishti";
 
@@ -29,24 +35,29 @@ const ARCHITECTURE_STATS = [
   {
     code: "SCALE-01",
     value: "3,111+",
+    numericValue: 3111,
+    suffix: "+",
     label: "National AWS & ARG Stations",
     sub: "Pan-India coverage across 36 States & UTs",
   },
   {
     code: "WMO-QC-02",
     value: "11",
+    numericValue: 11,
     label: "Deterministic Rule Checks",
     sub: "Range, spike, persistence, drift & step limits",
   },
   {
     code: "FUSION-03",
     value: "4",
+    numericValue: 4,
     label: "Spatial & Satellite Context Feeds",
     sub: "Neighboring AWS, NASA GPM, ERA5 & NWP",
   },
   {
     code: "AUDIT-04",
     value: "6",
+    numericValue: 6,
     label: "Auditable Ensemble Verdicts",
     sub: "Reason-coded decisions with operator review",
   },
@@ -57,11 +68,13 @@ const EXAMPLES = [
     code: "CASE STUDY A · CONVECTIVE EXTREME",
     where: "Pune AWS (IMD_PUNE_001) · Tipping-Bucket Rain Gauge",
     value: "182.0",
+    numericValue: 182.0,
     unit: "mm / 15 min",
     Icon: CloudRain,
     verdict: "LIKELY_GENUINE_EXTREME",
     verdictLabel: "Verified Severe Weather Event",
     real: true,
+    spotlight: "rgba(21, 128, 61, 0.12)",
     checks: [
       "Neighboring AWS stations within 25 km confirm intense convective core",
       "NASA GPM IMERG satellite precipitation rate matches storm footprint",
@@ -73,11 +86,13 @@ const EXAMPLES = [
     code: "CASE STUDY B · HARDWARE PROBE FAULT",
     where: "Nagpur AWS (IMD_NAGPUR_001) · Surface Air Temperature",
     value: "49.2",
+    numericValue: 49.2,
     unit: "°C in 5 min",
     Icon: Thermometer,
     verdict: "PROBABLE_SENSOR_FAULT",
     verdictLabel: "Quarantined Sensor Spike / Fault",
     real: false,
+    spotlight: "rgba(185, 28, 28, 0.12)",
     checks: [
       "Surrounding regional stations report stable 31.8 °C – 32.4 °C median",
       "ECMWF ERA5 reanalysis shows no corresponding thermal advection",
@@ -156,7 +171,7 @@ function ChartFrame() {
 
 function SectionBadge({ code, label }: { code: string; label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded border border-line bg-surface px-3 py-1 font-mono text-[11px] uppercase tracking-wider shadow-2xs">
+    <div className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/90 backdrop-blur-xs px-3.5 py-1 font-mono text-[11px] uppercase tracking-wider shadow-2xs">
       <span className="font-semibold text-accent">{code}</span>
       <span className="text-line">|</span>
       <span className="text-sub">{label}</span>
@@ -187,7 +202,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-3 text-slate-400">
               <span className="inline-flex items-center gap-1.5 text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
                 WMO-No. 8 QC Standard
               </span>
               <span className="hidden md:inline">· Smart India Hackathon 2026</span>
@@ -196,14 +211,18 @@ export default function LandingPage() {
         </div>
 
         {/* Main Navigation Bar */}
-        <header className="border-b border-line bg-surface/95 backdrop-blur-xs">
+        <header className="border-b border-line bg-surface/90 backdrop-blur-md">
           <nav className={`${wrap} flex h-16 items-center justify-between gap-6`}>
-            <Link href="/" className="flex items-center gap-3">
-              <Logo size={36} />
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="transition-transform duration-200 group-hover:scale-105">
+                <Logo size={36} />
+              </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-bold tracking-tight text-ink">MeghDrishti</span>
-                  <span className="rounded border border-accent/30 bg-accent-soft px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase text-accent">
+                  <span className="text-base font-bold tracking-tight text-ink group-hover:text-accent transition-colors">
+                    MeghDrishti
+                  </span>
+                  <span className="rounded-full border border-accent/30 bg-accent-soft px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-accent">
                     v2.6 National Grid
                   </span>
                 </div>
@@ -232,11 +251,10 @@ export default function LandingPage() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              <Link
-                href="/login"
-                className="inline-flex h-9 items-center gap-2 rounded bg-accent px-4 text-xs font-semibold uppercase tracking-wider text-on-accent shadow-xs transition-colors hover:bg-accent/90"
-              >
-                Launch Command Console <ArrowRight className="h-3.5 w-3.5" />
+              <Link href="/login">
+                <MagneticButton strength={0.3} size="sm" variant="primary">
+                  Launch Console <ArrowRight className="h-3.5 w-3.5" />
+                </MagneticButton>
               </Link>
             </div>
           </nav>
@@ -258,7 +276,10 @@ export default function LandingPage() {
               />
               <h1 className="mt-6 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-5xl md:text-[62px]">
                 Automated Quality Assurance for India&apos;s{" "}
-                <span className="text-accent">3,100+ Weather Station</span> Network.
+                <span className="text-accent underline decoration-accent/30 underline-offset-8">
+                  3,100+ Weather Station
+                </span>{" "}
+                Network.
               </h1>
               <p className="mx-auto mt-5 max-w-[74ch] text-base leading-relaxed text-sub md:text-[17px]">
                 Automatic Weather Stations (AWS) operate in extreme environments where clogged rain gauges, drifting
@@ -268,45 +289,51 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href="/login"
-                  className="inline-flex h-11 items-center gap-2 rounded bg-accent px-6 text-xs font-semibold uppercase tracking-wider text-on-accent shadow-sm transition-colors hover:bg-accent/90"
-                >
-                  Open Operations Console <ArrowRight className="h-4 w-4" />
+                <Link href="/login">
+                  <MagneticButton strength={0.35} size="lg" variant="primary">
+                    Open Operations Console <ArrowRight className="h-4 w-4" />
+                  </MagneticButton>
                 </Link>
-                <a
-                  href="#how"
-                  className="inline-flex h-11 items-center gap-2 rounded border border-line bg-surface px-6 text-xs font-semibold uppercase tracking-wider text-ink transition-colors hover:bg-raised"
-                >
-                  Inspect 6-Stage QC Pipeline
+                <a href="#how">
+                  <MagneticButton strength={0.25} size="lg" variant="secondary">
+                    Inspect 6-Stage QC Pipeline
+                  </MagneticButton>
                 </a>
                 <a
                   href="#problem"
-                  className="inline-flex h-11 items-center gap-2 rounded border border-line bg-surface px-5 text-xs font-medium uppercase tracking-wider text-sub transition-colors hover:text-ink"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-line bg-surface/80 px-5 text-xs font-medium uppercase tracking-wider text-sub transition-colors hover:text-ink hover:bg-raised"
                 >
-                  View Verification Case Studies
+                  Verification Case Studies
                 </a>
               </div>
             </div>
           </Reveal>
 
-          {/* Executive KPI Grid */}
+          {/* Executive KPI Grid with EasyUI Spotlight Cards */}
           <Reveal delay={0.06}>
-            <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-md border border-line bg-line shadow-sm sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {ARCHITECTURE_STATS.map((s) => (
-                <div key={s.code} className="border-t-2 border-t-accent bg-surface px-6 py-5">
+                <SpotlightCard
+                  key={s.code}
+                  spotlightColor="rgba(29, 78, 216, 0.12)"
+                  spotlightSize={280}
+                  className="border-t-2 border-t-accent bg-surface p-5 rounded-xl shadow-xs"
+                >
                   <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">{s.code}</p>
-                  <p className="mt-1.5 font-mono text-4xl font-bold tabular-nums tracking-tight text-ink">{s.value}</p>
+                  <div className="mt-1.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-ink flex items-baseline">
+                    <AnimatedNumber value={s.numericValue} />
+                    {s.suffix && <span>{s.suffix}</span>}
+                  </div>
                   <p className="mt-1 text-sm font-semibold text-ink">{s.label}</p>
                   <p className="mt-0.5 text-xs text-sub">{s.sub}</p>
-                </div>
+                </SpotlightCard>
               ))}
             </div>
           </Reveal>
 
           {/* Framed Live Console Preview */}
           <Reveal delay={0.12}>
-            <div className="mt-10 overflow-hidden rounded-md border border-line bg-surface shadow-[0_20px_50px_-24px_rgb(11_21_40/0.22)]">
+            <div className="mt-10 overflow-hidden rounded-xl border border-line bg-surface shadow-[0_20px_50px_-24px_rgb(11_21_40/0.22)]">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1e3358] bg-[#0b172a] px-4 py-2.5 text-xs text-slate-300">
                 <div className="flex items-center gap-2.5">
                   <span className="flex gap-1.5">
@@ -319,7 +346,10 @@ export default function LandingPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-wider text-slate-400">
-                  <span className="text-emerald-400">● STREAM ACTIVE</span>
+                  <span className="text-emerald-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    STREAM ACTIVE
+                  </span>
                   <span>15-MIN SYNOPTIC CADENCE</span>
                 </div>
               </div>
@@ -330,7 +360,7 @@ export default function LandingPage() {
                   width={1440}
                   height={900}
                   priority
-                  className="h-auto w-full rounded border border-line"
+                  className="h-auto w-full rounded-lg border border-line"
                 />
               </div>
             </div>
@@ -338,7 +368,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Section 1: The Operational Challenge (Case Study Comparison) */}
+      {/* Section 1: The Operational Challenge (Case Study Comparison with Spotlight Cards) */}
       <section id="problem" className={`${wrap} scroll-mt-24 pt-20 pb-16`}>
         <Reveal>
           <div className="max-w-[780px]">
@@ -357,8 +387,10 @@ export default function LandingPage() {
         <div className="mt-10 grid gap-6 md:grid-cols-2">
           {EXAMPLES.map((e, i) => (
             <Reveal key={e.where} delay={i * 0.08}>
-              <article
-                className={`c-card flex h-full flex-col justify-between overflow-hidden rounded-md border-t-4 ${
+              <SpotlightCard
+                spotlightColor={e.spotlight}
+                spotlightSize={380}
+                className={`flex h-full flex-col justify-between overflow-hidden rounded-xl border-t-4 p-0 shadow-sm ${
                   e.real ? "border-t-ok" : "border-t-crit"
                 }`}
               >
@@ -367,14 +399,14 @@ export default function LandingPage() {
                     <div>
                       <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">{e.code}</p>
                       <p className="mt-1 text-sm font-semibold text-ink">{e.where}</p>
-                      <p className="mt-3 flex items-baseline gap-2">
+                      <div className="mt-3 flex items-baseline gap-2">
                         <span className="font-mono text-5xl font-bold tabular-nums tracking-tight text-ink">
-                          {e.value}
+                          <AnimatedNumber value={e.numericValue} decimals={1} />
                         </span>
                         <span className="font-mono text-sm font-medium text-sub">{e.unit}</span>
-                      </p>
+                      </div>
                     </div>
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded border border-line bg-raised text-accent">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-line bg-raised text-accent">
                       <e.Icon className="h-6 w-6" strokeWidth={1.8} aria-hidden />
                     </div>
                   </div>
@@ -386,10 +418,10 @@ export default function LandingPage() {
                     {e.checks.map((c) => (
                       <li
                         key={c}
-                        className="flex items-start gap-2.5 rounded border border-line/80 bg-canvas/70 px-3.5 py-2.5 text-xs leading-relaxed text-ink"
+                        className="flex items-start gap-2.5 rounded-lg border border-line/80 bg-canvas/70 px-3.5 py-2.5 text-xs leading-relaxed text-ink"
                       >
                         <span
-                          className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-xs ${
+                          className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-sm ${
                             e.real ? "bg-ok text-white" : "bg-crit text-white"
                           }`}
                         >
@@ -407,7 +439,7 @@ export default function LandingPage() {
                       ENSEMBLE VERDICT
                     </span>
                     <span
-                      className={`inline-flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-xs font-semibold uppercase ${
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs font-semibold uppercase ${
                         e.real ? "border-ok/30 bg-ok/10 text-ok" : "border-crit/30 bg-crit/10 text-crit"
                       }`}
                     >
@@ -417,7 +449,7 @@ export default function LandingPage() {
                   </div>
                   <p className="mt-2 text-xs text-sub">{e.disposition}</p>
                 </div>
-              </article>
+              </SpotlightCard>
             </Reveal>
           ))}
         </div>
@@ -427,7 +459,7 @@ export default function LandingPage() {
       <section
         id="signal"
         aria-label="Live temperature trace"
-        className={`${wrap} relative my-8 h-[260px] rounded-md border border-line bg-surface/60`}
+        className={`${wrap} relative my-8 h-[260px] rounded-xl border border-line bg-surface/60 overflow-hidden shadow-xs`}
       >
         <div className="flex items-center justify-between border-b border-line bg-raised/60 px-4 py-2 font-mono text-[10px] uppercase tracking-wider text-sub">
           <span>SYNOPTIC WAVEFORM MONITOR // DELHI SAFDARJUNG AWS (42182)</span>
@@ -457,7 +489,11 @@ export default function LandingPage() {
           <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
             {pipelineStages.map((s, i) => (
               <Reveal key={s.key} delay={i * 0.05}>
-                <li className="c-card flex h-full flex-col justify-between rounded-md border-t-2 border-t-accent p-4">
+                <SpotlightCard
+                  spotlightColor="rgba(29, 78, 216, 0.08)"
+                  spotlightSize={220}
+                  className="flex h-full flex-col justify-between rounded-xl border-t-2 border-t-accent p-4 bg-canvas/60 shadow-2xs"
+                >
                   <div>
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs font-bold text-accent">
@@ -471,7 +507,7 @@ export default function LandingPage() {
                   <div className="mt-4 border-t border-line pt-2.5 font-mono text-[10px] uppercase tracking-wider text-sub">
                     {i === pipelineStages.length - 1 ? "OUTPUT: REASON-CODED VERDICT" : `NEXT → STAGE 0${i + 2}`}
                   </div>
-                </li>
+                </SpotlightCard>
               </Reveal>
             ))}
           </ol>
@@ -482,7 +518,11 @@ export default function LandingPage() {
       <section id="radar" className={`${wrap} relative mt-16 grid min-h-[460px] items-center gap-8 py-12 md:grid-cols-2`}>
         <div aria-hidden className="min-h-[280px]" />
         <Reveal>
-          <div className="c-card rounded-md border-t-4 border-t-accent p-7 md:p-8">
+          <SpotlightCard
+            spotlightColor="rgba(29, 78, 216, 0.1)"
+            spotlightSize={350}
+            className="rounded-xl border-t-4 border-t-accent p-7 md:p-8 shadow-sm"
+          >
             <SectionBadge code="SPATIAL-TEMPORAL VERIFICATION" label="OUTSIDE-IN EVIDENCE FUSION" />
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-ink md:text-3xl">
               Radar, Satellites, Reanalysis, and Neighboring Stations Checked on Every Flag.
@@ -492,24 +532,24 @@ export default function LandingPage() {
               hardware fault, it queries four independent spatial and atmospheric context layers:
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded border border-line bg-canvas/70 p-3">
+              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
                 <p className="font-mono text-[11px] font-semibold text-ink">01 · NEIGHBORING AWS GRID</p>
                 <p className="mt-1 text-xs text-sub">Spatial median & consistency check across nearby IMD stations.</p>
               </div>
-              <div className="rounded border border-line bg-canvas/70 p-3">
+              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
                 <p className="font-mono text-[11px] font-semibold text-ink">02 · NASA GPM IMERG</p>
                 <p className="mt-1 text-xs text-sub">Satellite precipitation rate verification for extreme rain flags.</p>
               </div>
-              <div className="rounded border border-line bg-canvas/70 p-3">
+              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
                 <p className="font-mono text-[11px] font-semibold text-ink">03 · ECMWF ERA5 REANALYSIS</p>
                 <p className="mt-1 text-xs text-sub">Synoptic background comparison for temperature, wind & pressure.</p>
               </div>
-              <div className="rounded border border-line bg-canvas/70 p-3">
+              <div className="rounded-lg border border-line bg-canvas/70 p-3 hover:border-accent/40 transition-colors">
                 <p className="font-mono text-[11px] font-semibold text-ink">04 · NWP FORECAST ENSEMBLE</p>
                 <p className="mt-1 text-xs text-sub">Expected mesoscale boundary check via Open-Meteo NWP feeds.</p>
               </div>
             </div>
-          </div>
+          </SpotlightCard>
         </Reveal>
       </section>
 
@@ -534,10 +574,14 @@ export default function LandingPage() {
               const Icon = p.icon;
               return (
                 <Reveal key={p.code} delay={i * 0.06}>
-                  <div className="c-card flex h-full flex-col justify-between rounded-md p-6">
+                  <SpotlightCard
+                    spotlightColor="rgba(29, 78, 216, 0.08)"
+                    spotlightSize={260}
+                    className="flex h-full flex-col justify-between rounded-xl p-6 shadow-xs"
+                  >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="grid h-9 w-9 place-items-center rounded border border-accent/25 bg-accent-soft text-accent">
+                        <span className="grid h-9 w-9 place-items-center rounded-lg border border-accent/25 bg-accent-soft text-accent">
                           <Icon className="h-4 w-4" />
                         </span>
                         <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-sub">
@@ -547,7 +591,7 @@ export default function LandingPage() {
                       <h3 className="mt-4 text-base font-bold text-ink">{p.title}</h3>
                       <p className="mt-2 text-xs leading-relaxed text-sub">{p.detail}</p>
                     </div>
-                  </div>
+                  </SpotlightCard>
                 </Reveal>
               );
             })}
@@ -558,7 +602,7 @@ export default function LandingPage() {
       {/* Executive Call-To-Action */}
       <section id="cta" className={`${wrap} py-16`}>
         <Reveal>
-          <div className="overflow-hidden rounded-md border border-[#1e3358] bg-[#0b172a] text-white shadow-lg">
+          <div className="overflow-hidden rounded-2xl border border-[#1e3358] bg-[#0b172a] text-white shadow-xl">
             <div className="gov-tricolor" />
             <div className="grid items-center gap-8 px-6 py-12 md:grid-cols-[1fr_auto] md:px-12">
               <div>
@@ -574,12 +618,11 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/login"
-                  className="inline-flex h-11 items-center gap-2 rounded bg-[#1d4ed8] px-6 text-xs font-semibold uppercase tracking-wider text-white transition-colors hover:bg-blue-600"
-                >
-                  <Radio className="h-4 w-4" />
-                  Launch Command Console
+                <Link href="/login">
+                  <MagneticButton strength={0.35} size="lg" variant="primary">
+                    <Radio className="h-4 w-4" />
+                    Launch Command Console
+                  </MagneticButton>
                 </Link>
               </div>
             </div>
@@ -605,7 +648,7 @@ export default function LandingPage() {
             href={REPO}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded border border-line bg-canvas px-3 py-1.5 font-mono text-[11px] text-ink transition-colors hover:bg-raised"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-canvas px-3 py-1.5 font-mono text-[11px] text-ink transition-colors hover:bg-raised"
           >
             <GitFork className="h-3.5 w-3.5 text-accent" /> github.com/Harshil089/MeghDrishti
           </a>
